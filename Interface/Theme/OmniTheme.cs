@@ -135,7 +135,7 @@ public static class OmniTheme
 
     public static float DalamudScaleValue => Math.Clamp(ImGuiHelpers.GlobalScale, 0.5f, 3f);
 
-    public static float ScaleValue =>
+    public static float ScaleValue => scopedScale ??
         Math.Clamp(FontManager.Instance().Config.FontSize, MinimumFontSize, MaximumFontSize) /
         DefaultFontSize *
         DalamudScaleValue;
@@ -144,6 +144,7 @@ public static class OmniTheme
 
     [ThreadStatic] private static ThemeTokens? scopedTokens;
     [ThreadStatic] private static Vector4? scopedControlAccent;
+    [ThreadStatic] private static float? scopedScale;
 
     public static ThemeTokens Tokens => scopedTokens ?? BaseTokens;
 
@@ -217,6 +218,20 @@ public static class OmniTheme
     }
 
     public static float Scale(float value) => value * ScaleValue;
+
+    // 局部窗口按当前字号布局，退出后恢复外层尺寸，支持嵌套弹窗。
+    public readonly struct ScaleScope : IDisposable
+    {
+        private readonly float? previousScale;
+
+        public ScaleScope(float scale)
+        {
+            previousScale = scopedScale;
+            scopedScale = scale;
+        }
+
+        public void Dispose() => scopedScale = previousScale;
+    }
 
     public static Vector2 Scale(Vector2 value) => value * ScaleValue;
 

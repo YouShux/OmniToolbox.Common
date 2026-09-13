@@ -166,7 +166,8 @@ public static class ItemSelectionTable
         float iconSize,
         string? displayName = null,
         bool showItemIDTooltip = true,
-        bool isCollected = false)
+        bool isCollected = false,
+        bool wrapName = false)
     {
         var itemName = string.IsNullOrWhiteSpace(displayName) ? LuminaWrapper.GetItemName(itemID) : displayName;
         if (string.IsNullOrWhiteSpace(itemName))
@@ -197,12 +198,14 @@ public static class ItemSelectionTable
             ImGui.Dummy(new Vector2(iconSize));
         }
 
-        var textSize = ImGui.CalcTextSize(itemName);
         var textSpacing = OmniTheme.Scale(6f);
+        var wrapWidth = wrapName ? MathF.Max(1f, availableWidth - iconSize - textSpacing) : 0f;
+        var textSize = ImGui.CalcTextSize(itemName, false, wrapWidth);
         var textPosition = new Vector2(
             cellPosition.X + iconSize + textSpacing,
             cellPosition.Y + MathF.Max(0f, (rowContentHeight - textSize.Y) * 0.5f));
-        ImGui.GetWindowDrawList().AddText(textPosition, ImGui.GetColorU32(ImGuiCol.Text), itemName);
+        ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), ImGui.GetFontSize(), textPosition,
+            ImGui.GetColorU32(ImGuiCol.Text), itemName, wrapWidth);
         ImGui.SetCursorScreenPos(textPosition);
         ImGui.Dummy(new Vector2(
             MathF.Max(1f, MathF.Min(textSize.X, availableWidth - iconSize - textSpacing)),

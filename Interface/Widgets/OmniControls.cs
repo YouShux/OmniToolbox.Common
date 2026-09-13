@@ -22,8 +22,55 @@ public static class OmniControls
     private static readonly List<FavoriteParticle> FavoriteParticles = [];
     private static double favoriteEffectsDrawnAt = -1d;
 
+    public static bool RoundedSelectable(string label, bool selected = false,
+        ImGuiSelectableFlags flags = ImGuiSelectableFlags.None, Vector2 size = default)
+        => DrawRoundedSelectable(label, selected, flags, size, false);
+
+    public static bool RoundedMenuItem(string label, bool enabled = true)
+        => DrawRoundedSelectable(label, false, enabled ? ImGuiSelectableFlags.None : ImGuiSelectableFlags.Disabled, default, true);
+
+    private static bool DrawRoundedSelectable(string label, bool selected, ImGuiSelectableFlags flags, Vector2 size, bool menuItem)
+    {
+        using var disabled = ImRaii.Disabled((flags & ImGuiSelectableFlags.Disabled) != 0);
+        var position = ImGui.GetCursorScreenPos();
+        var text = DisplayLabel(label);
+        var textSize = ImGui.CalcTextSize(text);
+        var rowSize = new Vector2(size.X > 0f ? size.X : MathF.Max(textSize.X, ImGui.GetContentRegionAvail().X),
+            size.Y > 0f ? size.Y : MathF.Max(textSize.Y, ImGui.GetTextLineHeight()));
+        var textColor = ImGui.GetColorU32(ImGuiCol.Text);
+        var selectedColor = ImGui.GetColorU32(ImGuiCol.Header);
+        var hoveredColor = ImGui.GetColorU32(ImGuiCol.HeaderHovered);
+        var activeColor = ImGui.GetColorU32(ImGuiCol.HeaderActive);
+        bool clicked;
+        using (ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero)
+                   .Push(ImGuiCol.Header, Vector4.Zero)
+                   .Push(ImGuiCol.HeaderHovered, Vector4.Zero)
+                   .Push(ImGuiCol.HeaderActive, Vector4.Zero))
+        {
+            // 保留原生选择项的 ID、点击、弹层关闭和导航行为，仅替换绘制。
+            clicked = menuItem ? ImGui.MenuItem(label, string.Empty, selected, (flags & ImGuiSelectableFlags.Disabled) == 0)
+                : ImGui.Selectable(label, selected, flags, size);
+        }
+        var drawList = ImGui.GetWindowDrawList();
+        if (selected || ImGui.IsItemHovered() || ImGui.IsItemActive())
+        {
+            drawList.AddRectFilled(position, position + rowSize,
+                ImGui.IsItemActive() ? activeColor : ImGui.IsItemHovered() ? hoveredColor : selectedColor,
+                MathF.Min(rowSize.Y * 0.5f, OmniTheme.Scale(OmniTheme.Tokens.ButtonRadius)));
+        }
+        drawList.PushClipRect(position, position + rowSize, true);
+        drawList.AddText(position + Vector2.Max(Vector2.Zero, rowSize - textSize) * ImGui.GetStyle().SelectableTextAlign,
+            textColor, text);
+        drawList.PopClipRect();
+        return clicked;
+    }
+
     public static bool CheckedSelectable(string id, string label, bool selected,
         ImGuiSelectableFlags flags = ImGuiSelectableFlags.None)
+        => CheckedSelectable(id, label, selected, flags, false);
+
+    public static bool CheckedSelectable(string id, string label, bool selected,
+        ImGuiSelectableFlags flags, bool rounded)
     {
         var checkTexture = OmniToolbox.Host.DalamudServices.TextureProvider
             .GetFromGame("ui/uld/ReadyCheck_hr1.tex").GetWrapOrDefault();
@@ -33,8 +80,8 @@ public static class OmniControls
         bool clicked;
         using (ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero))
         {
-            clicked = ImGui.Selectable(id, selected, flags,
-                new Vector2(MathF.Max(minimumWidth, ImGui.GetContentRegionAvail().X), 0f));
+            var size = new Vector2(MathF.Max(minimumWidth, ImGui.GetContentRegionAvail().X), 0f);
+            clicked = rounded ? RoundedSelectable(id, selected, flags, size) : ImGui.Selectable(id, selected, flags, size);
         }
         var position = ImGui.GetItemRectMin() + new Vector2(style.FramePadding.X,
             MathF.Max(0f, (ImGui.GetItemRectSize().Y - iconSize) * 0.5f));

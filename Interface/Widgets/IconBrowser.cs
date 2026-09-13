@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Globalization;
 using Dalamud.Game.Text;
 using Dalamud.Interface.Textures;
+using Dalamud.Interface.Textures.TextureWraps;
+using OmenTools.OmenService;
 using MapSymbol = Lumina.Excel.Sheets.MapSymbol;
 using OmniToolbox.Config;
 using OmniToolbox.Host;
@@ -14,6 +16,14 @@ namespace OmniToolbox.UI;
 public sealed class IconBrowser : IEscapeClosableWindow
 {
     private const float SearchControlWidth = 160f;
+    // 插件内置图标使用独立标识，不占用游戏图标 ID。
+    internal const uint LauncherIconID = int.MaxValue;
+    internal static string LauncherIconPath => System.IO.Path.Combine(
+        DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Resources", "XIVLauncherCN.png");
+
+    internal static IDalamudTextureWrap? GetIconTexture(uint iconID) => iconID == LauncherIconID
+        ? DalamudServices.TextureProvider.GetFromFile(LauncherIconPath).GetWrapOrDefault()
+        : ImageHelper.GetGameIcon(iconID);
 
     private static readonly IconTabDefinition[] GameIconTabs =
     [
@@ -400,6 +410,11 @@ public sealed class IconBrowser : IEscapeClosableWindow
                 }
                 else if (!string.IsNullOrWhiteSpace(gameIconFilter))
                 {
+                    if (OmniLoc.Get("IconBrowser.LauncherIcon").Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase) ||
+                        "XIVLauncherCN".Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase))
+                    {
+                        filteredGameIcons.Add((int)LauncherIconID);
+                    }
                     foreach (var symbol in GetMapSymbolIcons())
                     {
                         if (symbol.Value.Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase) && IconExists((uint)symbol.Key))
@@ -531,6 +546,10 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
         var tab = GameIconTabs[tabIndex];
         cache = new IconTabCache(tab.Ranges.Length == 0 ? 0 : tab.Ranges[0].Start);
+        if (tab.LabelKey == "IconBrowser.Tab.Featured")
+        {
+            cache.Icons.Add((int)LauncherIconID);
+        }
         if (tab.LabelKey == "IconBrowser.Tab.MapSymbols")
         {
             foreach (var icon in GetMapSymbolIcons().Keys)
@@ -600,6 +619,10 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
     private static bool IconExists(uint icon)
     {
+        if (icon == LauncherIconID)
+        {
+            return System.IO.File.Exists(LauncherIconPath);
+        }
         var folder = icon / 1000;
         return DalamudServices.DataManager.FileExists($"ui/icon/{folder:D3}000/{icon:D6}.tex")
             || DalamudServices.DataManager.FileExists($"ui/icon/{folder:D3}000/{icon:D6}_hr1.tex")
@@ -660,7 +683,12 @@ public sealed class IconBrowser : IEscapeClosableWindow
         if (sharedTexture is null && textureRequestBudget > 0)
         {
             textureRequestBudget--;
-            if (DalamudServices.TextureProvider.TryGetFromGameIcon(
+            if (icon == LauncherIconID)
+            {
+                sharedTexture = DalamudServices.TextureProvider.GetFromFile(LauncherIconPath);
+                gameIconTextures.Add(icon, sharedTexture);
+            }
+            else if (DalamudServices.TextureProvider.TryGetFromGameIcon(
                     new GameIconLookup((uint)icon),
                     out sharedTexture))
             {
@@ -703,7 +731,9 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Right) || texture is null)
         {
-            ImGui.SetTooltip(icon.ToString(CultureInfo.InvariantCulture));
+            ImGui.SetTooltip(icon == LauncherIconID
+                ? $"{OmniLoc.Get("IconBrowser.LauncherIcon")}\nID: {icon}"
+                : icon.ToString(CultureInfo.InvariantCulture));
             return;
         }
 

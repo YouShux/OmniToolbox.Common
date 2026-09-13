@@ -56,6 +56,10 @@ internal static class FramedGameIcon
         bool drawFrame = true,
         bool preserveAspectRatio = false)
     {
+        if (iconID == IconBrowser.LauncherIconID)
+        {
+            drawFrame = false;
+        }
         var iconPosition = drawFrame
             ? position + size * new Vector2(0.042f, 0.042f)
             : position;
@@ -63,7 +67,11 @@ internal static class FramedGameIcon
             ? position + size - size * new Vector2(0.042f, 0.078f)
             : position + size;
         IDalamudTextureWrap? texture = null;
-        if (iconID != 0 &&
+        if (iconID == IconBrowser.LauncherIconID)
+        {
+            texture = IconBrowser.GetIconTexture(iconID);
+        }
+        else if (iconID != 0 &&
             (DalamudServices.TextureProvider.TryGetFromGameIcon(new GameIconLookup(iconID, itemHQ), out var sharedTexture) ||
              DalamudServices.TextureProvider.TryGetFromGameIcon(new GameIconLookup(iconID, itemHQ, hiRes: false), out sharedTexture)))
         {
