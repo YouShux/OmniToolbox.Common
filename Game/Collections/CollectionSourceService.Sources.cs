@@ -39,6 +39,7 @@ public sealed partial class CollectionSourceService
                 true,
                 out var failedLines,
                 out var exceptions);
+            var containerNames = new Dictionary<uint, string>();
             foreach (var row in rows)
             {
                 if (row.ItemId == 0 ||
@@ -48,9 +49,13 @@ public sealed partial class CollectionSourceService
                     continue;
                 }
 
-                var containerName = itemsByID.TryGetValue(row.SourceItemId, out var container)
-                    ? container.Name.ExtractText()
-                    : FormattableString.Invariant($"#{row.SourceItemId}");
+                if (!containerNames.TryGetValue(row.SourceItemId, out var containerName))
+                {
+                    containerName = itemsByID.TryGetValue(row.SourceItemId, out var container)
+                        ? container.Name.ExtractText()
+                        : FormattableString.Invariant($"#{row.SourceItemId}");
+                    containerNames.Add(row.SourceItemId, containerName);
+                }
                 AddSourceIfMissing(itemRows, row.ItemId, new(
                     CollectionSourceCategory.Container,
                     row.SourceItemId,
@@ -72,30 +77,31 @@ public sealed partial class CollectionSourceService
 
     private static void AddCraftingSources(IDictionary<uint, HashSet<CollectionSource>> itemRows)
     {
-        var recipes = LuminaGetter.Get<Recipe>()
-            .Where(recipe => recipe.RowId != 0 && recipe.ItemResult.IsValid)
-            .ToArray();
-        var craftedItemIds = recipes
-            .Select(recipe => recipe.ItemResult.RowId)
-            .ToHashSet();
-        foreach (var (itemId, sources) in itemRows)
+        var craftedItemIds = new HashSet<uint>();
+        foreach (var recipe in LuminaGetter.Get<Recipe>())
         {
-            if (!craftedItemIds.Contains(itemId))
+            if (recipe.RowId == 0 || !recipe.ItemResult.IsValid)
             {
-                sources.RemoveWhere(source => source.Category == CollectionSourceCategory.Crafting);
+                continue;
             }
-        }
 
-        foreach (var recipe in recipes)
-        {
             var itemID = recipe.ItemResult.RowId;
-            if (!HasSource(itemRows, itemID, CollectionSourceCategory.Crafting))
+            if (craftedItemIds.Add(itemID) &&
+                !HasSource(itemRows, itemID, CollectionSourceCategory.Crafting))
             {
                 AddSource(itemRows, itemID, new(
                     CollectionSourceCategory.Crafting,
                     recipe.RowId,
                     FormattableString.Invariant($"#{recipe.RowId}"),
                     string.Empty));
+            }
+        }
+
+        foreach (var (itemId, sources) in itemRows)
+        {
+            if (!craftedItemIds.Contains(itemId))
+            {
+                sources.RemoveWhere(source => source.Category == CollectionSourceCategory.Crafting);
             }
         }
     }

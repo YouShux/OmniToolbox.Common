@@ -71,7 +71,7 @@ public sealed partial class CollectionSourceService
             }
 
             var categories = CreateCategoryMap();
-            ResolveCategories(categories, wikiShopDependencies);
+            PropagateCategories(categories, wikiShopDependencies);
             var dependencies = new Dictionary<uint, HashSet<uint>>();
             var purchasableItems = new HashSet<uint>();
             for (var index = 0; index < itemIds.Length; index++)
@@ -150,6 +150,16 @@ public sealed partial class CollectionSourceService
         Dictionary<uint, HashSet<CollectionSourceCategory>> categories,
         IReadOnlyDictionary<uint, HashSet<uint>> dependencies)
     {
+        PropagateCategories(categories, dependencies);
+        return categories
+            .Where(pair => pair.Value.Count != 0)
+            .ToFrozenDictionary(pair => pair.Key, pair => pair.Value.ToFrozenSet());
+    }
+
+    private static void PropagateCategories(
+        Dictionary<uint, HashSet<CollectionSourceCategory>> categories,
+        IReadOnlyDictionary<uint, HashSet<uint>> dependencies)
+    {
         for (var depth = 0; depth < 10; depth++)
         {
             var changed = false;
@@ -185,10 +195,6 @@ public sealed partial class CollectionSourceService
                 break;
             }
         }
-
-        return categories
-            .Where(pair => pair.Value.Count != 0)
-            .ToFrozenDictionary(pair => pair.Key, pair => pair.Value.ToFrozenSet());
     }
 
     private static Dictionary<uint, HashSet<uint>> BuildWikiShopDependencies(

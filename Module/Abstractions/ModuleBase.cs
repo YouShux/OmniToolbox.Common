@@ -60,6 +60,8 @@ public abstract class ModuleBase : IDisposable
     /// </summary>
     public virtual bool TryHandleCommand(string arguments) => false;
 
+    public virtual bool TryHandleCommand(string command, string arguments) => TryHandleCommand(arguments);
+
     public bool InterruptAutomation()
     {
         if (!disposed)

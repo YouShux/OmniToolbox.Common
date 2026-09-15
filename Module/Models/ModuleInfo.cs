@@ -27,4 +27,6 @@ public sealed class ModuleInfo
     public string? ReportURL { get; init; }
 
     public string? PreviewImageURL { get; init; }
+
+    public IReadOnlyList<string>? PreviewImageURLs { get; init; }
 }
