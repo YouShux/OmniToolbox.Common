@@ -160,8 +160,8 @@ internal static class RelicWeaponCatalog
 
     private static readonly uint[][] SkysteelItemIds =
     [
-        Range(29612, 11), Range(29623, 11), Range(29634, 13),
-        Range(30282, 13), Range(30293, 13), Range(31714, 13)
+        SkysteelRange(29612, 11), SkysteelRange(29623, 11), SkysteelRange(29634, 13),
+        SkysteelRange(30282, 13), SkysteelRange(30293, 13), SkysteelRange(31714, 13)
     ];
 
     private static readonly uint[][] SplendorousItemIds =
@@ -726,6 +726,13 @@ internal static class RelicWeaponCatalog
         {
             target.Add(sourceStart + (uint)offset, replicaStart + (uint)offset);
         }
+    }
+
+    private static uint[] SkysteelRange(uint start, int count)
+    {
+        var result = Range(start, count);
+        (result[8], result[9]) = (result[9], result[8]);
+        return result;
     }
 
     private static uint[] Range(uint start, int count)

@@ -68,6 +68,16 @@ public readonly record struct CollectionSourceLocation(
     float X,
     float Y);
 
+// BlueSpells.csv 的原始行，保留坐标与怪物名供青魔法书导航使用。
+public readonly record struct BlueSpellSource(
+    string SourceType,
+    string MobDescription,
+    string LocationDescription,
+    float? X,
+    float? Y,
+    uint? Level,
+    string Note);
+
 public sealed record CollectionEntry
 {
     public required uint ID { get; init; }

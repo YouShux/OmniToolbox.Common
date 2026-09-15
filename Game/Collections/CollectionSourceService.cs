@@ -20,6 +20,7 @@ public sealed partial class CollectionSourceService : IDisposable
     private readonly FrozenDictionary<uint, IReadOnlyList<CollectionSource>> itemSources;
     private readonly FrozenDictionary<uint, IReadOnlyList<uint>> blindBoxDropPools;
     private readonly FrozenDictionary<uint, IReadOnlyList<CollectionSource>> blueMageSources;
+    private readonly FrozenDictionary<uint, IReadOnlyList<BlueSpellSource>> blueSpellRows;
     private readonly FrozenDictionary<uint, uint> relicAchievementIds;
     private readonly FrozenDictionary<uint, CollectionSourceCategory[]> categorySeeds;
     private readonly Dictionary<uint, HashSet<uint>> wikiShopDependencies;
@@ -86,6 +87,7 @@ public sealed partial class CollectionSourceService : IDisposable
         itemIds = itemsByID.Keys.Order().ToArray();
 
         var blueRows = new Dictionary<uint, HashSet<CollectionSource>>();
+        var blueSpellDetails = new Dictionary<uint, List<BlueSpellSource>>();
         ReadCSV("BlueSpells.csv", csv =>
         {
             var actionID = csv.GetField<uint>("ActionId");
@@ -95,6 +97,18 @@ public sealed partial class CollectionSourceService : IDisposable
             }
 
             var sourceType = csv.GetField<string>("SourceType") ?? string.Empty;
+            var mobDescription = csv.GetField<string>("MobDescription") ?? string.Empty;
+            var locationDescription = csv.GetField<string>("LocationDescription") ?? string.Empty;
+            var x = csv.GetField<float?>("X");
+            var y = csv.GetField<float?>("Y");
+            var level = csv.GetField<uint?>("Level");
+            var note = csv.GetField<string>("Note") ?? string.Empty;
+            if (!blueSpellDetails.TryGetValue(actionID, out var details))
+            {
+                blueSpellDetails[actionID] = details = [];
+            }
+
+            details.Add(new(sourceType, mobDescription, locationDescription, x, y, level, note));
             AddSource(blueRows, actionID, new(
                 sourceType switch
                 {
@@ -108,17 +122,15 @@ public sealed partial class CollectionSourceService : IDisposable
                     _ => throw new InvalidDataException($"未知的青魔获取类型：{sourceType}")
                 },
                 0,
-                NormalizeBlueMageText(csv.GetField<string>("MobDescription") ?? string.Empty),
-                FormatBlueMageDetail(
-                    csv.GetField<string>("LocationDescription") ?? string.Empty,
-                    csv.GetField<float?>("X"),
-                    csv.GetField<float?>("Y"),
-                    csv.GetField<uint?>("Level"),
-                    NormalizeBlueMageText(csv.GetField<string>("Note") ?? string.Empty))));
+                NormalizeBlueMageText(mobDescription),
+                FormatBlueMageDetail(locationDescription, x, y, level, NormalizeBlueMageText(note))));
         });
 
         itemSources = Freeze(itemRows);
         blueMageSources = Freeze(blueRows);
+        blueSpellRows = blueSpellDetails.ToFrozenDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<BlueSpellSource>)pair.Value.ToArray());
         relicAchievementIds = relicAchievements.ToFrozenDictionary();
         exchangeCategoryTask = Task.Run(() => BuildExchangeCategoriesAsync(categoryBuildCancellation.Token));
     }
@@ -144,6 +156,9 @@ public sealed partial class CollectionSourceService : IDisposable
 
     public IReadOnlyList<CollectionSource> GetBlueMageSources(uint actionID) =>
         blueMageSources.GetValueOrDefault(actionID, EmptySources);
+
+    public IReadOnlyList<BlueSpellSource> GetBlueSpellRows(uint actionID) =>
+        blueSpellRows.GetValueOrDefault(actionID, []);
 
     public IReadOnlySet<CollectionSourceCategory> GetItemCategories(uint itemID) =>
         Volatile.Read(ref itemCategories).GetValueOrDefault(itemID, EmptyCategories);

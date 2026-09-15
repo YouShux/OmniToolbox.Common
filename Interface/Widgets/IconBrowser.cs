@@ -3,8 +3,10 @@ using System.Globalization;
 using Dalamud.Game.Text;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
+using CharaMakeCustomize = Lumina.Excel.Sheets.CharaMakeCustomize;
 using OmenTools.OmenService;
 using MapSymbol = Lumina.Excel.Sheets.MapSymbol;
+using OmniToolbox.Items;
 using OmniToolbox.Config;
 using OmniToolbox.Host;
 using OmniToolbox.UI;
@@ -562,6 +564,27 @@ public sealed class IconBrowser : IEscapeClosableWindow
             cache.Icons.Sort();
             cache.IsComplete = true;
         }
+        else if (tab.LabelKey == "IconBrowser.Tab.Artwork")
+        {
+            var hairstyleUnlocks = new HashSet<uint>();
+            foreach (var hairstyle in HairstyleData.GetPurchasableRows())
+            {
+                hairstyleUnlocks.Add(hairstyle.UnlockLink);
+            }
+
+            var hairstyleIcons = new HashSet<int>();
+            foreach (var hairstyle in DalamudServices.DataManager.GetExcelSheet<CharaMakeCustomize>())
+            {
+                if (hairstyle.FeatureID <= byte.MaxValue &&
+                    hairstyleUnlocks.Contains(hairstyle.UnlockLink) &&
+                    hairstyle.Icon != 0 &&
+                    IconExists((uint)hairstyle.Icon) &&
+                    hairstyleIcons.Add((int)hairstyle.Icon))
+                {
+                    cache.Icons.Add((int)hairstyle.Icon);
+                }
+            }
+        }
         tabCaches.Add(tabIndex, cache);
         return cache;
     }
@@ -607,7 +630,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
                 continue;
             }
 
-            if (IconExists((uint)cache.NextIcon))
+            if (IconExists((uint)cache.NextIcon) && !cache.Icons.Contains(cache.NextIcon))
             {
                 cache.Icons.Add(cache.NextIcon);
             }

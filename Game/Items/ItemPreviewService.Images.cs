@@ -197,12 +197,6 @@ public sealed unsafe partial class ItemPreviewService
             return null;
         }
 
-        if (hairstyle.Icon == 131_094 &&
-            LuminaGetter.TryGetRow<CharaMakeCustomize>(hairstyleID, out var representative))
-        {
-            hairstyle = representative;
-        }
-
         return hairstyle.Icon is 0 or 131_094 ? null : hairstyle;
     }
 

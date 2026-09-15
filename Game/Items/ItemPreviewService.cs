@@ -638,64 +638,78 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             return null;
         }
 
-        HairMakeType? hairMakeType = null;
-        HairMakeType? alternateHairMakeType = null;
+        var customize = character->DrawData.CustomizeData;
         foreach (var row in LuminaGetter.Get<HairMakeType>())
         {
-            if (row.Tribe.RowId != character->DrawData.CustomizeData.Tribe)
+            if (row.Tribe.RowId != customize.Tribe || row.Gender != customize.Sex)
             {
                 continue;
             }
 
-            if (row.Gender == character->DrawData.CustomizeData.Sex)
+            foreach (var rowID in row.CharaMakeStruct[0].SubMenuParam)
             {
-                hairMakeType = row;
+                if (rowID == 0 ||
+                    !LuminaGetter.TryGetRow<CharaMakeCustomize>(rowID, out var hairstyle) ||
+                    hairstyle.FeatureID != selected.FeatureID)
+                {
+                    continue;
+                }
+
+                return hairstyle;
             }
-            else
-            {
-                alternateHairMakeType = row;
-            }
+
+            return GetHairstyleVariant(selected.UnlockLink, customize.Tribe, customize.Sex) ?? selected;
         }
 
-        CharaMakeCustomize? alternateHairstyle = null;
+        return null;
+    }
+
+    private static IEnumerable<uint> GetHairstyleRows(HairMakeType hairMakeType)
+    {
+        for (var menuIndex = 0; menuIndex < hairMakeType.CharaMakeStruct.Count; menuIndex++)
+        {
+            foreach (var rowID in hairMakeType.CharaMakeStruct[menuIndex].SubMenuParam)
+            {
+                if (rowID != 0)
+                {
+                    yield return rowID;
+                }
+            }
+        }
+    }
+
+    private static CharaMakeCustomize? GetHairstyleVariant(uint unlockLink, byte tribe, byte sex)
+    {
+        if (unlockLink == 0)
+        {
+            return null;
+        }
+
+        var variantIndex = (tribe, sex) switch
+        {
+            (8, 1) => 9,
+            _ => -1
+        };
+        if (variantIndex < 0)
+        {
+            return null;
+        }
+
+        var currentIndex = 0;
         foreach (var row in LuminaGetter.Get<CharaMakeCustomize>())
         {
-            if (row.RowId == 0 ||
-                row.FeatureID > byte.MaxValue ||
-                row.RowId != hairstyleID &&
-                (selected.UnlockLink == 0 || row.UnlockLink != selected.UnlockLink) &&
-                (itemID is not { } sourceItemID || row.HintItem.RowId != sourceItemID))
+            if (row.UnlockLink != unlockLink)
             {
                 continue;
             }
 
-            if (hairMakeType.HasValue && ContainsHairstyle(hairMakeType.Value, row.RowId))
+            if (currentIndex++ == variantIndex)
             {
                 return row;
             }
-
-            if (!alternateHairstyle.HasValue &&
-                alternateHairMakeType.HasValue &&
-                ContainsHairstyle(alternateHairMakeType.Value, row.RowId))
-            {
-                alternateHairstyle = row;
-            }
         }
 
-        return alternateHairstyle;
-    }
-
-    private static bool ContainsHairstyle(HairMakeType hairMakeType, uint rowID)
-    {
-        foreach (var hairstyleID in hairMakeType.CharaMakeStruct[0].SubMenuParam)
-        {
-            if (hairstyleID == rowID)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return null;
     }
 
     private static void ApplyHairstyle(Character* character, byte hairstyleID)
