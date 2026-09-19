@@ -5,16 +5,16 @@ using Dalamud.Interface.Textures;
 using Lumina.Text.ReadOnly;
 using OmenTools;
 using OmenTools.OmenService;
+using OmniToolbox.Host;
 using DalamudSeString = Dalamud.Game.Text.SeStringHandling.SeString;
 using DalamudSeStringBuilder = Dalamud.Game.Text.SeStringHandling.SeStringBuilder;
-using OmniToolbox.Host;
 
 namespace OmniToolbox.Notifications;
 
 public static class OmniNotifier
 {
     private static readonly Lazy<ISharedImmediateTexture?> PluginIcon = new(LoadPluginIcon);
-    private static WindowsPopupNotifier? windowsNotifier;
+    private static WindowsPopupNotifier? WindowsNotifier;
 
     private static readonly ReadOnlySeString ChatPrefix = new(
         new DalamudSeStringBuilder()
@@ -78,7 +78,7 @@ public static class OmniNotifier
         var resolvedTitle = string.IsNullOrWhiteSpace(title) ? content : title;
         if (notifyWhenBackground && !GameState.IsForeground)
         {
-            windowsNotifier?.Show(resolvedTitle, content);
+            WindowsNotifier?.Show(resolvedTitle, content);
         }
 
         DService.Instance().DalamudNotification.AddNotification(
@@ -95,14 +95,14 @@ public static class OmniNotifier
 
     public static void InitializeWindowsNotifications(string iconPath)
     {
-        windowsNotifier?.Dispose();
-        windowsNotifier = new(iconPath);
+        WindowsNotifier?.Dispose();
+        WindowsNotifier = new(iconPath);
     }
 
     public static void DisposeWindowsNotifications()
     {
-        windowsNotifier?.Dispose();
-        windowsNotifier = null;
+        WindowsNotifier?.Dispose();
+        WindowsNotifier = null;
     }
 
     private static ISharedImmediateTexture? LoadPluginIcon()

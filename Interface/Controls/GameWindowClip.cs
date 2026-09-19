@@ -6,16 +6,16 @@ namespace OmniToolbox.UI;
 public static unsafe class GameWindowClip
 {
     private static readonly List<(Vector2 Min, Vector2 Max)> Regions = [];
-    private static int lastFrame = -1;
+    private static int LastFrame = -1;
 
     public static IReadOnlyList<(Vector2 Min, Vector2 Max)> GetVisibleRegions()
     {
         var frame = ImGui.GetFrameCount();
-        if (lastFrame == frame)
+        if (LastFrame == frame)
         {
             return Regions;
         }
-        lastFrame = frame;
+        LastFrame = frame;
         Regions.Clear();
         var viewport = ImGui.GetMainViewport();
         Regions.Add((viewport.Pos, viewport.Pos + viewport.Size));

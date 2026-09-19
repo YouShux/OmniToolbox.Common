@@ -12,18 +12,18 @@ namespace OmniToolbox.UI;
 
 internal static class PluginIconResolver
 {
-    private const BindingFlags InstanceMemberFlags =
+    private const BindingFlags INSTANCE_MEMBER_FLAGS =
         BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
     private static readonly object? ImageCache =
         DalamudReflector.GetService("Dalamud.Interface.Internal.Windows.PluginImageCache");
     private static readonly FieldInfo? LocalPluginField = typeof(IExposedPlugin).Assembly
         .GetType("Dalamud.Plugin.ExposedPlugin")?
-        .GetField("<plugin>P", InstanceMemberFlags);
+        .GetField("<plugin>P", INSTANCE_MEMBER_FLAGS);
     private static readonly MethodInfo? TryGetIconMethod = ImageCache?.GetType()
-        .GetMethod("TryGetIcon", InstanceMemberFlags);
+        .GetMethod("TryGetIcon", INSTANCE_MEMBER_FLAGS);
     private static readonly PropertyInfo? DefaultIconProperty = ImageCache?.GetType()
-        .GetProperty("DefaultIcon", InstanceMemberFlags);
+        .GetProperty("DefaultIcon", INSTANCE_MEMBER_FLAGS);
     private static readonly Dictionary<string, ISharedImmediateTexture?> LocalTextures =
         new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, string?> LocalIconPaths =
@@ -112,7 +112,7 @@ internal static class PluginIconResolver
         {
         }
 
-        foreach (var field in plugin.GetType().GetFields(InstanceMemberFlags))
+        foreach (var field in plugin.GetType().GetFields(INSTANCE_MEMBER_FLAGS))
         {
             var typeName = field.FieldType.FullName ?? field.FieldType.Name;
             if (!typeName.Contains("LocalPlugin", StringComparison.OrdinalIgnoreCase))
@@ -151,8 +151,8 @@ internal static class PluginIconResolver
         var directories = new List<string>();
         if (GetLocalPlugin(plugin) is { } localPlugin)
         {
-            var assembly = localPlugin.GetType().GetProperty("PluginAssembly", InstanceMemberFlags)?.GetValue(localPlugin) as Assembly ??
-                           localPlugin.GetType().GetField("pluginAssembly", InstanceMemberFlags)?.GetValue(localPlugin) as Assembly;
+            var assembly = localPlugin.GetType().GetProperty("PluginAssembly", INSTANCE_MEMBER_FLAGS)?.GetValue(localPlugin) as Assembly ??
+                           localPlugin.GetType().GetField("pluginAssembly", INSTANCE_MEMBER_FLAGS)?.GetValue(localPlugin) as Assembly;
             if (!string.IsNullOrWhiteSpace(assembly?.Location))
             {
                 directories.Add(Path.GetDirectoryName(assembly.Location)!);

@@ -13,7 +13,7 @@ namespace OmniToolbox.Items;
 
 internal sealed unsafe class ItemDetailImagePreview : IDisposable
 {
-    private const string AddonName = "ItemDetail";
+    private const string ADDON_NAME = "ItemDetail";
 
     private readonly ItemImagePreviewConfig config;
     private readonly ItemPreviewService itemPreviewService;
@@ -33,8 +33,8 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
 
         try
         {
-            addonEvents.Register(AddonEvent.PostUpdate, AddonName, OnItemDetailUpdate);
-            addonEvents.Register(AddonEvent.PreFinalize, AddonName, OnItemDetailFinalize);
+            addonEvents.Register(AddonEvent.PostUpdate, ADDON_NAME, OnItemDetailUpdate);
+            addonEvents.Register(AddonEvent.PreFinalize, ADDON_NAME, OnItemDetailFinalize);
             DalamudServices.PluginInterface.UiBuilder.Draw += Draw;
             drawRegistered = true;
             Refresh();
@@ -141,7 +141,7 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
             return;
         }
 
-        var addon = AddonHelper.GetByName(AddonName);
+        var addon = AddonHelper.GetByName(ADDON_NAME);
         if (addon == null ||
             !addon->IsVisible ||
             addon->RootNode == null)

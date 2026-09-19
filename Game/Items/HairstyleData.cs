@@ -5,8 +5,8 @@ namespace OmniToolbox.Items;
 
 internal static class HairstyleData
 {
-    private const uint UnlockLinkItemActionID = 2633;
-    private static Dictionary<uint, Item>? unlockItemsByLink;
+    private const uint UNLOCK_LINK_ITEM_ACTION_ID = 2633;
+    private static Dictionary<uint, Item>? UnlockItemsByLink;
 
     public static IEnumerable<CharaMakeCustomize> GetPurchasableRows()
     {
@@ -46,8 +46,8 @@ internal static class HairstyleData
             return null;
         }
 
-        unlockItemsByLink ??= BuildUnlockItemsByLink();
-        return unlockItemsByLink.GetValueOrDefault(hairstyle.UnlockLink);
+        UnlockItemsByLink ??= BuildUnlockItemsByLink();
+        return UnlockItemsByLink.GetValueOrDefault(hairstyle.UnlockLink);
     }
 
     private static Dictionary<uint, Item> BuildUnlockItemsByLink()
@@ -61,7 +61,7 @@ internal static class HairstyleData
             }
 
             var itemAction = item.ItemAction.Value;
-            if (itemAction.Action.RowId == UnlockLinkItemActionID && itemAction.Data[0] > 0)
+            if (itemAction.Action.RowId == UNLOCK_LINK_ITEM_ACTION_ID && itemAction.Data[0] > 0)
             {
                 items.TryAdd((uint)itemAction.Data[0], item);
             }

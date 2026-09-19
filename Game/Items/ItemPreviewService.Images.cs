@@ -5,9 +5,9 @@ using Lumina.Excel.Sheets;
 using OmenTools.Info.Game.ItemSource;
 using OmenTools.Info.Game.ItemSource.Enums;
 using OmenTools.Interop.Game.Lumina;
-using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 using OmniToolbox.Collections;
 using OmniToolbox.Config;
+using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
 namespace OmniToolbox.Items;
 

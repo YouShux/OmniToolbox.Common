@@ -10,8 +10,8 @@ public static partial class OmniLoc
 {
     private static readonly Dictionary<string, string> Texts = BuildTexts();
     private static Lazy<IReadOnlyDictionary<string, string>> TraditionalTexts = new(BuildTraditionalTexts);
-    private const uint TraditionalChineseMapFlag = 0x04000000;
-    private static UILanguage language;
+    private const uint TRADITIONAL_CHINESE_MAP_FLAG = 0x04000000;
+    private static UILanguage Language;
 
     public static void RegisterTexts(IReadOnlyDictionary<string, string> texts)
     {
@@ -19,7 +19,7 @@ public static partial class OmniLoc
         TraditionalTexts = new(BuildTraditionalTexts);
     }
 
-    public static void SetLanguage(UILanguage value) => language = value;
+    public static void SetLanguage(UILanguage value) => Language = value;
 
     public static string Get(string key)
     {
@@ -28,7 +28,7 @@ public static partial class OmniLoc
             return key;
         }
 
-        return language == UILanguage.TraditionalChinese
+        return Language == UILanguage.TraditionalChinese
             ? TraditionalTexts.Value[key]
             : text;
     }
@@ -71,7 +71,7 @@ public static partial class OmniLoc
     {
         var length = LCMapStringEx(
             "zh-TW",
-            TraditionalChineseMapFlag,
+            TRADITIONAL_CHINESE_MAP_FLAG,
             text,
             -1,
             null,
@@ -87,7 +87,7 @@ public static partial class OmniLoc
         var result = new StringBuilder(length);
         return LCMapStringEx(
                    "zh-TW",
-                   TraditionalChineseMapFlag,
+                   TRADITIONAL_CHINESE_MAP_FLAG,
                    text,
                    -1,
                    result,

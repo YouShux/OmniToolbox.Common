@@ -6,12 +6,12 @@ namespace OmniToolbox.Game;
 
 internal static class CombatCharacterSnapshot
 {
-    private static readonly List<IPlayerCharacter> players = new(100);
-    private static readonly List<IBattleChara> battleCharas = new(100);
-    private static readonly Dictionary<uint, IGameObject> objectsByEntityID = new(100);
-    private static readonly Dictionary<ulong, IGameObject> objectsByGameObjectID = new(100);
-    public static IReadOnlyList<IPlayerCharacter> Players => players;
-    public static IReadOnlyList<IBattleChara> BattleCharas => battleCharas;
+    private static readonly List<IPlayerCharacter> PlayerSnapshot = new(100);
+    private static readonly List<IBattleChara> BattleCharaSnapshot = new(100);
+    private static readonly Dictionary<uint, IGameObject> ObjectsByEntityID = new(100);
+    private static readonly Dictionary<ulong, IGameObject> ObjectsByGameObjectID = new(100);
+    public static IReadOnlyList<IPlayerCharacter> Players => PlayerSnapshot;
+    public static IReadOnlyList<IBattleChara> BattleCharas => BattleCharaSnapshot;
 
     public static void Refresh()
     {
@@ -30,18 +30,18 @@ internal static class CombatCharacterSnapshot
 
             if (character is IPlayerCharacter player)
             {
-                players.Add(player);
+                PlayerSnapshot.Add(player);
             }
 
             if (character is IBattleChara battleChara)
             {
-                battleCharas.Add(battleChara);
+                BattleCharaSnapshot.Add(battleChara);
             }
 
-            objectsByEntityID[character.EntityID] = character;
+            ObjectsByEntityID[character.EntityID] = character;
             if (character.GameObjectID != 0)
             {
-                objectsByGameObjectID[character.GameObjectID] = character;
+                ObjectsByGameObjectID[character.GameObjectID] = character;
             }
         }
     }
@@ -53,23 +53,23 @@ internal static class CombatCharacterSnapshot
             return null;
         }
 
-        return objectsByEntityID.TryGetValue(id, out var entityObject)
+        return ObjectsByEntityID.TryGetValue(id, out var entityObject)
             ? entityObject
-            : objectsByGameObjectID.TryGetValue(id, out var gameObject)
+            : ObjectsByGameObjectID.TryGetValue(id, out var gameObject)
                 ? gameObject
                 : null;
     }
 
     public static IGameObject? Find(ulong gameObjectID, uint entityID) =>
-        gameObjectID != 0 && objectsByGameObjectID.TryGetValue(gameObjectID, out var gameObject)
+        gameObjectID != 0 && ObjectsByGameObjectID.TryGetValue(gameObjectID, out var gameObject)
             ? gameObject
             : Find(entityID);
 
     public static void Clear()
     {
-        players.Clear();
-        battleCharas.Clear();
-        objectsByEntityID.Clear();
-        objectsByGameObjectID.Clear();
+        PlayerSnapshot.Clear();
+        BattleCharaSnapshot.Clear();
+        ObjectsByEntityID.Clear();
+        ObjectsByGameObjectID.Clear();
     }
 }

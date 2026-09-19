@@ -8,7 +8,7 @@ namespace OmniToolbox.Items;
 
 public static unsafe class ItemLinkService
 {
-    private static uint? itemTextCommandParamID;
+    private static uint? ItemTextCommandParamID;
 
     public static bool TryInsert(uint itemID)
     {
@@ -47,7 +47,7 @@ public static unsafe class ItemLinkService
 
     private static uint GetItemTextCommandParamID()
     {
-        if (itemTextCommandParamID is { } cachedId)
+        if (ItemTextCommandParamID is { } cachedId)
         {
             return cachedId;
         }
@@ -59,11 +59,11 @@ public static unsafe class ItemLinkService
                 continue;
             }
 
-            itemTextCommandParamID = row.RowId;
+            ItemTextCommandParamID = row.RowId;
             return row.RowId;
         }
 
-        itemTextCommandParamID = 0;
+        ItemTextCommandParamID = 0;
         return 0;
     }
 }
