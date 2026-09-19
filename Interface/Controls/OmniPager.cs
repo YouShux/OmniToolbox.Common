@@ -4,8 +4,8 @@ namespace OmniToolbox.UI.Controls;
 
 public static class OmniPager
 {
-    private const int MaxPageTokens = 10;
-    private static readonly List<(int Value, string Label)> PageTokens = new(MaxPageTokens);
+    private const int MAX_PAGE_TOKENS = 10;
+    private static readonly List<(int Value, string Label)> PageTokens = new(MAX_PAGE_TOKENS);
 
     public static void Draw(string id, ref int page, ref int jumpPage, int itemCount, int pageSize)
     {
@@ -14,7 +14,7 @@ public static class OmniPager
         jumpPage = Math.Clamp(jumpPage, 1, pageCount);
         ImGui.PushID(id);
         PageTokens.Clear();
-        if (pageCount <= MaxPageTokens)
+        if (pageCount <= MAX_PAGE_TOKENS)
         {
             for (var value = 1; value <= pageCount; value++)
             {

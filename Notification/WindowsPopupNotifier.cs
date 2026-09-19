@@ -6,7 +6,7 @@ namespace OmniToolbox.Notifications;
 
 internal sealed class WindowsPopupNotifier : IDisposable
 {
-    private const uint IconID = 0x4F4D4E49;
+    private const uint ICON_ID = 0x4F4D4E49;
 
     private readonly Icon icon;
     private readonly nint windowHandle;
@@ -85,7 +85,7 @@ internal sealed class WindowsPopupNotifier : IDisposable
     {
         Size = (uint)Marshal.SizeOf<NotifyIconData>(),
         WindowHandle = windowHandle,
-        ID = IconID,
+        ID = ICON_ID,
         ToolTip = string.Empty,
         Info = string.Empty,
         InfoTitle = string.Empty

@@ -8,21 +8,21 @@ namespace OmniToolbox.UI.Controls;
 
 public static class OmniFontSelector
 {
-    private static object? installedSnapshot;
-    private static KeyValuePair<string, string>[] sortedFonts = [];
+    private static object? InstalledSnapshot;
+    private static KeyValuePair<string, string>[] SortedFonts = [];
     private static readonly StringComparer NameComparer = StringComparer.Create(CultureInfo.GetCultureInfo("zh-CN"), true);
 
     public static bool Draw(string id, ref string path, ref string search, string defaultLabel, string defaultPath)
     {
         var installed = FontManager.Instance().InstalledFonts;
-        if (!ReferenceEquals(installedSnapshot, installed))
+        if (!ReferenceEquals(InstalledSnapshot, installed))
         {
-            sortedFonts = installed.Concat(OmniFonts.GameFonts)
+            SortedFonts = installed.Concat(OmniFonts.GameFonts)
                 .OrderBy(font => font.Value.Any(c => c is >= '\u3400' and <= '\u9fff') ? 0 : 1)
                 .ThenBy(font => font.Value, NameComparer)
                 .ThenBy(font => font.Key, StringComparer.Ordinal)
                 .ToArray();
-            installedSnapshot = installed;
+            InstalledSnapshot = installed;
         }
         var isDefault = string.IsNullOrWhiteSpace(path) || string.Equals(path, defaultPath, StringComparison.OrdinalIgnoreCase);
         var label = isDefault ? defaultLabel : installed.GetValueOrDefault(path, Path.GetFileNameWithoutExtension(path));
@@ -57,7 +57,7 @@ public static class OmniFontSelector
                     path = defaultPath;
                     changed = true;
                 }
-                foreach (var font in sortedFonts)
+                foreach (var font in SortedFonts)
                 {
                     if (font.Key == defaultPath || font.Value == defaultLabel ||
                         (!string.IsNullOrWhiteSpace(search) &&

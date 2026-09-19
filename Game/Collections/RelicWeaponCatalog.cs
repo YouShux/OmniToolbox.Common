@@ -64,7 +64,7 @@ internal sealed class RelicWeaponSeries
 
 internal static class RelicWeaponCatalog
 {
-    private static readonly uint[][] ZodiacItemIds =
+    private static readonly uint[][] ZodiacItemIDs =
     [
         [1665, 1735, 1805, 1874, 1944, 2046, 2135, 2191, 2192, 7887],
         [1675, 1746, 1816, 1885, 1955, 2052, 2140, 2213, 2214, 7888],
@@ -77,13 +77,13 @@ internal static class RelicWeaponCatalog
         [10054, 10055, 10056, 10057, 10058, 10059, 10060, 10061, 10062, 10064]
     ];
 
-    private static readonly uint[][] AnimaItemIds =
+    private static readonly uint[][] AnimaItemIDs =
     [
         Range(13611, 13), Range(13597, 13), Range(13223, 13), Range(14870, 13),
         Range(15223, 13), Range(15237, 13), Range(15251, 13), Range(16050, 13)
     ];
 
-    private static readonly uint[][] EurekaItemIds =
+    private static readonly uint[][] EurekaItemIDs =
     [
         Range(21942, 15), Range(21958, 15), Range(21974, 15), Range(21990, 15),
         Range(22925, 15), Range(22941, 15), Range(22957, 15), Range(24039, 15),
@@ -91,24 +91,24 @@ internal static class RelicWeaponCatalog
         Range(24675, 15), Range(24691, 15), Range(24707, 15)
     ];
 
-    private static readonly uint[][] BozjaItemIds =
+    private static readonly uint[][] BozjaItemIDs =
     [
         Range(30228, 17), Range(30767, 17), Range(30785, 17),
         Range(32651, 17), Range(32669, 17), Range(33462, 17)
     ];
 
-    private static readonly uint[][] MandervillousItemIds =
+    private static readonly uint[][] MandervillousItemIDs =
     [
         Range(38400, 19), Range(39144, 19), Range(39920, 19), Range(40932, 19)
     ];
 
-    private static readonly uint[][] PhantomItemIds =
+    private static readonly uint[][] PhantomItemIDs =
     [
         Range(47869, 21), Range(47006, 21), Range(50032, 21),
         Range(50978, 21), Range(51000, 21)
     ];
 
-    private static readonly uint[][] DeepDungeonItemIds =
+    private static readonly uint[][] DeepDungeonItemIDs =
     [
         [15181, 15182, 15183, 15184, 15185, 15189, 15190, 15191, 15192, 15186, 15187, 15188, 15193, 20456, 20457, 27347, 27348, 35756, 35774, 43633, 43654],
         [16152, 16153, 16154, 16155, 16156, 16160, 16161, 16162, 16163, 16157, 16158, 16159, 16164, 20458, 20459, 27349, 27350, 35757, 35775, 43634, 43655],
@@ -119,7 +119,7 @@ internal static class RelicWeaponCatalog
         Range(47050, 21)
     ];
 
-    private static readonly uint[][] PrimalItemIds =
+    private static readonly uint[][] PrimalItemIDs =
     [
         [8355, 8356, 8357, 8358, 8359, 8360, 15915, 8362, 8363, 9234, 10408, 10470, 10532, 20358, 20359, 0, 0, 0, 0, 0, 0],
         [0, 8373, 8374, 8375, 8376, 8377, 15916, 8379, 8380, 9236, 10410, 10473, 10534, 20366, 20367, 0, 0, 0, 0, 0, 0],
@@ -149,7 +149,7 @@ internal static class RelicWeaponCatalog
         [48173, 48174, 48175, 48176, 48177, 48181, 48182, 48183, 48184, 48178, 48179, 48180, 48185, 48186, 48187, 48188, 48189, 0, 48190, 0, 0]
     ];
 
-    private static readonly uint[][] YokaiItemIds =
+    private static readonly uint[][] YokaiItemIDs =
     [
         [
             15208, 15209, 15210, 15211, 15212, 15216, 15217,
@@ -158,19 +158,19 @@ internal static class RelicWeaponCatalog
         ]
     ];
 
-    private static readonly uint[][] SkysteelItemIds =
+    private static readonly uint[][] SkysteelItemIDs =
     [
         SkysteelRange(29612, 11), SkysteelRange(29623, 11), SkysteelRange(29634, 13),
         SkysteelRange(30282, 13), SkysteelRange(30293, 13), SkysteelRange(31714, 13)
     ];
 
-    private static readonly uint[][] SplendorousItemIds =
+    private static readonly uint[][] SplendorousItemIDs =
     [
         Range(38715, 11), Range(38726, 11), Range(38737, 11), Range(39732, 11),
         Range(39743, 11), Range(41180, 11), Range(41191, 11)
     ];
 
-    private static readonly uint[][] UltimateItemIds =
+    private static readonly uint[][] UltimateItemIDs =
     [
         Range(20959, 15),
         Range(22868, 15),
@@ -185,7 +185,7 @@ internal static class RelicWeaponCatalog
         Range(52299, 21)
     ];
 
-    private static readonly uint[][] ElegantItemIds =
+    private static readonly uint[][] ElegantItemIDs =
     [
         [
             41679, 41680, 41681, 41682, 41683, 41689, 41687,
@@ -194,7 +194,7 @@ internal static class RelicWeaponCatalog
         ]
     ];
 
-    private static readonly uint[][] DreamItemIds =
+    private static readonly uint[][] DreamItemIDs =
     [
         [
             45047, 45048, 45049, 45050, 45051, 45052, 45053, 45054,
@@ -203,7 +203,7 @@ internal static class RelicWeaponCatalog
         ]
     ];
 
-    private static readonly uint[][] LockbladeItemIds =
+    private static readonly uint[][] LockbladeItemIDs =
     [
         [
             47072, 47073, 47074, 47075, 47076, 47077, 47078,
@@ -212,7 +212,7 @@ internal static class RelicWeaponCatalog
         ]
     ];
 
-    private static readonly uint[][] GaroItemIds =
+    private static readonly uint[][] GaroItemIDs =
     [
         [
             16067, 16068, 16069, 16070, 16071, 16075, 16076,
@@ -221,7 +221,7 @@ internal static class RelicWeaponCatalog
         ]
     ];
 
-    private static readonly uint[][] HellhoundItemIds =
+    private static readonly uint[][] HellhoundItemIDs =
     [
         [
             40456, 40457, 40458, 40459, 40460, 40464, 40465,
@@ -230,7 +230,7 @@ internal static class RelicWeaponCatalog
         ]
     ];
 
-    private static readonly uint[][] TriumphItemIds =
+    private static readonly uint[][] TriumphItemIDs =
     [
         [
             36963, 36964, 36965, 36966, 36967, 36971, 36972,
@@ -239,7 +239,7 @@ internal static class RelicWeaponCatalog
         ]
     ];
 
-    private static readonly uint[][] LightningItemIds =
+    private static readonly uint[][] LightningItemIDs =
     [
         [
             6033, 6035, 6034, 6036, 6037, 6038, 6039, 6040,
@@ -247,7 +247,7 @@ internal static class RelicWeaponCatalog
         ]
     ];
 
-    private static readonly uint[][] AdvancedAnimalItemIds =
+    private static readonly uint[][] AdvancedAnimalItemIDs =
     [
         [
             9174, 9175, 9176, 9177, 9178, 9180, 9181, 9182,
@@ -256,55 +256,55 @@ internal static class RelicWeaponCatalog
         ]
     ];
 
-    private static readonly uint[] UltimateShieldItemIds =
+    private static readonly uint[] UltimateShieldItemIDs =
         [20974, 22883, 28306, 36962, 39183, 44742, 52320];
 
-    private static readonly uint[] ElegantShieldItemIds = [41698];
+    private static readonly uint[] ElegantShieldItemIDs = [41698];
 
-    private static readonly uint[] DreamShieldItemIds = [45068];
+    private static readonly uint[] DreamShieldItemIDs = [45068];
 
-    private static readonly uint[] LockbladeShieldItemIds = [47093];
+    private static readonly uint[] LockbladeShieldItemIDs = [47093];
 
-    private static readonly uint[] GaroShieldItemIds = [16080];
+    private static readonly uint[] GaroShieldItemIDs = [16080];
 
-    private static readonly uint[] HellhoundShieldItemIds = [40475];
+    private static readonly uint[] HellhoundShieldItemIDs = [40475];
 
-    private static readonly uint[] TriumphShieldItemIds = [36982];
+    private static readonly uint[] TriumphShieldItemIDs = [36982];
 
-    private static readonly uint[] AdvancedAnimalShieldItemIds = [9173];
+    private static readonly uint[] AdvancedAnimalShieldItemIDs = [9173];
 
-    private static readonly uint[] PhantomShieldItemIds = [47890, 47027, 50053, 50999, 51021];
+    private static readonly uint[] PhantomShieldItemIDs = [47890, 47027, 50053, 50999, 51021];
 
-    private static readonly uint[] MandervillousShieldItemIds = [38419, 39163, 39939, 40951];
+    private static readonly uint[] MandervillousShieldItemIDs = [38419, 39163, 39939, 40951];
 
-    private static readonly uint[] BozjaShieldItemIds = [30245, 30784, 30802, 32668, 32686, 33479];
+    private static readonly uint[] BozjaShieldItemIDs = [30245, 30784, 30802, 32668, 32686, 33479];
 
-    private static readonly uint[] EurekaShieldItemIds =
+    private static readonly uint[] EurekaShieldItemIDs =
     [
         21957, 21973, 21989, 22005, 22940,
         22956, 22972, 24054, 24070, 24086,
         24658, 24674, 24690, 24706, 24722
     ];
 
-    private static readonly uint[] AnimaShieldItemIds =
+    private static readonly uint[] AnimaShieldItemIDs =
         [13624, 13610, 13236, 14883, 15236, 15250, 15264, 16063];
 
-    private static readonly uint[] ZodiacShieldItemIds =
+    private static readonly uint[] ZodiacShieldItemIDs =
         [0, 2306, 6266, 7833, 7843, 7872, 8658, 9500, 10063];
 
-    private static readonly uint[] DeepDungeonShieldItemIds =
+    private static readonly uint[] DeepDungeonShieldItemIDs =
         [15194, 16165, 22992, 39203, 39223, 47049, 47071];
 
-    private static readonly uint[] PrimalShieldItemIds =
+    private static readonly uint[] PrimalShieldItemIDs =
     [
         0, 8381, 0, 0, 7822, 15569, 9548, 15597, 15583,
         15611, 17617, 24335, 25037, 25053, 37332, 30085, 33612,
         30826, 30842, 30858, 38558, 33904, 39566, 41617, 44993, 48192
     ];
 
-    private static readonly uint[] YokaiShieldItemIds = [15221];
+    private static readonly uint[] YokaiShieldItemIDs = [15221];
 
-    private static readonly uint[][] CosmosItemIds =
+    private static readonly uint[][] CosmosItemIDs =
     [
         [45679, 45680, 45681, 45682, 45683, 45684, 45685, 45686, 45687, 45688, 45689],
         [49053, 49054, 49055, 49056, 49057, 49058, 49059, 49060, 49061, 49062, 49063],
@@ -312,23 +312,23 @@ internal static class RelicWeaponCatalog
         [51778, 51779, 51780, 51781, 51782, 51783, 51784, 51785, 51786, 51787, 51788]
     ];
 
-    private static readonly uint[][] HuihuangItemIds =
+    private static readonly uint[][] HuihuangItemIDs =
     [
         [33154, 33155, 33156, 33157, 33158, 33159, 33160, 33161, 33356, 33357, 33358]
     ];
 
-    private static readonly uint[][] CifuItemIds =
+    private static readonly uint[][] CifuItemIDs =
     [
         [16958, 16959, 16960, 16961, 16962, 16963, 16964, 16965, 16966, 16967, 16968],
         [24821, 24822, 24823, 24824, 24825, 24826, 24827, 24828, 24829, 24830, 24831]
     ];
 
-    private static readonly uint[][] LiuguangItemIds =
+    private static readonly uint[][] LiuguangItemIDs =
     [
         [2326, 2353, 2378, 2403, 2428, 2454, 2479, 2505, 2531, 2557, 2583]
     ];
 
-    private static readonly uint[][] HuaguangItemIds =
+    private static readonly uint[][] HuaguangItemIDs =
     [
         Range(10132, 11)
     ];
@@ -400,8 +400,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Ultimate",
             StageLabelKeys = Keys("Ultimate", 7),
             JobIds = [19, 21, 32, 24, 28, 33, 20, 22, 30, 34, 23, 31, 25, 27, 35, 37, 38, 40, 39, 41, 42],
-            StageItemIds = UltimateItemIds,
-            ShieldItemIds = UltimateShieldItemIds,
+            StageItemIds = UltimateItemIDs,
+            ShieldItemIds = UltimateShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Ultimate,
             TotemItemIds = UltimateTotemItemIds
         },
@@ -411,8 +411,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Elegant",
             StageLabelKeys = Keys("Elegant", 1),
             JobIds = [19, 21, 32, 37, 24, 28, 33, 40, 20, 22, 39, 34, 30, 41, 23, 31, 38, 25, 27, 35, 36, 42],
-            StageItemIds = ElegantItemIds,
-            ShieldItemIds = ElegantShieldItemIds,
+            StageItemIds = ElegantItemIDs,
+            ShieldItemIds = ElegantShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current
         },
         new()
@@ -421,8 +421,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Dream",
             StageLabelKeys = Keys("Dream", 1),
             JobIds = [19, 21, 32, 37, 24, 28, 33, 40, 20, 22, 39, 34, 30, 41, 23, 31, 38, 25, 27, 35, 36, 42],
-            StageItemIds = DreamItemIds,
-            ShieldItemIds = DreamShieldItemIds,
+            StageItemIds = DreamItemIDs,
+            ShieldItemIds = DreamShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current
         },
         new()
@@ -431,8 +431,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Phantom",
             StageLabelKeys = Keys("Phantom", 5),
             JobIds = [19, 21, 32, 37, 24, 28, 33, 40, 20, 22, 39, 34, 30, 41, 23, 31, 38, 25, 27, 35, 42],
-            StageItemIds = PhantomItemIds,
-            ShieldItemIds = PhantomShieldItemIds,
+            StageItemIds = PhantomItemIDs,
+            ShieldItemIds = PhantomShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current,
             Materials = RelicMaterialCatalog.Phantom,
             ExportReplicas = true
@@ -443,8 +443,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Mandervillous",
             StageLabelKeys = Keys("Mandervillous", 4),
             JobIds = [19, 21, 32, 37, 24, 28, 33, 40, 20, 22, 39, 34, 30, 23, 31, 38, 25, 27, 35],
-            StageItemIds = MandervillousItemIds,
-            ShieldItemIds = MandervillousShieldItemIds,
+            StageItemIds = MandervillousItemIDs,
+            ShieldItemIds = MandervillousShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Legacy,
             Materials = RelicMaterialCatalog.Mandervillous,
             ExportReplicas = true
@@ -455,8 +455,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Bozja",
             StageLabelKeys = Keys("Bozja", 6),
             JobIds = [19, 21, 32, 37, 24, 28, 33, 20, 22, 34, 30, 23, 31, 38, 25, 27, 35],
-            StageItemIds = BozjaItemIds,
-            ShieldItemIds = BozjaShieldItemIds,
+            StageItemIds = BozjaItemIDs,
+            ShieldItemIds = BozjaShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Legacy,
             Materials = RelicMaterialCatalog.Bozja
         },
@@ -466,8 +466,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Eureka",
             StageLabelKeys = Keys("Eureka", 15),
             JobIds = [19, 21, 32, 24, 28, 33, 20, 22, 34, 30, 23, 31, 25, 27, 35],
-            StageItemIds = EurekaItemIds,
-            ShieldItemIds = EurekaShieldItemIds,
+            StageItemIds = EurekaItemIDs,
+            ShieldItemIds = EurekaShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Legacy,
             Materials = RelicMaterialCatalog.Eureka,
             ExportReplicas = true
@@ -478,8 +478,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Anima",
             StageLabelKeys = Keys("Anima", 8),
             JobIds = [19, 21, 32, 24, 28, 33, 20, 22, 30, 23, 31, 25, 27],
-            StageItemIds = AnimaItemIds,
-            ShieldItemIds = AnimaShieldItemIds,
+            StageItemIds = AnimaItemIDs,
+            ShieldItemIds = AnimaShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Legacy,
             Materials = RelicMaterialCatalog.Anima
         },
@@ -489,8 +489,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Zodiac",
             StageLabelKeys = Keys("Zodiac", 9),
             JobIds = [19, 21, 24, 28, 20, 22, 30, 23, 25, 27],
-            StageItemIds = ZodiacItemIds,
-            ShieldItemIds = ZodiacShieldItemIds,
+            StageItemIds = ZodiacItemIDs,
+            ShieldItemIds = ZodiacShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current,
             Materials = RelicMaterialCatalog.Zodiac,
             ExportReplicas = true
@@ -501,8 +501,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.DeepDungeon",
             StageLabelKeys = Keys("DeepDungeon", 7),
             JobIds = [19, 21, 32, 37, 24, 28, 33, 40, 20, 22, 39, 34, 30, 41, 23, 31, 38, 25, 27, 35, 42],
-            StageItemIds = DeepDungeonItemIds,
-            ShieldItemIds = DeepDungeonShieldItemIds,
+            StageItemIds = DeepDungeonItemIDs,
+            ShieldItemIds = DeepDungeonShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current
         },
         new()
@@ -511,8 +511,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Primal",
             StageLabelKeys = Keys("Primal", 26),
             JobIds = [19, 21, 32, 37, 24, 28, 33, 40, 20, 22, 39, 34, 30, 41, 23, 31, 38, 25, 27, 35, 42],
-            StageItemIds = PrimalItemIds,
-            ShieldItemIds = PrimalShieldItemIds,
+            StageItemIds = PrimalItemIDs,
+            ShieldItemIds = PrimalShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current
         },
         new()
@@ -521,8 +521,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Yokai",
             StageLabelKeys = Keys("Yokai", 1),
             JobIds = [19, 21, 32, 37, 24, 28, 33, 20, 22, 34, 30, 23, 31, 38, 25, 27, 35],
-            StageItemIds = YokaiItemIds,
-            ShieldItemIds = YokaiShieldItemIds,
+            StageItemIds = YokaiItemIDs,
+            ShieldItemIds = YokaiShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current
         },
         new()
@@ -531,7 +531,7 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Cosmos",
             StageLabelKeys = Keys("Cosmos", 4),
             JobIds = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-            StageItemIds = CosmosItemIds,
+            StageItemIds = CosmosItemIDs,
             JobOrder = RelicWeaponJobOrder.Life,
             ExportReplicas = true
         },
@@ -541,7 +541,7 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Splendorous",
             StageLabelKeys = Keys("Splendorous", 7),
             JobIds = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-            StageItemIds = SplendorousItemIds,
+            StageItemIds = SplendorousItemIDs,
             JobOrder = RelicWeaponJobOrder.Life,
             Materials = RelicMaterialCatalog.Splendorous,
             ExportReplicas = true
@@ -552,7 +552,7 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Skysteel",
             StageLabelKeys = Keys("Skysteel", 6),
             JobIds = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-            StageItemIds = SkysteelItemIds,
+            StageItemIds = SkysteelItemIDs,
             JobOrder = RelicWeaponJobOrder.Life,
             Materials = RelicMaterialCatalog.Skysteel,
             ExportReplicas = true
@@ -563,7 +563,7 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Huihuang",
             StageLabelKeys = Keys("Huihuang", 1),
             JobIds = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-            StageItemIds = HuihuangItemIds,
+            StageItemIds = HuihuangItemIDs,
             JobOrder = RelicWeaponJobOrder.Life,
             ExportReplicas = true
         },
@@ -573,7 +573,7 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Cifu",
             StageLabelKeys = Keys("Cifu", 2),
             JobIds = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-            StageItemIds = CifuItemIds,
+            StageItemIds = CifuItemIDs,
             JobOrder = RelicWeaponJobOrder.Life,
             ExportReplicas = true
         },
@@ -583,7 +583,7 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Huaguang",
             StageLabelKeys = Keys("Huaguang", 1),
             JobIds = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-            StageItemIds = HuaguangItemIds,
+            StageItemIds = HuaguangItemIDs,
             JobOrder = RelicWeaponJobOrder.Life,
             ExportReplicas = true
         },
@@ -593,7 +593,7 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Liuguang",
             StageLabelKeys = Keys("Liuguang", 1),
             JobIds = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-            StageItemIds = LiuguangItemIds,
+            StageItemIds = LiuguangItemIDs,
             JobOrder = RelicWeaponJobOrder.Life,
             ExportReplicas = true
         },
@@ -603,8 +603,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Lockblade",
             StageLabelKeys = Keys("Lockblade", 1),
             JobIds = [19, 21, 32, 37, 24, 28, 33, 40, 20, 22, 39, 34, 30, 41, 23, 31, 38, 25, 27, 35, 42],
-            StageItemIds = LockbladeItemIds,
-            ShieldItemIds = LockbladeShieldItemIds,
+            StageItemIds = LockbladeItemIDs,
+            ShieldItemIds = LockbladeShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current
         },
         new()
@@ -613,8 +613,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Garo",
             StageLabelKeys = Keys("Garo", 1),
             JobIds = [19, 21, 32, 24, 28, 33, 20, 22, 30, 23, 31, 25, 27],
-            StageItemIds = GaroItemIds,
-            ShieldItemIds = GaroShieldItemIds,
+            StageItemIds = GaroItemIDs,
+            ShieldItemIds = GaroShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current
         },
         new()
@@ -623,8 +623,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Hellhound",
             StageLabelKeys = Keys("Hellhound", 1),
             JobIds = [19, 21, 32, 37, 24, 28, 33, 40, 20, 22, 39, 34, 30, 41, 23, 31, 38, 25, 27, 35, 42],
-            StageItemIds = HellhoundItemIds,
-            ShieldItemIds = HellhoundShieldItemIds,
+            StageItemIds = HellhoundItemIDs,
+            ShieldItemIds = HellhoundShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current
         },
         new()
@@ -633,8 +633,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Triumph",
             StageLabelKeys = Keys("Triumph", 1),
             JobIds = [19, 21, 32, 37, 24, 28, 33, 40, 20, 22, 39, 34, 30, 41, 23, 31, 38, 25, 27, 35, 42],
-            StageItemIds = TriumphItemIds,
-            ShieldItemIds = TriumphShieldItemIds,
+            StageItemIds = TriumphItemIDs,
+            ShieldItemIds = TriumphShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current
         },
         new()
@@ -643,7 +643,7 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.Lightning",
             StageLabelKeys = Keys("Lightning", 1),
             JobIds = [19, 21, 24, 28, 20, 22, 23, 25, 27],
-            StageItemIds = LightningItemIds,
+            StageItemIds = LightningItemIDs,
             JobOrder = RelicWeaponJobOrder.Current
         },
         new()
@@ -652,8 +652,8 @@ internal static class RelicWeaponCatalog
             LabelKey = "Collection.Relic.Series.AdvancedAnimal",
             StageLabelKeys = Keys("AdvancedAnimal", 1),
             JobIds = [19, 21, 32, 24, 28, 33, 20, 22, 30, 23, 31, 25, 27],
-            StageItemIds = AdvancedAnimalItemIds,
-            ShieldItemIds = AdvancedAnimalShieldItemIds,
+            StageItemIds = AdvancedAnimalItemIDs,
+            ShieldItemIds = AdvancedAnimalShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Current
         }
     ];
@@ -667,13 +667,13 @@ internal static class RelicWeaponCatalog
         AddRangeMap(result, 40932, 40992, 19);
 
         int[] zodiacReplicaJobOffsets = [0, 1, 2, 3, 4, 6, 7, 8, 9, 5];
-        for (var stageIndex = 0; stageIndex < ZodiacItemIds.Length; stageIndex++)
+        for (var stageIndex = 0; stageIndex < ZodiacItemIDs.Length; stageIndex++)
         {
-            for (var jobIndex = 0; jobIndex < ZodiacItemIds[stageIndex].Length; jobIndex++)
+            for (var jobIndex = 0; jobIndex < ZodiacItemIDs[stageIndex].Length; jobIndex++)
             {
                 result.Add(
-                    ZodiacItemIds[stageIndex][jobIndex],
-                    12116u + (uint)(zodiacReplicaJobOffsets[jobIndex] * ZodiacItemIds.Length + stageIndex));
+                    ZodiacItemIDs[stageIndex][jobIndex],
+                    12116u + (uint)(zodiacReplicaJobOffsets[jobIndex] * ZodiacItemIDs.Length + stageIndex));
             }
         }
 

@@ -2,7 +2,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
-using Dalamud.Interface.Utility;
 using OmniToolbox.Config;
 using OmniToolbox.Host;
 
@@ -10,25 +9,25 @@ namespace OmniToolbox.UI.Theme;
 
 public static class GlassBackdrop
 {
-    private static UIConfig? config;
-    private static CancellationTokenSource? cancellation;
-    private static Task<IDalamudTextureWrap>? pending;
-    private static IDalamudTextureWrap? capture;
+    private static UIConfig? CurrentConfig;
+    private static CancellationTokenSource? Cancellation;
+    private static Task<IDalamudTextureWrap>? Pending;
+    private static IDalamudTextureWrap? Capture;
     private static readonly IDrawListTextureWrap?[] BlurLevels = new IDrawListTextureWrap?[4];
-    private static BufferBackedImDrawData commands;
-    private static bool hasCommands;
-    private static bool failed;
-    private static int requestedFrame = -10;
-    private static int renderedFrame = -10;
-    private static uint viewportID;
-    private static GlassQuality lastQuality;
-    private static UITheme lastTheme;
+    private static BufferBackedImDrawData Commands;
+    private static bool HasCommands;
+    private static bool Failed;
+    private static int RequestedFrame = -10;
+    private static int RenderedFrame = -10;
+    private static uint ViewportID;
+    private static GlassQuality LastQuality;
+    private static UITheme LastTheme;
 
     public static void Initialize(UIConfig ui)
     {
-        config = ui;
-        lastQuality = ui.GlassQuality;
-        lastTheme = ui.Theme;
+        CurrentConfig = ui;
+        LastQuality = ui.GlassQuality;
+        LastTheme = ui.Theme;
         var builder = DalamudServices.PluginInterface.UiBuilder;
         builder.Draw += BeginFrame;
         builder.HideUi += Release;
@@ -42,35 +41,35 @@ public static class GlassBackdrop
         Release();
         GlassMotion.Clear();
         MaterialPainter.Clear();
-        config = null;
+        CurrentConfig = null;
     }
 
     private static void BeginFrame()
     {
-        if (config is null)
+        if (CurrentConfig is null)
         {
             return;
         }
 
-        GlassMotion.Mode = config.MotionMode == UIMotionMode.Full &&
+        GlassMotion.Mode = CurrentConfig.MotionMode == UIMotionMode.Full &&
                            DalamudServices.PluginInterface.UiBuilder.ShouldUseReducedMotion
             ? UIMotionMode.Reduced
-            : config.MotionMode;
+            : CurrentConfig.MotionMode;
         GlassMotion.Prune();
-        if (lastTheme != config.Theme || lastQuality != config.GlassQuality)
+        if (LastTheme != CurrentConfig.Theme || LastQuality != CurrentConfig.GlassQuality)
         {
-            if (lastTheme is not (UITheme.GlassLight or UITheme.GlassDark) ||
-                !OmniTheme.IsGlass || lastQuality != config.GlassQuality || failed)
+            if (LastTheme is not (UITheme.GlassLight or UITheme.GlassDark) ||
+                !OmniTheme.IsGlass || LastQuality != CurrentConfig.GlassQuality || Failed)
             {
                 Release();
             }
             MaterialPainter.Clear();
-            failed = false;
-            lastTheme = config.Theme;
-            lastQuality = config.GlassQuality;
+            Failed = false;
+            LastTheme = CurrentConfig.Theme;
+            LastQuality = CurrentConfig.GlassQuality;
         }
-        if (!OmniTheme.IsGlass || config.GlassQuality == GlassQuality.Compatible ||
-            ImGui.GetFrameCount() - requestedFrame > 1)
+        if (!OmniTheme.IsGlass || CurrentConfig.GlassQuality == GlassQuality.Compatible ||
+            ImGui.GetFrameCount() - RequestedFrame > 1)
         {
             Release();
         }
@@ -80,8 +79,8 @@ public static class GlassBackdrop
         ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius,
         float opacity = 1f, ImDrawFlags corners = ImDrawFlags.RoundCornersAll)
     {
-        if (!OmniTheme.IsGlass || config is null || failed ||
-            config.GlassQuality == GlassQuality.Compatible || opacity <= 0f ||
+        if (!OmniTheme.IsGlass || CurrentConfig is null || Failed ||
+            CurrentConfig.GlassQuality == GlassQuality.Compatible || opacity <= 0f ||
             max.X <= min.X || max.Y <= min.Y)
         {
             return false;
@@ -93,18 +92,18 @@ public static class GlassBackdrop
             return false;
         }
 
-        requestedFrame = ImGui.GetFrameCount();
+        RequestedFrame = ImGui.GetFrameCount();
         try
         {
-            if (viewportID != viewport.ID)
+            if (ViewportID != viewport.ID)
             {
                 Release();
-                viewportID = viewport.ID;
+                ViewportID = viewport.ID;
             }
-            if (capture is null)
+            if (Capture is null)
             {
-                cancellation ??= new CancellationTokenSource();
-                pending ??= DalamudServices.TextureProvider.CreateFromImGuiViewportAsync(
+                Cancellation ??= new CancellationTokenSource();
+                Pending ??= DalamudServices.TextureProvider.CreateFromImGuiViewportAsync(
                     new ImGuiViewportTextureArgs
                     {
                         ViewportId = viewport.ID,
@@ -112,20 +111,20 @@ public static class GlassBackdrop
                         TakeBeforeImGuiRender = true,
                         KeepTransparency = false
                     },
-                    "Omni Glass game background", cancellation.Token);
-                if (!pending.IsCompleted)
+                    "Omni Glass game background", Cancellation.Token);
+                if (!Pending.IsCompleted)
                 {
                     return false;
                 }
-                capture = pending.GetAwaiter().GetResult();
-                pending = null;
+                Capture = Pending.GetAwaiter().GetResult();
+                Pending = null;
             }
 
-            var levelCount = config.GlassQuality == GlassQuality.Light ? 2 : 4;
-            if (renderedFrame != requestedFrame)
+            var levelCount = CurrentConfig.GlassQuality == GlassQuality.Light ? 2 : 4;
+            if (RenderedFrame != RequestedFrame)
             {
                 RenderBlur(levelCount);
-                renderedFrame = requestedFrame;
+                RenderedFrame = RequestedFrame;
             }
             var texture = BlurLevels[levelCount - 1]!;
             drawList.AddImageRounded(
@@ -138,7 +137,7 @@ public static class GlassBackdrop
         }
         catch (Exception exception)
         {
-            failed = true;
+            Failed = true;
             Release();
             DalamudServices.PluginLog.Warning(exception, "Omni glass background is unavailable; using compatible material.");
             return false;
@@ -148,15 +147,15 @@ public static class GlassBackdrop
     internal static bool TryGetSurfaceTexture(Vector2 min, Vector2 max, out SurfaceTexture surface)
     {
         surface = default;
-        if (!OmniTheme.IsGlass || config is null || failed ||
-            config.GlassQuality == GlassQuality.Compatible || renderedFrame != ImGui.GetFrameCount())
+        if (!OmniTheme.IsGlass || CurrentConfig is null || Failed ||
+            CurrentConfig.GlassQuality == GlassQuality.Compatible || RenderedFrame != ImGui.GetFrameCount())
         {
             return false;
         }
         var viewport = ImGui.GetMainViewport();
         var end = viewport.Pos + viewport.Size;
-        var texture = BlurLevels[config.GlassQuality == GlassQuality.Light ? 1 : 3];
-        if (texture is null || viewportID != viewport.ID ||
+        var texture = BlurLevels[CurrentConfig.GlassQuality == GlassQuality.Light ? 1 : 3];
+        if (texture is null || ViewportID != viewport.ID ||
             min.X < viewport.Pos.X || min.Y < viewport.Pos.Y || max.X > end.X || max.Y > end.Y)
         {
             return false;
@@ -167,21 +166,21 @@ public static class GlassBackdrop
 
     private static void RenderBlur(int levelCount)
     {
-        if (!hasCommands)
+        if (!HasCommands)
         {
-            commands = BufferBackedImDrawData.Create();
-            hasCommands = true;
+            Commands = BufferBackedImDrawData.Create();
+            HasCommands = true;
         }
 
         ReadOnlySpan<int> divisors = levelCount == 2 ? [8, 4] : [4, 8, 16, 4];
-        IDalamudTextureWrap source = capture!;
+        IDalamudTextureWrap source = Capture!;
         for (var level = 0; level < levelCount; level++)
         {
             var target = BlurLevels[level] ??=
                 DalamudServices.TextureProvider.CreateDrawListTexture($"Omni Glass blur {level}");
             var divisor = divisors[level];
-            target.Size = Vector2.Max(Vector2.One, capture!.Size / divisor);
-            var list = commands.ListPtr;
+            target.Size = Vector2.Max(Vector2.One, Capture!.Size / divisor);
+            var list = Commands.ListPtr;
             list._ResetForNewFrame();
             list.PushClipRect(Vector2.Zero, target.Size, false);
             list.PushTextureID(source.Handle);
@@ -203,10 +202,10 @@ public static class GlassBackdrop
 
     private static void Release()
     {
-        cancellation?.Cancel();
-        cancellation?.Dispose();
-        cancellation = null;
-        if (pending is { } task)
+        Cancellation?.Cancel();
+        Cancellation?.Dispose();
+        Cancellation = null;
+        if (Pending is { } task)
         {
             // 取消与首次捕获完成可能同时发生，仍需接管并释放成功返回的纹理。
             _ = task.ContinueWith(completed =>
@@ -220,21 +219,21 @@ public static class GlassBackdrop
                     _ = completed.Exception;
                 }
             }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-            pending = null;
+            Pending = null;
         }
-        capture?.Dispose();
-        capture = null;
+        Capture?.Dispose();
+        Capture = null;
         for (var index = 0; index < BlurLevels.Length; index++)
         {
             BlurLevels[index]?.Dispose();
             BlurLevels[index] = null;
         }
-        if (hasCommands)
+        if (HasCommands)
         {
-            commands.Dispose();
-            hasCommands = false;
+            Commands.Dispose();
+            HasCommands = false;
         }
-        renderedFrame = -10;
+        RenderedFrame = -10;
     }
 
     internal readonly record struct SurfaceTexture(ImTextureID Handle, Vector2 Origin, Vector2 Size, Vector2 HalfTexel);

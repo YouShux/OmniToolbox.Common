@@ -17,8 +17,8 @@ internal static class MaterialPainter
         (new(0.51f, 0.04f), OfficePink)
     ];
     private static readonly Vector2 LightDirection = Vector2.Normalize(new Vector2(-0.65f, -0.75f));
-    private const int ContourCapacity = 240;
-    private const int GeometryCacheCapacity = 256;
+    private const int CONTOUR_CAPACITY = 240;
+    private const int GEOMETRY_CACHE_CAPACITY = 256;
     private static readonly Dictionary<GeometryKey, Geometry> GeometryCache = [];
 
     internal static void Clear() => GeometryCache.Clear();
@@ -133,11 +133,11 @@ internal static class MaterialPainter
         {
             return geometry;
         }
-        if (GeometryCache.Count >= GeometryCacheCapacity)
+        if (GeometryCache.Count >= GEOMETRY_CACHE_CAPACITY)
         {
             GeometryCache.Clear();
         }
-        Span<Vector2> points = stackalloc Vector2[ContourCapacity];
+        Span<Vector2> points = stackalloc Vector2[CONTOUR_CAPACITY];
         var count = BuildContour(points, Vector2.Zero, size, radius, corners);
         geometry = new Geometry(points[..count].ToArray(), new Vector2[count],
             new Vector4[count], key.Glass ? [] : new Vector2[count]);

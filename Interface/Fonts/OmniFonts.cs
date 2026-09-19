@@ -17,8 +17,8 @@ public static class OmniFonts
     ];
 
     private static readonly Dictionary<float, IFontHandle> UIHandles = [];
-    private static string currentPath = string.Empty;
-    private static float currentSize;
+    private static string CurrentPath = string.Empty;
+    private static float CurrentSize;
 
     public static bool TryGetGameFamily(string path, out GameFontFamily family)
     {
@@ -38,11 +38,11 @@ public static class OmniFonts
         var manager = FontManager.Instance();
         var path = manager.Config.FontFileName;
         var baseSize = manager.GetActualFontSize(1f);
-        if (currentPath != path || currentSize != baseSize)
+        if (CurrentPath != path || CurrentSize != baseSize)
         {
             Dispose();
-            currentPath = path;
-            currentSize = baseSize;
+            CurrentPath = path;
+            CurrentSize = baseSize;
         }
         if (!TryGetGameFamily(path, out var family))
         {

@@ -282,15 +282,15 @@ public sealed partial class CollectionSourceService
 
     internal static bool TryGetWikiShopRequirements(string detail, out string requirements)
     {
-        const string requiredPrefix = "所需：";
-        var startIndex = detail.IndexOf(requiredPrefix, StringComparison.Ordinal);
+        const string REQUIRED_PREFIX = "所需：";
+        var startIndex = detail.IndexOf(REQUIRED_PREFIX, StringComparison.Ordinal);
         if (startIndex < 0)
         {
             requirements = string.Empty;
             return false;
         }
 
-        startIndex += requiredPrefix.Length;
+        startIndex += REQUIRED_PREFIX.Length;
         var endIndex = detail.IndexOf(" | ", startIndex, StringComparison.Ordinal);
         requirements = detail[
             startIndex..(endIndex < 0 ? detail.Length : endIndex)].Trim();

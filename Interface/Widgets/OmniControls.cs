@@ -11,16 +11,16 @@ namespace OmniToolbox.UI.Controls;
 
 public static class OmniControls
 {
-    private const int BorderHighlightBands = 12;
-    private const float ButtonHoverAlpha = 0.60f;
-    private const float ButtonActiveAlpha = 0.80f;
-    private const float SliderBgAlpha = 0.04f;
-    private const float SliderHoverAlpha = 0.10f;
-    private const float SliderActiveAlpha = 0.14f;
-    private const float IconGlyphScale = 0.82f;
-    private const float TitleGlyphScale = 0.72f;
+    private const int BORDER_HIGHLIGHT_BANDS = 12;
+    private const float BUTTON_HOVER_ALPHA = 0.60f;
+    private const float BUTTON_ACTIVE_ALPHA = 0.80f;
+    private const float SLIDER_BG_ALPHA = 0.04f;
+    private const float SLIDER_HOVER_ALPHA = 0.10f;
+    private const float SLIDER_ACTIVE_ALPHA = 0.14f;
+    private const float ICON_GLYPH_SCALE = 0.82f;
+    private const float TITLE_GLYPH_SCALE = 0.72f;
     private static readonly List<FavoriteParticle> FavoriteParticles = [];
-    private static double favoriteEffectsDrawnAt = -1d;
+    private static double FavoriteEffectsDrawnAt = -1d;
 
     public static bool RoundedSelectable(string label, bool selected = false,
         ImGuiSelectableFlags flags = ImGuiSelectableFlags.None, Vector2 size = default)
@@ -171,8 +171,8 @@ public static class OmniControls
         DrawControlShadow(drawList, pos, size, radius);
         using var textColor = ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero);
         using var colors = ImRaii.PushColor(ImGuiCol.Button, active && !useFavoriteStyle ? tokens.Accent : tokens.Surface)
-            .Push(ImGuiCol.ButtonHovered, OmniTheme.UsesDarkPalette ? OmniTheme.HoverBackground : tokens.Accent with { W = ButtonHoverAlpha })
-            .Push(ImGuiCol.ButtonActive, OmniTheme.UsesDarkPalette ? OmniTheme.ActiveBackground : tokens.Accent with { W = ButtonActiveAlpha })
+            .Push(ImGuiCol.ButtonHovered, OmniTheme.UsesDarkPalette ? OmniTheme.HoverBackground : tokens.Accent with { W = BUTTON_HOVER_ALPHA })
+            .Push(ImGuiCol.ButtonActive, OmniTheme.UsesDarkPalette ? OmniTheme.ActiveBackground : tokens.Accent with { W = BUTTON_ACTIVE_ALPHA })
             .Push(ImGuiCol.Border, tokens.Border);
         using var border = ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(ImGuiStyleVar.FrameRounding, radius);
@@ -188,7 +188,7 @@ public static class OmniControls
         if (iconVisible)
         {
             var iconText = icon.ToIconString();
-            var glyphScale = IconGlyphScale;
+            var glyphScale = ICON_GLYPH_SCALE;
             if (favoriteStyle && !isFavorite)
             {
                 var iconSize = GetScaledIconSize(iconText, 1f);
@@ -225,7 +225,7 @@ public static class OmniControls
         DrawTitleGlyph(
             FontAwesomeIcon.Times,
             position + size * 0.5f,
-            MathF.Min(size.X, size.Y) * TitleGlyphScale);
+            MathF.Min(size.X, size.Y) * TITLE_GLYPH_SCALE);
         HelpTooltip(OmniLoc.Get("Common.Close"));
         return ImGui.IsItemClicked();
     }
@@ -238,7 +238,7 @@ public static class OmniControls
         DrawTitleGlyph(
             collapsed ? FontAwesomeIcon.CaretRight : FontAwesomeIcon.CaretDown,
             position + size * 0.5f,
-            MathF.Min(size.X, size.Y) * TitleGlyphScale);
+            MathF.Min(size.X, size.Y) * TITLE_GLYPH_SCALE);
         HelpTooltip(OmniLoc.Get("Tooltip.ToggleCollapse"));
         return ImGui.IsItemClicked();
     }
@@ -272,12 +272,12 @@ public static class OmniControls
         }
 
         var now = ImGui.GetTime();
-        if (favoriteEffectsDrawnAt == now)
+        if (FavoriteEffectsDrawnAt == now)
         {
             return;
         }
 
-        favoriteEffectsDrawnAt = now;
+        FavoriteEffectsDrawnAt = now;
         var icon = FontAwesomeIcon.Heart.ToIconString();
         var drawList = ImGui.GetForegroundDrawList();
         for (var index = FavoriteParticles.Count - 1; index >= 0; index--)
@@ -297,7 +297,7 @@ public static class OmniControls
                            new Vector2(0f, OmniTheme.Scale(260f) * elapsed * elapsed * 0.5f);
             drawList.AddText(
                 ImGui.GetFont(),
-                ImGui.GetFontSize() * IconGlyphScale * scale,
+                ImGui.GetFontSize() * ICON_GLYPH_SCALE * scale,
                 position - iconSize * 0.5f,
                 OmniTheme.Color(OmniTheme.Favorite with { W = 1f - progress }),
                 icon);
@@ -666,9 +666,9 @@ public static class OmniControls
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderBgAlpha })
-            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderHoverAlpha })
-            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderActiveAlpha })
+        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_BG_ALPHA })
+            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_HOVER_ALPHA })
+            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_ACTIVE_ALPHA })
             .Push(ImGuiCol.SliderGrab, OmniTheme.ControlAccent)
             .Push(ImGuiCol.SliderGrabActive, OmniTheme.UsesMaterial ? OmniTheme.ControlAccent : tokens.Secondary)
             .Push(ImGuiCol.Text, tokens.Text);
@@ -688,9 +688,9 @@ public static class OmniControls
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderBgAlpha })
-            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderHoverAlpha })
-            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderActiveAlpha })
+        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_BG_ALPHA })
+            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_HOVER_ALPHA })
+            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_ACTIVE_ALPHA })
             .Push(ImGuiCol.SliderGrab, OmniTheme.ControlAccent)
             .Push(ImGuiCol.SliderGrabActive, OmniTheme.UsesMaterial ? OmniTheme.ControlAccent : tokens.Secondary)
             .Push(ImGuiCol.Text, tokens.Text);
@@ -717,9 +717,9 @@ public static class OmniControls
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderBgAlpha })
-            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderHoverAlpha })
-            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderActiveAlpha })
+        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_BG_ALPHA })
+            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_HOVER_ALPHA })
+            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_ACTIVE_ALPHA })
             .Push(ImGuiCol.Text, tokens.Text);
         var changed = ImGui.DragFloat(id, ref value, speed, min, max, format, flags);
         EndNativeControl(frame);
@@ -743,9 +743,9 @@ public static class OmniControls
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderBgAlpha })
-            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderHoverAlpha })
-            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SliderActiveAlpha })
+        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_BG_ALPHA })
+            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_HOVER_ALPHA })
+            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_ACTIVE_ALPHA })
             .Push(ImGuiCol.Text, tokens.Text);
         var changed = ImGui.DragFloat2(id, ref value, speed, min, max, format);
         EndNativeControl(frame);
@@ -758,14 +758,14 @@ public static class OmniControls
         float width,
         ImGuiComboFlags flags = ImGuiComboFlags.None)
     {
-        const ImGuiComboFlags heightMask = ImGuiComboFlags.HeightSmall |
+        const ImGuiComboFlags HEIGHT_MASK = ImGuiComboFlags.HeightSmall |
                                            ImGuiComboFlags.HeightRegular |
                                            ImGuiComboFlags.HeightLarge |
                                            ImGuiComboFlags.HeightLargest;
-        if ((flags & heightMask) == ImGuiComboFlags.None ||
+        if ((flags & HEIGHT_MASK) == ImGuiComboFlags.None ||
             (flags & ImGuiComboFlags.HeightLargest) != ImGuiComboFlags.None)
         {
-            flags = flags & ~heightMask | ImGuiComboFlags.HeightLarge;
+            flags = flags & ~HEIGHT_MASK | ImGuiComboFlags.HeightLarge;
         }
 
         var tokens = OmniTheme.Tokens;
@@ -832,9 +832,9 @@ public static class OmniControls
             false);
         var hovered = ImGui.IsMouseHoveringRect(frame.Pos, frame.Pos + frame.Size, true);
         var fill = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left)
-            ? tokens.Accent with { W = ButtonActiveAlpha }
+            ? tokens.Accent with { W = BUTTON_ACTIVE_ALPHA }
             : hovered
-                ? tokens.Accent with { W = ButtonHoverAlpha }
+                ? tokens.Accent with { W = BUTTON_HOVER_ALPHA }
                 : tokens.Primary;
         if (!OmniTheme.UsesMaterial)
         {
@@ -1188,9 +1188,9 @@ public static class OmniControls
         }
         var tokens = OmniTheme.Tokens;
         var fill = ImGui.IsItemActive()
-            ? OmniTheme.UsesDarkPalette ? OmniTheme.ActiveBackground : tokens.Accent with { W = ButtonActiveAlpha }
+            ? OmniTheme.UsesDarkPalette ? OmniTheme.ActiveBackground : tokens.Accent with { W = BUTTON_ACTIVE_ALPHA }
             : ImGui.IsItemHovered()
-                ? OmniTheme.UsesDarkPalette ? OmniTheme.HoverBackground : tokens.Accent with { W = ButtonHoverAlpha }
+                ? OmniTheme.UsesDarkPalette ? OmniTheme.HoverBackground : tokens.Accent with { W = BUTTON_HOVER_ALPHA }
                 : normal;
         var radius = OmniTheme.Scale(tokens.ButtonRadius);
         var drawList = ImGui.GetWindowDrawList();
@@ -1395,7 +1395,7 @@ public static class OmniControls
             color);
     }
 
-    private static Vector2 GetScaledIconSize(string icon, float glyphScale = IconGlyphScale) =>
+    private static Vector2 GetScaledIconSize(string icon, float glyphScale = ICON_GLYPH_SCALE) =>
         ImGui.CalcTextSize(icon) * glyphScale;
 
     private static unsafe void DrawTitleGlyph(FontAwesomeIcon icon, Vector2 center, float targetSize)
@@ -1419,7 +1419,7 @@ public static class OmniControls
         Vector2 center,
         Vector4 color,
         float horizontalOffset = 0f,
-        float glyphScale = IconGlyphScale)
+        float glyphScale = ICON_GLYPH_SCALE)
     {
         var iconSize = GetScaledIconSize(icon, glyphScale);
         drawList.AddText(
@@ -1466,8 +1466,8 @@ public static class OmniControls
 
     public static void HelpTooltipLine(string template, string markerText, Vector4 markerColor)
     {
-        const string marker = "{0}";
-        var markerIndex = template.IndexOf(marker, StringComparison.Ordinal);
+        const string MARKER = "{0}";
+        var markerIndex = template.IndexOf(MARKER, StringComparison.Ordinal);
         if (markerIndex < 0)
         {
             ImGui.TextUnformatted(template);
@@ -1478,7 +1478,7 @@ public static class OmniControls
         ImGui.SameLine(0f, 0f);
         ImGui.TextColored(markerColor, markerText);
         ImGui.SameLine(0f, 0f);
-        ImGui.TextUnformatted(template[(markerIndex + marker.Length)..]);
+        ImGui.TextUnformatted(template[(markerIndex + MARKER.Length)..]);
     }
 
     private static string DrawLeadingControlLabel(string id, ref float width)
@@ -1611,17 +1611,17 @@ public static class OmniControls
             size.Y * 0.22f + radius * 0.25f,
             size.Y * 0.12f,
             size.Y * 0.38f);
-        var bandHeight = height / BorderHighlightBands;
+        var bandHeight = height / BORDER_HIGHLIGHT_BANDS;
         var max = pos + size;
-        for (var i = 0; i < BorderHighlightBands; i++)
+        for (var i = 0; i < BORDER_HIGHLIGHT_BANDS; i++)
         {
             var y0 = pos.Y + i * bandHeight;
-            var y1 = i == BorderHighlightBands - 1 ? pos.Y + height : y0 + bandHeight;
+            var y1 = i == BORDER_HIGHLIGHT_BANDS - 1 ? pos.Y + height : y0 + bandHeight;
             drawList.PushClipRect(new Vector2(pos.X, y0), new Vector2(max.X, y1), true);
             drawList.AddRectFilled(
                 pos,
                 max,
-                OmniTheme.Color(Vector4.One with { W = alpha * (1f - (i + 0.5f) / BorderHighlightBands) }),
+                OmniTheme.Color(Vector4.One with { W = alpha * (1f - (i + 0.5f) / BORDER_HIGHLIGHT_BANDS) }),
                 radius,
                 ImDrawFlags.RoundCornersAll);
             drawList.PopClipRect();

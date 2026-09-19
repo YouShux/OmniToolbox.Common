@@ -14,7 +14,7 @@ public sealed partial class CollectionSourceService : IDisposable
     private static readonly IReadOnlyList<CollectionSource> EmptySources = Array.Empty<CollectionSource>();
     private static readonly FrozenSet<CollectionSourceCategory> EmptyCategories =
         Array.Empty<CollectionSourceCategory>().ToFrozenSet();
-    private static readonly FrozenSet<uint> EmptyItemIds = Array.Empty<uint>().ToFrozenSet();
+    private static readonly FrozenSet<uint> EmptyItemIDs = Array.Empty<uint>().ToFrozenSet();
 
     private readonly FrozenSet<uint> unobtainableItemIds;
     private readonly FrozenDictionary<uint, IReadOnlyList<CollectionSource>> itemSources;
@@ -30,7 +30,7 @@ public sealed partial class CollectionSourceService : IDisposable
     private readonly CancellationTokenSource categoryBuildCancellation = new();
     private readonly Task exchangeCategoryTask;
     private FrozenDictionary<uint, FrozenSet<CollectionSourceCategory>> itemCategories;
-    private FrozenSet<uint> purchasableItemIds = EmptyItemIds;
+    private FrozenSet<uint> purchasableItemIds = EmptyItemIDs;
     private long revision;
     private bool disposed;
 

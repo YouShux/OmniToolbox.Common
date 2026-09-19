@@ -15,7 +15,7 @@ public interface IEscapeClosableWindow
 
 public sealed class EscapeCloseController
 {
-    private const int EscapeVirtualKey = 0x1B;
+    private const int ESCAPE_VIRTUAL_KEY = 0x1B;
 
     private bool escapePressedLastFrame;
     private bool suppressEscapeUntilRelease;
@@ -25,7 +25,7 @@ public sealed class EscapeCloseController
         IEscapeClosableWindow? second = null,
         IEscapeClosableWindow? third = null)
     {
-        var escapePressed = (GetAsyncKeyState(EscapeVirtualKey) & 0x8000) != 0;
+        var escapePressed = (GetAsyncKeyState(ESCAPE_VIRTUAL_KEY) & 0x8000) != 0;
         if (!escapePressed)
         {
             escapePressedLastFrame = false;

@@ -1,20 +1,20 @@
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
-using LuminaAction = Lumina.Excel.Sheets.Action;
-using LuminaItem = Lumina.Excel.Sheets.Item;
 using OmniToolbox.Host;
 using OmniToolbox.Items;
 using OmniToolbox.UI.Theme;
+using LuminaAction = Lumina.Excel.Sheets.Action;
+using LuminaItem = Lumina.Excel.Sheets.Item;
 
 namespace OmniToolbox.UI.Controls;
 
 internal static class FramedGameIcon
 {
     private static readonly Vector4 DimmedTint = new(0.55f, 0.55f, 0.55f, 1f);
-    private static ISharedImmediateTexture? activeTexture;
-    private static ISharedImmediateTexture? collectionStatusTexture;
-    private static ISharedImmediateTexture? frameTexture;
-    private const string CollectionStatusTexturePath = "ui/uld/ReadyCheck_hr1.tex";
+    private static ISharedImmediateTexture? ActiveTexture;
+    private static ISharedImmediateTexture? CollectionStatusTexture;
+    private static ISharedImmediateTexture? FrameTexture;
+    private const string COLLECTION_STATUS_TEXTURE_PATH = "ui/uld/ReadyCheck_hr1.tex";
 
     public static void DrawItem(LuminaItem item, Vector2 size) =>
         DrawAtCursor(item.Icon, size, !ItemCategoryMap.IsCurrency(item));
@@ -205,8 +205,8 @@ internal static class FramedGameIcon
 
     private static IDalamudTextureWrap? GetCollectionStatusTexture()
     {
-        collectionStatusTexture ??= DalamudServices.TextureProvider.GetFromGame(CollectionStatusTexturePath);
-        return collectionStatusTexture.GetWrapOrDefault();
+        CollectionStatusTexture ??= DalamudServices.TextureProvider.GetFromGame(COLLECTION_STATUS_TEXTURE_PATH);
+        return CollectionStatusTexture.GetWrapOrDefault();
     }
 
     private static void DrawAtCursor(uint iconID, Vector2 size, bool drawFrame)
@@ -218,10 +218,10 @@ internal static class FramedGameIcon
 
     private static bool TryGetActiveFrame(out IDalamudTextureWrap frame)
     {
-        activeTexture ??= DalamudServices.TextureProvider.GetFromFile(System.IO.Path.Combine(
+        ActiveTexture ??= DalamudServices.TextureProvider.GetFromFile(System.IO.Path.Combine(
             DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!,
             @"Resources\activeaction.png"));
-        if (activeTexture.TryGetWrap(out var frameWrap, out _))
+        if (ActiveTexture.TryGetWrap(out var frameWrap, out _))
         {
             frame = frameWrap;
             return true;
@@ -233,10 +233,10 @@ internal static class FramedGameIcon
 
     private static bool TryGetFrame(out IDalamudTextureWrap frame)
     {
-        frameTexture ??= DalamudServices.TextureProvider.GetFromManifestResource(
+        FrameTexture ??= DalamudServices.TextureProvider.GetFromManifestResource(
             typeof(FramedGameIcon).Assembly,
             "OmniToolbox.Resources.边框.png");
-        if (frameTexture.TryGetWrap(out var frameWrap, out _))
+        if (FrameTexture.TryGetWrap(out var frameWrap, out _))
         {
             frame = frameWrap;
             return true;

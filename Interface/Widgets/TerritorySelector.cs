@@ -8,8 +8,8 @@ namespace OmniToolbox.UI.Controls;
 public sealed class TerritorySelector
 {
     private static readonly List<TerritoryOption> TerritoryOptions = [];
-    private static readonly HashSet<uint> TerritoryOptionIds = [];
-    private static bool territoryOptionsLoaded;
+    private static readonly HashSet<uint> TerritoryOptionIDs = [];
+    private static bool TerritoryOptionsLoaded;
 
     private readonly string id;
     private readonly List<TerritoryOption> visibleTerritoryOptions = [];
@@ -23,8 +23,8 @@ public sealed class TerritorySelector
     public bool Draw(HashSet<uint> selectedTerritoryIds, string emptyText)
     {
         EnsureTerritoryOptions();
-        var changed = TerritoryOptionIds.Count > 0 &&
-                      selectedTerritoryIds.RemoveWhere(territoryID => !TerritoryOptionIds.Contains(territoryID)) > 0;
+        var changed = TerritoryOptionIDs.Count > 0 &&
+                      selectedTerritoryIds.RemoveWhere(territoryID => !TerritoryOptionIDs.Contains(territoryID)) > 0;
         var header = string.Format(
             OmniLoc.Get("Common.TerritorySelector.Title"),
             selectedTerritoryIds.Count);
@@ -201,12 +201,12 @@ public sealed class TerritorySelector
 
     private static void EnsureTerritoryOptions()
     {
-        if (territoryOptionsLoaded)
+        if (TerritoryOptionsLoaded)
         {
             return;
         }
 
-        territoryOptionsLoaded = true;
+        TerritoryOptionsLoaded = true;
         foreach (var territory in LuminaGetter.Get<TerritoryType>())
         {
             if (territory.RowId == 0)
@@ -240,7 +240,7 @@ public sealed class TerritorySelector
                     regionName,
                     zoneName,
                     territory.ContentFinderCondition.ValueNullable?.Name.ToString() ?? string.Empty)));
-            TerritoryOptionIds.Add(territory.RowId);
+            TerritoryOptionIDs.Add(territory.RowId);
         }
 
         TerritoryOptions.Sort(static (left, right) => left.ID.CompareTo(right.ID));

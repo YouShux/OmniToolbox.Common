@@ -2,7 +2,7 @@ namespace OmniToolbox.UI.Theme;
 
 public sealed class ComicStyleScope : IDisposable
 {
-    private const int VarCount = 9;
+    private const int VAR_COUNT = 9;
     private readonly int colorCount;
     private bool disposed;
 
@@ -107,7 +107,7 @@ public sealed class ComicStyleScope : IDisposable
         }
 
         disposed = true;
-        ImGui.PopStyleVar(VarCount);
+        ImGui.PopStyleVar(VAR_COUNT);
         ImGui.PopStyleColor(colorCount);
     }
 }

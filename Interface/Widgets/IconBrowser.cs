@@ -3,21 +3,21 @@ using System.Globalization;
 using Dalamud.Game.Text;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
-using CharaMakeCustomize = Lumina.Excel.Sheets.CharaMakeCustomize;
 using OmenTools.OmenService;
-using MapSymbol = Lumina.Excel.Sheets.MapSymbol;
-using OmniToolbox.Items;
 using OmniToolbox.Config;
 using OmniToolbox.Host;
+using OmniToolbox.Items;
 using OmniToolbox.UI;
 using OmniToolbox.UI.Controls;
 using OmniToolbox.UI.Theme;
+using CharaMakeCustomize = Lumina.Excel.Sheets.CharaMakeCustomize;
+using MapSymbol = Lumina.Excel.Sheets.MapSymbol;
 
 namespace OmniToolbox.UI;
 
 public sealed class IconBrowser : IEscapeClosableWindow
 {
-    private const float SearchControlWidth = 160f;
+    private const float SEARCH_CONTROL_WIDTH = 160f;
     // 插件内置图标使用独立标识，不占用游戏图标 ID。
     internal const uint LauncherIconID = int.MaxValue;
     internal static string LauncherIconPath => System.IO.Path.Combine(
@@ -258,7 +258,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
         var viewportSize = ImGuiHelpers.MainViewport.Size;
         var imguiStyle = ImGui.GetStyle();
         var toolbarMinWidth =
-            OmniTheme.Scale(SearchControlWidth + 160f + 180f) +
+            OmniTheme.Scale(SEARCH_CONTROL_WIDTH + 160f + 180f) +
             OmniControls.CompactButtonSize(OmniLoc.Get("IconBrowser.RebuildCache")).X +
             ImGui.CalcTextSize(OmniLoc.Get("IconBrowser.Search")).X +
             ImGui.CalcTextSize(OmniLoc.Get("IconBrowser.IconSize")).X +
@@ -398,7 +398,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
                     $"{OmniLoc.Get("IconBrowser.Search")}##iconBrowserGameFilter",
                     ref gameIconFilter,
                     128,
-                    OmniTheme.Scale(SearchControlWidth)))
+                    OmniTheme.Scale(SEARCH_CONTROL_WIDTH)))
             {
                 filteredGameIcons.Clear();
                 if (int.TryParse(
@@ -433,7 +433,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
                 $"{OmniLoc.Get("IconBrowser.Search")}##iconBrowserSeFilter",
                 ref seIconFilter,
                 128,
-                OmniTheme.Scale(SearchControlWidth));
+                OmniTheme.Scale(SEARCH_CONTROL_WIDTH));
         }
 
         ImGui.SameLine();
@@ -660,9 +660,9 @@ public sealed class IconBrowser : IEscapeClosableWindow
         bool statusIcons,
         ref int textureRequestBudget)
     {
-        if (!ImGui.BeginChild($"##iconBrowserGrid{tabIndex}"))
+        using var child = ImRaii.Child($"##iconBrowserGrid{tabIndex}");
+        if (!child)
         {
-            ImGui.EndChild();
             return;
         }
 
@@ -670,7 +670,6 @@ public sealed class IconBrowser : IEscapeClosableWindow
         var contentWidth = ImGui.GetContentRegionAvail().X;
         if (!float.IsFinite(contentWidth) || !float.IsFinite(iconSize) || iconSize <= 0f)
         {
-            ImGui.EndChild();
             return;
         }
 
@@ -697,7 +696,6 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
         clipper.End();
         clipper.Destroy();
-        ImGui.EndChild();
     }
 
     private void DrawGameIcon(int icon, float iconSize, bool statusIcon, ref int textureRequestBudget)
