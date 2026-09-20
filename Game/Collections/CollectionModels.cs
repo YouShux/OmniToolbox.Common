@@ -61,14 +61,17 @@ public readonly record struct CollectionSource(
     uint SourceID,
     string Description,
     string Detail,
-    CollectionSourceLocation? Location = null);
+    CollectionSourceLocation? Location = null)
+{
+    public uint MapTerritoryID { get; init; }
+}
 
 public readonly record struct CollectionSourceLocation(
     uint TerritoryID,
     float X,
     float Y);
 
-// BlueSpells.csv 的原始行，保留坐标与怪物名供青魔法书导航使用。
+// 青魔来源行，保留怪物名及补全后的坐标供青魔法书导航使用。
 public readonly record struct BlueSpellSource(
     string SourceType,
     string MobDescription,

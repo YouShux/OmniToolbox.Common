@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -86,7 +85,6 @@ public sealed partial class CollectionSourceService : IDisposable
         itemCategories = ResolveCategories(categories, wikiShopDependencies);
         itemIds = itemsByID.Keys.Order().ToArray();
 
-        var blueRows = new Dictionary<uint, HashSet<CollectionSource>>();
         var blueSpellDetails = new Dictionary<uint, List<BlueSpellSource>>();
         ReadCSV("BlueSpells.csv", csv =>
         {
@@ -109,25 +107,10 @@ public sealed partial class CollectionSourceService : IDisposable
             }
 
             details.Add(new(sourceType, mobDescription, locationDescription, x, y, level, note));
-            AddSource(blueRows, actionID, new(
-                sourceType switch
-                {
-                    "carnivale" or "dungeon" or "guildhests" or "raid" or "trail" =>
-                        CollectionSourceCategory.Duty,
-                    "fate" => CollectionSourceCategory.Fate,
-                    "hunt" => CollectionSourceCategory.TheHunt,
-                    "jobquest" => CollectionSourceCategory.Quest,
-                    "treasure" => CollectionSourceCategory.TreasureHunts,
-                    "levequests" or "map" or "special" => CollectionSourceCategory.Other,
-                    _ => throw new InvalidDataException($"未知的青魔获取类型：{sourceType}")
-                },
-                0,
-                NormalizeBlueMageText(mobDescription),
-                FormatBlueMageDetail(locationDescription, x, y, level, NormalizeBlueMageText(note))));
         });
 
         itemSources = Freeze(itemRows);
-        blueMageSources = Freeze(blueRows);
+        blueMageSources = BuildBlueMageSources(blueSpellDetails);
         blueSpellRows = blueSpellDetails.ToFrozenDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<BlueSpellSource>)pair.Value.ToArray());
