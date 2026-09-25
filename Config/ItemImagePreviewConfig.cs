@@ -1,11 +1,5 @@
 namespace OmniToolbox.Config;
 
-public enum ItemImagePreviewPosition
-{
-    Right = 0,
-    Left = 1
-}
-
 [Serializable]
 public sealed class ItemImagePreviewConfig
 {
@@ -22,6 +16,4 @@ public sealed class ItemImagePreviewConfig
     public bool ShowExchangeRewards { get; set; } = true;
 
     public float Scale { get; set; } = 1f;
-
-    public ItemImagePreviewPosition Position { get; set; } = ItemImagePreviewPosition.Right;
 }
