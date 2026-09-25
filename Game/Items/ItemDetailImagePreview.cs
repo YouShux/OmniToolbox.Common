@@ -2,6 +2,7 @@ using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Interface.Textures;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using OmenTools.Extensions;
 using OmenTools.Interop.Game.Helpers;
 using OmniToolbox.Config;
 using OmniToolbox.Host;
@@ -144,7 +145,8 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
         var addon = AddonHelper.GetByName(ADDON_NAME);
         if (addon == null ||
             !addon->IsVisible ||
-            addon->RootNode == null)
+            addon->RootNode == null ||
+            addon->WindowNode == null)
         {
             return;
         }
@@ -157,23 +159,36 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
                 ItemPreviewImageKind.FashionAccessory
                     ? 240f
                     : 300f) * scale);
-        var displaySize = ImGui.GetIO().DisplaySize;
+        var viewport = ImGui.GetMainViewport();
+        var displaySize = viewport.Size;
         if (displaySize.X <= 0f || displaySize.Y <= 0f)
         {
             return;
         }
 
         var gap = OmniTheme.Scale(6f) * scale;
-        var desired = new Vector2(
-            config.Position == ItemImagePreviewPosition.Left
-                ? addon->X - imageSize.X - gap
-                : addon->X + addon->RootNode->Width * addon->Scale + gap,
-            addon->Y - (image.Kind == ItemPreviewImageKind.Mount ? OmniTheme.Scale(22f) * scale : 0f));
-        var position = Vector2.Clamp(
-            desired,
-            Vector2.Zero,
-            Vector2.Max(Vector2.Zero, displaySize - imageSize));
-        var drawList = ImGui.GetForegroundDrawList();
+        var tooltipPosition = addon->WindowNode->AtkResNode.GetPosition();
+        var tooltipSize = addon->WindowNode->AtkResNode.GetSize();
+        var rightStart = MathF.Max(0f, tooltipPosition.X + tooltipSize.X + gap);
+        var leftEnd = MathF.Min(displaySize.X, tooltipPosition.X - gap);
+        var rightSpace = MathF.Max(0f, displaySize.X - rightStart);
+        var leftSpace = MathF.Max(0f, leftEnd);
+        var showOnRight = rightSpace >= imageSize.X ||
+                          (leftSpace < imageSize.X && rightSpace >= leftSpace);
+        var availableWidth = showOnRight ? rightSpace : leftSpace;
+        if (availableWidth <= 0f)
+        {
+            return;
+        }
+
+        imageSize *= MathF.Min(1f, MathF.Min(availableWidth / imageSize.X, displaySize.Y / imageSize.Y));
+        var position = viewport.Pos + new Vector2(
+            showOnRight ? rightStart : leftEnd - imageSize.X,
+            Math.Clamp(
+                tooltipPosition.Y - (image.Kind == ItemPreviewImageKind.Mount ? OmniTheme.Scale(22f) * scale : 0f),
+                0f,
+                MathF.Max(0f, displaySize.Y - imageSize.Y)));
+        var drawList = ImGui.GetForegroundDrawList(viewport);
         drawList.AddImage(texture.Handle, position, position + imageSize);
 
         var statusSize = MathF.Min(imageSize.X, imageSize.Y) * 0.3f;
