@@ -7,6 +7,12 @@ namespace OmniToolbox.Host;
 
 public sealed class DalamudServices
 {
+    private static volatile bool isUnloading;
+
+    public static bool IsUnloading => isUnloading;
+
+    public static void BeginUnload() => isUnloading = true;
+
     [PluginService]
     public static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
 
@@ -40,6 +46,9 @@ public sealed class DalamudServices
     [PluginService]
     public static IUnlockState UnlockState { get; private set; } = null!;
 
-    public static void Initialize(IDalamudPluginInterface pluginInterface) =>
+    public static void Initialize(IDalamudPluginInterface pluginInterface)
+    {
+        isUnloading = false;
         pluginInterface.Create<DalamudServices>();
+    }
 }
