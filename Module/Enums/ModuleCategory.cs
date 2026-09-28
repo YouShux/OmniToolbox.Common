@@ -11,5 +11,6 @@ public enum ModuleCategory
     Automation,
     Debug,
     Local,
-    Online
+    Online,
+    Enabled
 }
