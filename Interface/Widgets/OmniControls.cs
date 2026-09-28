@@ -201,7 +201,7 @@ public static class OmniControls
             DrawScaledIcon(
                 drawList,
                 iconText,
-                pos + size * 0.5f + (isFavorite ? OmniTheme.Scale(new Vector2(0f, 2f)) : Vector2.Zero),
+                pos + size * 0.5f,
                 iconColor,
                 horizontalOffset: favoriteStyle && !isFavorite ? 1f : 0f,
                 glyphScale: glyphScale);
