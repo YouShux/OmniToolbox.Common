@@ -191,6 +191,8 @@ public sealed class IconBrowser : IEscapeClosableWindow
     private bool isCollapsed;
     private bool restoreExpandedSize;
     private bool isFocused;
+    private float lastScale;
+    private Vector2 lastViewportSize;
 
     public IconBrowser(IconBrowserConfig config, Action saveConfig)
     {
@@ -253,9 +255,10 @@ public sealed class IconBrowser : IEscapeClosableWindow
             return;
         }
 
+        using var font = OmniFonts.GetUIFont().Push();
         using var style = new ComicStyleScope();
         var iconSize = OmniTheme.Scale(config.IconSize);
-        var viewportSize = ImGuiHelpers.MainViewport.Size;
+        var viewportSize = ImGui.GetMainViewport().WorkSize;
         var imguiStyle = ImGui.GetStyle();
         var toolbarMinWidth =
             OmniTheme.Scale(SEARCH_CONTROL_WIDTH + 160f + 180f) +
@@ -268,35 +271,30 @@ public sealed class IconBrowser : IEscapeClosableWindow
         if (isCollapsed)
         {
             ImGui.SetNextWindowSize(
-                OmniTheme.CollapsedWindowSize(
+                OmniTheme.ClampWindowSize(OmniTheme.CollapsedWindowSize(
                     expandedWindowSize == Vector2.Zero
                         ? MathF.Min(toolbarMinWidth, viewportSize.X)
-                        : OmniTheme.Scale(expandedWindowSize).X),
+                        : OmniTheme.Scale(expandedWindowSize).X)),
                 ImGuiCond.Always);
         }
         else
         {
             ImGui.SetNextWindowSizeConstraints(
-                new Vector2(
-                    MathF.Min(
-                        MathF.Max(
-                            (iconSize + imguiStyle.ItemSpacing.X) * 11f + imguiStyle.WindowPadding.X * 2f,
-                            toolbarMinWidth) +
-                        (OmniTheme.ChromeFrameInset() + OmniTheme.WindowInset()) * 2f,
-                        viewportSize.X),
-                    MathF.Min(OmniTheme.Scale(420f), viewportSize.Y)),
+                OmniTheme.ClampWindowSize(OmniTheme.Scale(new Vector2(320f, 240f))),
                 viewportSize);
-            if (restoreExpandedSize && expandedWindowSize != Vector2.Zero)
+            if ((restoreExpandedSize || lastScale != OmniTheme.ScaleValue || lastViewportSize != viewportSize) && expandedWindowSize != Vector2.Zero)
             {
-                ImGui.SetNextWindowSize(OmniTheme.Scale(expandedWindowSize), ImGuiCond.Always);
+                ImGui.SetNextWindowSize(OmniTheme.ClampWindowSize(OmniTheme.Scale(expandedWindowSize)), ImGuiCond.Always);
             }
 
             restoreExpandedSize = false;
         }
+        lastScale = OmniTheme.ScaleValue;
+        lastViewportSize = viewportSize;
 
         ImGui.SetNextWindowCollapsed(false, ImGuiCond.Always);
         var flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
-                    ImGuiWindowFlags.NoBackground;
+                    ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove;
         if (isCollapsed)
         {
             flags |= ImGuiWindowFlags.NoResize;
@@ -312,9 +310,15 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
         var windowPosition = ImGui.GetWindowPos();
         var windowSize = ImGui.GetWindowSize();
+        var clampedPosition = OmniTheme.ClampWindowPosition(windowPosition, windowSize);
+        if (clampedPosition != windowPosition)
+        {
+            ImGui.SetWindowPos(clampedPosition);
+            windowPosition = clampedPosition;
+        }
         if (!isCollapsed)
         {
-            expandedWindowSize = OmniTheme.Unscale(windowSize);
+            expandedWindowSize = OmniTheme.Unscale(OmniTheme.PreserveWindowSize(windowSize, OmniTheme.Scale(expandedWindowSize)));
         }
 
         var framePosition = isCollapsed
@@ -332,6 +336,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
             OmniLoc.Get("IconBrowser.Title"),
             "##collapseIconBrowser",
             "##closeIconBrowser");
+        framePosition += ImGui.GetWindowPos() - windowPosition;
         var collapseChanged = chrome.ToggleCollapse;
         if (chrome.ToggleCollapse)
         {
@@ -436,30 +441,35 @@ public sealed class IconBrowser : IEscapeClosableWindow
                 OmniTheme.Scale(SEARCH_CONTROL_WIDTH));
         }
 
-        ImGui.SameLine();
-        var iconSize = config.IconSize;
-        ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted(OmniLoc.Get("IconBrowser.IconSize"));
-        ImGui.SameLine();
-        if (OmniControls.SliderFloat(
-                "##iconBrowserSize",
-                ref iconSize,
-                16f,
-                128f,
-                "%.0f",
-                OmniTheme.Scale(160f)))
+        OmniControls.SameLineOrWrap(ImGui.CalcTextSize(OmniLoc.Get("IconBrowser.IconSize")).X +
+                                   ImGui.GetStyle().ItemSpacing.X + OmniTheme.Scale(160f));
+        using (ImRaii.Group())
         {
-            config.IconSize = Math.Clamp(iconSize, 16f, 128f);
+            var iconSize = config.IconSize;
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted(OmniLoc.Get("IconBrowser.IconSize"));
+            OmniControls.SameLineOrWrap(OmniTheme.Scale(160f));
+            if (OmniControls.SliderFloat(
+                    "##iconBrowserSize",
+                    ref iconSize,
+                    16f,
+                    128f,
+                    "%.0f",
+                    OmniTheme.Scale(160f)))
+            {
+                config.IconSize = Math.Clamp(iconSize, 16f, 128f);
+            }
+
+            if (ImGui.IsItemDeactivatedAfterEdit())
+            {
+                saveConfig();
+            }
         }
 
-        if (ImGui.IsItemDeactivatedAfterEdit())
-        {
-            saveConfig();
-        }
-
-        ImGui.SameLine();
+        OmniControls.SameLineOrWrap(ImGui.CalcTextSize(OmniLoc.Get("IconBrowser.Mode")).X + ImGui.GetStyle().ItemInnerSpacing.X +
+            OmniControls.MeasureCombo(OmniLoc.Get("IconBrowser.Mode.GameIcon"), OmniTheme.Scale(180f)).X);
         DrawModeSelector();
-        ImGui.SameLine();
+        OmniControls.SameLineOrWrap(OmniControls.CompactButtonSize(OmniLoc.Get("IconBrowser.RebuildCache")).X);
         if (OmniControls.SmallButton(OmniLoc.Get("IconBrowser.RebuildCache"), false))
         {
             tabCaches.Clear();
@@ -475,7 +485,8 @@ public sealed class IconBrowser : IEscapeClosableWindow
         if (!OmniControls.BeginCombo(
                 $"{OmniLoc.Get("IconBrowser.Mode")}##iconBrowserMode",
                 current,
-                OmniTheme.Scale(180f)))
+                MathF.Max(OmniControls.MeasureCombo(OmniLoc.Get("IconBrowser.Mode.GameIcon"), OmniTheme.Scale(180f)).X,
+                    OmniControls.MeasureCombo(OmniLoc.Get("IconBrowser.Mode.SeIconChar")).X)))
         {
             return;
         }
@@ -673,6 +684,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
             return;
         }
 
+        iconSize = MathF.Min(iconSize, MathF.Max(1f, contentWidth));
         var columns = Math.Max(1, (int)((contentWidth + spacing.X) / (iconSize + spacing.X)));
         var rows = icons.Count == 0 ? 0 : (icons.Count - 1) / columns + 1;
         var clipper = ImGui.ImGuiListClipper();
@@ -752,7 +764,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Right) || texture is null)
         {
-            ImGui.SetTooltip(icon == LauncherIconID
+            OmniControls.HelpTooltip(icon == LauncherIconID
                 ? $"{OmniLoc.Get("IconBrowser.LauncherIcon")}\nID: {icon}"
                 : icon.ToString(CultureInfo.InvariantCulture));
             return;
@@ -764,13 +776,11 @@ public sealed class IconBrowser : IEscapeClosableWindow
             MathF.Min(
                 OmniTheme.Scale(700f),
                 MathF.Min(viewportSize.X, viewportSize.Y) - OmniTheme.Scale(48f)));
-        ImGui.BeginTooltip();
-        ImGui.Image(
+        OmniControls.HelpTooltip(() => ImGui.Image(
             texture.Handle,
             statusIcon
                 ? OmniTheme.StatusIconSize(previewSize)
-                : OmniTheme.FitImageSize(new Vector2(texture.Width, texture.Height), previewSize));
-        ImGui.EndTooltip();
+                : OmniTheme.FitImageSize(new Vector2(texture.Width, texture.Height), previewSize)));
     }
 
     private void DrawSeIconBrowser(float iconSize)
@@ -782,19 +792,19 @@ public sealed class IconBrowser : IEscapeClosableWindow
             return;
         }
 
-        using var table = ImRaii.Table(
+        ReadOnlySpan<string> labels = [OmniLoc.Get("IconBrowser.Column.Preview"), OmniLoc.Get("IconBrowser.Column.Name"),
+            OmniLoc.Get("IconBrowser.Column.Value"), OmniLoc.Get("IconBrowser.Column.Hex")];
+        var numberWidth = ImGui.CalcTextSize("65535").X;
+        var hexWidth = ImGui.CalcTextSize("0xFFFF").X;
+        ReadOnlySpan<float> minimum = [iconSize, ImGui.GetFontSize() * 4f, numberWidth, hexWidth];
+        ReadOnlySpan<float> desired = [iconSize + OmniTheme.Scale(12f), OmniTheme.Scale(200f),
+            MathF.Max(numberWidth, OmniTheme.Scale(72f)), MathF.Max(hexWidth, OmniTheme.Scale(72f))];
+        using var table = OmniControls.DataTable(
             "##iconBrowserSeIconTable",
-            4,
-            ImGuiTableFlags.RowBg | ImGuiTableFlags.NoSavedSettings | ImGuiTableFlags.SizingStretchProp);
+            labels, minimum, desired, out var detailLayout,
+            ImGuiTableFlags.RowBg | ImGuiTableFlags.NoSavedSettings | ImGuiTableFlags.SizingStretchProp, stretchColumn: 1);
         if (table)
         {
-            ImGui.TableSetupColumn(
-                OmniLoc.Get("IconBrowser.Column.Preview"),
-                ImGuiTableColumnFlags.WidthFixed,
-                MathF.Max(OmniTheme.Scale(46f), iconSize + OmniTheme.Scale(12f)));
-            ImGui.TableSetupColumn(OmniLoc.Get("IconBrowser.Column.Name"), ImGuiTableColumnFlags.WidthStretch, 1.1f);
-            ImGui.TableSetupColumn(OmniLoc.Get("IconBrowser.Column.Value"), ImGuiTableColumnFlags.WidthFixed, OmniTheme.Scale(72f));
-            ImGui.TableSetupColumn(OmniLoc.Get("IconBrowser.Column.Hex"), ImGuiTableColumnFlags.WidthFixed, OmniTheme.Scale(72f));
             ImGui.TableHeadersRow();
 
             var filter = seIconFilter.Trim();
@@ -807,21 +817,22 @@ public sealed class IconBrowser : IEscapeClosableWindow
                 }
 
                 ImGui.TableNextRow();
-                ImGui.TableNextColumn();
-                if (ImGui.Button($"{entry.IconText}##seIcon{entry.Value}", new Vector2(iconSize)))
+                OmniControls.NextTableField(labels[0], detailLayout);
+                var previewSize = MathF.Min(iconSize, MathF.Max(1f, ImGui.GetContentRegionAvail().X));
+                if (ImGui.Button($"{entry.IconText}##seIcon{entry.Value}", new Vector2(previewSize)))
                 {
                     ApplySeIcon(entry);
                 }
 
-                ImGui.TableNextColumn();
-                if (ImGui.Selectable(entry.Name, false, ImGuiSelectableFlags.SpanAllColumns))
+                OmniControls.NextTableField(labels[1], detailLayout);
+                if (OmniControls.WrappedSelectable(entry.Name, false, ImGuiSelectableFlags.SpanAllColumns))
                 {
                     ApplySeIcon(entry);
                 }
 
-                ImGui.TableNextColumn();
+                OmniControls.NextTableField(labels[2], detailLayout);
                 ImGui.TextUnformatted(entry.DecimalValue);
-                ImGui.TableNextColumn();
+                OmniControls.NextTableField(labels[3], detailLayout);
                 ImGui.TextUnformatted(entry.HexValue);
             }
         }

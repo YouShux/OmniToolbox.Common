@@ -56,7 +56,7 @@ public static class OmniPager
         var jumpSize = OmniControls.CompactButtonSize(jumpLabel);
         var rowHeight = MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight());
         jumpSize.Y = rowHeight;
-        var inputWidth = OmniTheme.Scale(70f);
+        var inputWidth = OmniControls.MeasureInput(pageCount.ToString(), OmniTheme.Scale(70f)).X;
         var totalWidth = inputWidth + jumpSize.X + spacing;
         foreach (var token in PageTokens)
         {
@@ -69,12 +69,13 @@ public static class OmniPager
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - totalWidth) * 0.5f));
         for (var i = 0; i < PageTokens.Count; i++)
         {
+            var token = PageTokens[i];
             if (i > 0)
             {
-                ImGui.SameLine();
+                OmniControls.SameLineOrWrap(token.Value < 0 ? ImGui.CalcTextSize(token.Label).X :
+                    OmniControls.CompactButtonSize(token.Label, 0f, 24f).X);
             }
 
-            var token = PageTokens[i];
             if (token.Value < 0)
             {
                 ImGui.AlignTextToFramePadding();
@@ -91,13 +92,16 @@ public static class OmniPager
             }
         }
 
-        ImGui.SameLine();
-        OmniControls.InputInt("##jumpPage", ref jumpPage, inputWidth);
-        OmniControls.HelpTooltip(OmniLoc.Get("ItemSearch.Jump.Help"));
-        ImGui.SameLine();
-        if (OmniControls.SmallButton(jumpLabel, false, jumpSize))
+        OmniControls.SameLineOrWrap(inputWidth + spacing + jumpSize.X);
+        using (ImRaii.Group())
         {
-            page = Math.Clamp(jumpPage, 1, pageCount);
+            OmniControls.InputInt("##jumpPage", ref jumpPage, inputWidth);
+            OmniControls.HelpTooltip(OmniLoc.Get("ItemSearch.Jump.Help"));
+            OmniControls.SameLineOrWrap(jumpSize.X);
+            if (OmniControls.SmallButton(jumpLabel, false, jumpSize))
+            {
+                page = Math.Clamp(jumpPage, 1, pageCount);
+            }
         }
 
         ImGui.PopID();

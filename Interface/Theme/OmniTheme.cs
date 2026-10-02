@@ -23,7 +23,7 @@ public static class OmniTheme
         10f,
         1.85f,
         0.05f,
-        new Vector2(12f, 12f),
+        new Vector2(8f),
         new Vector2(8f, 8f),
         new Vector2(8f, 6f));
 
@@ -124,8 +124,9 @@ public static class OmniTheme
         HighlightStrength = 0.08f
     };
 
-    public const float DefaultFontSize = 18f;
-    public const float MinimumFontSize = 6f;
+    public const float DefaultFontSize = 16f;
+    public const float MinimumFontSize = 4f;
+    public const float REFERENCE_FONT_SIZE = 18f;
     public const float MaximumFontSize = 48f;
     public const ushort OrangeColorType = 500;
     public const ushort ShopColorType = 43;
@@ -137,7 +138,7 @@ public static class OmniTheme
 
     public static float ScaleValue => scopedScale ??
         Math.Clamp(FontManager.Instance().Config.FontSize, MinimumFontSize, MaximumFontSize) /
-        DefaultFontSize *
+        REFERENCE_FONT_SIZE *
         DalamudScaleValue;
 
     public static UITheme CurrentTheme { get; set; } = UITheme.LineGreen;
@@ -238,11 +239,28 @@ public static class OmniTheme
     public static Vector2 MainWindowSize(Vector2 configuredSize) =>
         Scale(configuredSize == Vector2.Zero ? UIConfig.DefaultMainWindowSize : configuredSize);
 
-    public static Vector2 MainWindowMinSize() => Scale(new Vector2(900f, 560f));
+    public static Vector2 MainWindowMinSize() => Scale(new Vector2(320f, 240f));
 
-    public static Vector2 CollapsedWindowSize(float width) => new(MathF.Max(Scale(420f), width), TitleBarHeight() + Scale(4f));
+    public static Vector2 CollapsedWindowSize(float width) => ClampWindowSize(new(MathF.Max(Scale(420f), width), TitleBarHeight() + Scale(4f)));
 
     public static Vector2 Unscale(Vector2 value) => value / ScaleValue;
+
+    public static Vector2 ClampWindowSize(Vector2 size) =>
+        Vector2.Clamp(size, Vector2.One, Vector2.Max(Vector2.One, ImGui.GetMainViewport().WorkSize));
+
+    public static Vector2 ClampWindowPosition(Vector2 position, Vector2 size)
+    {
+        var viewport = ImGui.GetMainViewport();
+        return Vector2.Clamp(position, viewport.WorkPos,
+            Vector2.Max(viewport.WorkPos, viewport.WorkPos + viewport.WorkSize - ClampWindowSize(size)));
+    }
+
+    public static Vector2 PreserveWindowSize(Vector2 actual, Vector2 expected)
+    {
+        var viewport = ImGui.GetMainViewport().WorkSize;
+        return new(actual.X >= viewport.X - 1f && expected.X > viewport.X ? expected.X : actual.X,
+            actual.Y >= viewport.Y - 1f && expected.Y > viewport.Y ? expected.Y : actual.Y);
+    }
 
     public static float ChromeFrameInset() => Scale(4f);
 
@@ -250,9 +268,11 @@ public static class OmniTheme
 
     public static float CollapsedHeaderTop() => Scale(1.6f);
 
-    public static float TitleBarHeight() => ImGui.GetFrameHeight();
+    public static float TitleBarHeight() => MathF.Ceiling(ImGui.GetTextLineHeight() + Scale(8f));
 
-    public static float WindowInset() => Scale(14f);
+    public static float WindowInset() => ContentGap();
+
+    public static Vector2 PopupPadding() => new(ChromeFrameInset() + WindowInset());
 
     public static Vector2 TitleIconSize() => new(ImGui.GetTextLineHeight());
 
@@ -262,9 +282,9 @@ public static class OmniTheme
 
     public static float TitleCloseIconRight() => TitleIconSize().X + Scale(5f);
 
-    public static Vector2 SidebarWidth() => new(Scale(184f), 0f);
+    public static Vector2 SidebarWidth() => new(Scale(164f), 0f);
 
-    public static Vector2 SidebarIconSize() => Scale(new Vector2(68f, 68f));
+    public static Vector2 SidebarIconSize() => Scale(new Vector2(60f, 60f));
 
     public static Vector2 StatusIconSize(float height) => new(MathF.Round(height * (24f / 32f)), height);
 
@@ -273,9 +293,9 @@ public static class OmniTheme
 
     public static Vector2 NavButtonSize() => new(Scale(148f), Scale(34f));
 
-    public static float SidebarHeaderGap() => Scale(14f);
+    public static float SidebarHeaderGap() => Scale(8f);
 
-    public static float SidebarFooterHeight() => Scale(58f);
+    public static float SidebarFooterHeight() => ImGui.GetTextLineHeight() * 2f + ImGui.GetStyle().ItemSpacing.Y;
 
     public static Vector2 SmallButtonSize() => new(Scale(116f), Scale(34f));
 
@@ -283,7 +303,7 @@ public static class OmniTheme
 
     public static Vector2 FeatureCardSize() => new(0f, Scale(78f));
 
-    public static float ContentGap() => Scale(14f);
+    public static float ContentGap() => Scale(Tokens.WindowPadding.X);
 
     public static float SectionHeaderHeight() => Scale(34f);
 

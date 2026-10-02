@@ -152,13 +152,14 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
         }
 
         var scale = Math.Clamp(config.Scale, 0.1f, 3f);
+        var nativeScale = addon->WindowNode->AtkResNode.GetScale().X;
         var imageSize = OmniTheme.FitImageSize(
             new Vector2(texture.Width, texture.Height),
-            OmniTheme.Scale(image.Kind is ItemPreviewImageKind.Minion or
+            (image.Kind is ItemPreviewImageKind.Minion or
                 ItemPreviewImageKind.Hairstyle or
                 ItemPreviewImageKind.FashionAccessory
                     ? 240f
-                    : 300f) * scale);
+                    : 300f) * nativeScale * scale);
         var viewport = ImGui.GetMainViewport();
         var displaySize = viewport.Size;
         if (displaySize.X <= 0f || displaySize.Y <= 0f)
@@ -166,7 +167,7 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
             return;
         }
 
-        var gap = OmniTheme.Scale(6f) * scale;
+        var gap = 6f * nativeScale * scale;
         var tooltipPosition = addon->WindowNode->AtkResNode.GetPosition();
         var tooltipSize = addon->WindowNode->AtkResNode.GetSize();
         var rightStart = MathF.Max(0f, tooltipPosition.X + tooltipSize.X + gap);
@@ -185,7 +186,7 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
         var position = viewport.Pos + new Vector2(
             showOnRight ? rightStart : leftEnd - imageSize.X,
             Math.Clamp(
-                tooltipPosition.Y - (image.Kind == ItemPreviewImageKind.Mount ? OmniTheme.Scale(22f) * scale : 0f),
+                tooltipPosition.Y - (image.Kind == ItemPreviewImageKind.Mount ? 22f * nativeScale * scale : 0f),
                 0f,
                 MathF.Max(0f, displaySize.Y - imageSize.Y)));
         var drawList = ImGui.GetForegroundDrawList(viewport);

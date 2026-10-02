@@ -2,6 +2,7 @@ using System.IO;
 using Dalamud.Game.Text;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Interface.Textures;
+using Dalamud.Utility;
 using Lumina.Text.ReadOnly;
 using OmenTools;
 using OmenTools.OmenService;
@@ -50,7 +51,10 @@ public static class OmniNotifier
             return;
         }
 
-        NotifyHelper.Instance().Chat(new ReadOnlySeString(message.Encode()), ChatPrefix);
+        using var rented = new RentedSeStringBuilder();
+        var builder = rented.Builder;
+        builder.Append(ChatPrefix).Append(" ").Append(new ReadOnlySeString(message.Encode()));
+        NotifyHelper.Instance().Chat(builder.ToReadOnlySeString(), useDefaultPrefix: false);
     }
 
     public static void Banner(string content)

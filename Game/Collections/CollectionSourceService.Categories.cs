@@ -146,11 +146,25 @@ public sealed partial class CollectionSourceService
         return categories;
     }
 
-    private static FrozenDictionary<uint, FrozenSet<CollectionSourceCategory>> ResolveCategories(
+    private FrozenDictionary<uint, FrozenSet<CollectionSourceCategory>> ResolveCategories(
         Dictionary<uint, HashSet<CollectionSourceCategory>> categories,
         IReadOnlyDictionary<uint, HashSet<uint>> dependencies)
     {
         PropagateCategories(categories, dependencies);
+        foreach (var (setItemID, memberItemIDs) in itemSetItemIDs)
+        {
+            foreach (var memberItemID in memberItemIDs)
+            {
+                if (categories.TryGetValue(memberItemID, out var memberCategories))
+                {
+                    foreach (var category in memberCategories)
+                    {
+                        AddCategory(categories, setItemID, category);
+                    }
+                }
+            }
+        }
+
         return categories
             .Where(pair => pair.Value.Count != 0)
             .ToFrozenDictionary(pair => pair.Key, pair => pair.Value.ToFrozenSet());

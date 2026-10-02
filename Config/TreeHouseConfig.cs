@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -157,7 +158,15 @@ public sealed class TreeHouseConfig
         var type = config.GetType();
         var defaults = Activator.CreateInstance(type)
             ?? throw new InvalidOperationException($"Unable to create default settings for {moduleName}.");
-        foreach (var property in type.GetProperties())
+        foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
+        {
+            if (!field.IsInitOnly && !field.IsLiteral)
+            {
+                field.SetValue(config, field.GetValue(defaults));
+            }
+        }
+
+        foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
         {
             if (property.CanRead &&
                 property.CanWrite &&

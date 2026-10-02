@@ -20,40 +20,51 @@ public sealed class EscapeCloseController
     private bool escapePressedLastFrame;
     private bool suppressEscapeUntilRelease;
 
+    public bool IsSuppressingEscape => suppressEscapeUntilRelease;
+
     public void Update(
         IEscapeClosableWindow first,
         IEscapeClosableWindow? second = null,
         IEscapeClosableWindow? third = null)
     {
+        var focusedWindow = ResolveFocusedWindow(first, second, third);
+        if (TryConsumeEscape(focusedWindow is not null) && focusedWindow is not null)
+        {
+            focusedWindow.Close();
+        }
+    }
+
+    public bool TryConsumeEscape(bool canClose)
+    {
         var escapePressed = (GetAsyncKeyState(ESCAPE_VIRTUAL_KEY) & 0x8000) != 0;
+        if (suppressEscapeUntilRelease)
+        {
+            // 松键帧仍需清除游戏输入，避免关闭插件窗口后触发系统菜单。
+            DalamudServices.KeyState[VirtualKey.ESCAPE] = false;
+            escapePressedLastFrame = escapePressed;
+            suppressEscapeUntilRelease = escapePressed;
+            return false;
+        }
         if (!escapePressed)
         {
             escapePressedLastFrame = false;
-            suppressEscapeUntilRelease = false;
-            return;
-        }
-
-        if (suppressEscapeUntilRelease)
-        {
-            DalamudServices.KeyState[VirtualKey.ESCAPE] = false;
-            return;
+            return false;
         }
 
         if (escapePressedLastFrame)
         {
-            return;
+            return false;
         }
 
         escapePressedLastFrame = true;
-        var focusedWindow = ResolveFocusedWindow(first, second, third);
-        if (focusedWindow is null)
+        if (!canClose)
         {
-            return;
+            return false;
         }
 
-        focusedWindow.Close();
         suppressEscapeUntilRelease = true;
         DalamudServices.KeyState[VirtualKey.ESCAPE] = false;
+        return true;
     }
 
     private static IEscapeClosableWindow? ResolveFocusedWindow(

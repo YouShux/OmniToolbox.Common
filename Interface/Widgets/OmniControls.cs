@@ -9,7 +9,7 @@ using OmniToolbox.UI.Theme;
 
 namespace OmniToolbox.UI.Controls;
 
-public static class OmniControls
+public static partial class OmniControls
 {
     private const int BORDER_HIGHLIGHT_BANDS = 12;
     private const float BUTTON_HOVER_ALPHA = 0.60f;
@@ -21,6 +21,9 @@ public static class OmniControls
     private const float TITLE_GLYPH_SCALE = 0.72f;
     private static readonly List<FavoriteParticle> FavoriteParticles = [];
     private static double FavoriteEffectsDrawnAt = -1d;
+    private static uint HelpTooltipSourceID;
+    private static Vector2 HelpTooltipSourcePosition;
+    private static int HelpTooltipFrame = -1;
 
     public static bool RoundedSelectable(string label, bool selected = false,
         ImGuiSelectableFlags flags = ImGuiSelectableFlags.None, Vector2 size = default)
@@ -34,9 +37,15 @@ public static class OmniControls
         using var disabled = ImRaii.Disabled((flags & ImGuiSelectableFlags.Disabled) != 0);
         var position = ImGui.GetCursorScreenPos();
         var text = DisplayLabel(label);
-        var textSize = ImGui.CalcTextSize(text);
-        var rowSize = new Vector2(size.X > 0f ? size.X : MathF.Max(textSize.X, ImGui.GetContentRegionAvail().X),
-            size.Y > 0f ? size.Y : MathF.Max(textSize.Y, ImGui.GetTextLineHeight()));
+        var width = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+        var textSize = ImGui.CalcTextSize(text, false, menuItem ? 0f : width);
+        var rowSize = new Vector2(size.X > 0f ? MathF.Min(size.X, width) : width,
+            MathF.Max(size.Y, MathF.Max(textSize.Y, ImGui.GetTextLineHeight())));
+        if (!menuItem)
+        {
+            textSize = ImGui.CalcTextSize(text, false, rowSize.X);
+            rowSize.Y = MathF.Max(rowSize.Y, textSize.Y);
+        }
         var textColor = ImGui.GetColorU32(ImGuiCol.Text);
         var selectedColor = ImGui.GetColorU32(ImGuiCol.Header);
         var hoveredColor = ImGui.GetColorU32(ImGuiCol.HeaderHovered);
@@ -49,7 +58,7 @@ public static class OmniControls
         {
             // 保留原生选择项的 ID、点击、弹层关闭和导航行为，仅替换绘制。
             clicked = menuItem ? ImGui.MenuItem(label, string.Empty, selected, (flags & ImGuiSelectableFlags.Disabled) == 0)
-                : ImGui.Selectable(label, selected, flags, size);
+                : ImGui.Selectable(label, selected, flags, rowSize);
         }
         var drawList = ImGui.GetWindowDrawList();
         if (selected || ImGui.IsItemHovered() || ImGui.IsItemActive())
@@ -59,8 +68,9 @@ public static class OmniControls
                 MathF.Min(rowSize.Y * 0.5f, OmniTheme.Scale(OmniTheme.Tokens.ButtonRadius)));
         }
         drawList.PushClipRect(position, position + rowSize, true);
-        drawList.AddText(position + Vector2.Max(Vector2.Zero, rowSize - textSize) * ImGui.GetStyle().SelectableTextAlign,
-            textColor, text);
+        drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+            position + Vector2.Max(Vector2.Zero, rowSize - textSize) * ImGui.GetStyle().SelectableTextAlign,
+            textColor, text, menuItem ? 0f : rowSize.X);
         drawList.PopClipRect();
         return clicked;
     }
@@ -76,23 +86,29 @@ public static class OmniControls
             .GetFromGame("ui/uld/ReadyCheck_hr1.tex").GetWrapOrDefault();
         var iconSize = ImGui.GetTextLineHeight();
         var style = ImGui.GetStyle();
-        var minimumWidth = iconSize + style.ItemInnerSpacing.X + ImGui.CalcTextSize(label).X + style.FramePadding.X * 2f;
+        var width = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+        var stacked = width < iconSize + style.ItemInnerSpacing.X + style.FramePadding.X * 2f + ImGui.GetFontSize() * 2f;
+        var textWidth = MathF.Max(1f, width - style.FramePadding.X * 2f - (stacked ? 0f : iconSize + style.ItemInnerSpacing.X));
+        var textSize = ImGui.CalcTextSize(label, false, textWidth);
+        var height = stacked ? iconSize + style.ItemInnerSpacing.Y + textSize.Y : MathF.Max(iconSize, textSize.Y);
         bool clicked;
         using (ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero))
         {
-            var size = new Vector2(MathF.Max(minimumWidth, ImGui.GetContentRegionAvail().X), 0f);
+            var size = new Vector2(width, height);
             clicked = rounded ? RoundedSelectable(id, selected, flags, size) : ImGui.Selectable(id, selected, flags, size);
         }
         var position = ImGui.GetItemRectMin() + new Vector2(style.FramePadding.X,
-            MathF.Max(0f, (ImGui.GetItemRectSize().Y - iconSize) * 0.5f));
+            stacked ? 0f : MathF.Max(0f, (ImGui.GetItemRectSize().Y - iconSize) * 0.5f));
         var drawList = ImGui.GetWindowDrawList();
         if (selected && checkTexture is not null)
         {
             drawList.AddImage(checkTexture.Handle, position, position + new Vector2(iconSize),
                 Vector2.Zero, new Vector2(0.5f, 1f));
         }
-        drawList.AddText(position + new Vector2(iconSize + style.ItemInnerSpacing.X, 0f),
-            OmniTheme.Color(OmniTheme.Tokens.Text), label);
+        var textPosition = ImGui.GetItemRectMin() + new Vector2(style.FramePadding.X + (stacked ? 0f : iconSize + style.ItemInnerSpacing.X),
+            stacked ? iconSize + style.ItemInnerSpacing.Y : MathF.Max(0f, (height - textSize.Y) * 0.5f));
+        drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(), textPosition,
+            OmniTheme.Color(OmniTheme.Tokens.Text), label, textWidth);
         return clicked;
     }
 
@@ -106,12 +122,12 @@ public static class OmniControls
 
     public static Vector2 NavButtonSize(string label) =>
         new(
-            MathF.Max(
+            MathF.Ceiling(MathF.Max(
                 OmniTheme.NavButtonSize().X,
-                ImGui.CalcTextSize(DisplayLabel(label)).X + OmniTheme.Scale(24f)),
-            MathF.Max(
+                ImGui.CalcTextSize(DisplayLabel(label)).X + MathF.Max(OmniTheme.Scale(24f), ImGui.GetStyle().FramePadding.X * 2f))),
+            MathF.Ceiling(MathF.Max(
                 OmniTheme.NavButtonSize().Y,
-                ImGui.GetTextLineHeightWithSpacing() + OmniTheme.Scale(8f)));
+                ImGui.GetTextLineHeightWithSpacing() + OmniTheme.Scale(8f))));
 
     public static bool SmallButton(string label, bool active) =>
         SmallButton(label, active, CompactButtonSize(label));
@@ -140,6 +156,7 @@ public static class OmniControls
         bool iconVisible = true,
         bool favoriteStyle = false)
     {
+        WrapControl(size.X);
         var tokens = OmniTheme.Tokens;
         var isFavorite = icon == FontAwesomeIcon.Heart;
         var useFavoriteStyle = isFavorite || favoriteStyle;
@@ -309,6 +326,24 @@ public static class OmniControls
 
     public static bool Checkbox(string label, ref bool value, float controlSize)
     {
+        WrapControl(MeasureCheckbox(label, controlSize).X);
+        var text = DisplayLabel(label);
+        if (text.Length > 0 && MeasureCheckbox(label, controlSize).X > ImGui.GetContentRegionAvail().X + 1f)
+        {
+            using var group = ImRaii.Group();
+            ImGuiP.PushOverrideID(ImGui.GetID(label));
+            var wrappedChanged = Checkbox(string.Empty, ref value, controlSize);
+            ImGui.PopID();
+            SameLineOrWrap(ImGui.GetTextLineHeight(), ImGui.GetStyle().ItemInnerSpacing.X);
+            using (ImRaii.TextWrapPos(0f))
+                ImGui.TextUnformatted(text);
+            if (ImGui.IsItemClicked())
+            {
+                value = !value;
+                wrappedChanged = true;
+            }
+            return wrappedChanged;
+        }
         var tokens = OmniTheme.Tokens;
         var pos = ImGui.GetCursorScreenPos();
         var size = new Vector2(MathF.Max(ImGui.GetTextLineHeight(), controlSize));
@@ -351,6 +386,19 @@ public static class OmniControls
 
     public static bool RadioButton(string label, bool active)
     {
+        WrapControl(MeasureCheckbox(label).X);
+        var text = DisplayLabel(label);
+        if (text.Length > 0 && MeasureCheckbox(label).X > ImGui.GetContentRegionAvail().X + 1f)
+        {
+            using var group = ImRaii.Group();
+            ImGuiP.PushOverrideID(ImGui.GetID(label));
+            var wrappedClicked = RadioButton(string.Empty, active);
+            ImGui.PopID();
+            SameLineOrWrap(ImGui.GetTextLineHeight(), ImGui.GetStyle().ItemInnerSpacing.X);
+            using (ImRaii.TextWrapPos(0f))
+                ImGui.TextUnformatted(text);
+            return wrappedClicked || ImGui.IsItemClicked();
+        }
         var tokens = OmniTheme.Tokens;
         var pos = ImGui.GetCursorScreenPos();
         var size = new Vector2(MathF.Max(ImGui.GetTextLineHeight(), OmniTheme.CheckboxSize()));
@@ -507,34 +555,31 @@ public static class OmniControls
         bool groupThousands = false)
     {
         var tokens = OmniTheme.Tokens;
+        width = MathF.Max(width, MeasureInput(value.ToString(groupThousands ? "N0" : "0", CultureInfo.InvariantCulture), step: step).X);
         id = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, true);
+        var drawGroupedText = groupThousands && step == 0 && GlassMotion.ActiveItemID != frame.ID;
         using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.Text, tokens.Text)
+        using var colors = ImRaii.PushColor(ImGuiCol.Text, drawGroupedText ? Vector4.Zero : tokens.Text)
             .Push(ImGuiCol.FrameBg, Vector4.Zero)
             .Push(ImGuiCol.FrameBgHovered, Vector4.Zero)
             .Push(ImGuiCol.FrameBgActive, Vector4.Zero)
             .Push(ImGuiCol.Border, Vector4.Zero);
         var changed = ImGui.InputInt(id, ref value, step, stepFast);
-        if (groupThousands && step == 0 && !ImGui.IsItemActive())
+        if (drawGroupedText)
         {
-            var drawList = ImGui.GetWindowDrawList();
+            var drawList = frame.DrawList;
             var inset = MathF.Max(1f, OmniTheme.BorderThickness());
             drawList.PushClipRect(frame.Pos + new Vector2(inset), frame.Pos + frame.Size - new Vector2(inset), true);
-            drawList.AddRectFilled(
-                frame.Pos + new Vector2(inset),
-                frame.Pos + frame.Size - new Vector2(inset),
-                OmniTheme.Color(tokens.Surface with { W = 1f }),
-                MathF.Max(0f, frame.Radius - inset));
             drawList.AddText(
                 frame.Pos + new Vector2(
                     ImGui.GetStyle().FramePadding.X,
                     MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)),
-                ImGui.GetColorU32(ImGuiCol.Text),
+                OmniTheme.Color(tokens.Text),
                 value.ToString("N0", CultureInfo.InvariantCulture));
             drawList.PopClipRect();
         }
@@ -560,6 +605,7 @@ public static class OmniControls
         string format = "%.3f")
     {
         var tokens = OmniTheme.Tokens;
+        width = MathF.Max(width, MeasureFloatInput(value, format, stepped: step != 0f).X);
         id = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, true);
         using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
@@ -594,9 +640,9 @@ public static class OmniControls
         }
 
         changed |= ImGui.IsItemDeactivatedAfterEdit();
-        var buttonSize = new Vector2(OmniTheme.SmallButtonSize().Y);
+        var buttonSize = new Vector2(MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight()));
         var spacing = OmniTheme.Scale(6f);
-        ImGui.SameLine(0f, spacing);
+        SameLineOrWrap(buttonSize.X, spacing);
         var amount = ImGui.GetIO().KeyCtrl && stepFast > 0 ? stepFast : Math.Max(1, step);
         if (StepButton($"{id}Decrease", false, buttonSize))
         {
@@ -604,7 +650,7 @@ public static class OmniControls
             changed = true;
         }
 
-        ImGui.SameLine(0f, spacing);
+        SameLineOrWrap(buttonSize.X, spacing);
         if (StepButton($"{id}Increase", true, buttonSize))
         {
             value = (int)Math.Clamp((long)value + amount, minimum, maximum);
@@ -628,7 +674,7 @@ public static class OmniControls
             (ImGui.GetContentRegionAvail().X - separatorWidth - spacing * 2f) * 0.5f);
         InputInt($"{id}Min", ref minimum, inputWidth);
         var changed = ImGui.IsItemDeactivatedAfterEdit();
-        ImGui.SameLine(0f, spacing);
+        SameLineOrWrap(separatorWidth, spacing);
         var separatorPosition = ImGui.GetCursorScreenPos();
         var separatorSize = new Vector2(separatorWidth, MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight()));
         ImGui.InvisibleButton($"{id}Separator", separatorSize);
@@ -637,7 +683,7 @@ public static class OmniControls
             separatorPosition + new Vector2(separatorSize.X - OmniTheme.Scale(5f), separatorSize.Y * 0.5f),
             OmniTheme.Color(OmniTheme.Tokens.Text),
             OmniTheme.BorderThickness());
-        ImGui.SameLine(0f, spacing);
+        SameLineOrWrap(MeasureInput(maximum.ToString(CultureInfo.InvariantCulture), inputWidth).X, spacing);
         InputInt($"{id}Max", ref maximum, inputWidth);
         changed |= ImGui.IsItemDeactivatedAfterEdit();
         if (!changed)
@@ -658,6 +704,7 @@ public static class OmniControls
     public static bool SliderFloat(string id, ref float value, float min, float max, string format, float width)
     {
         var tokens = OmniTheme.Tokens;
+        width = MathF.Max(width, MeasureFloatInput(value, format).X);
         id = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, false);
         using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
@@ -680,6 +727,7 @@ public static class OmniControls
     public static bool SliderInt(string id, ref int value, int min, int max, string format, float width)
     {
         var tokens = OmniTheme.Tokens;
+        width = MathF.Max(width, MeasureIntInput(value, format).X);
         id = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, false);
         using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
@@ -710,6 +758,7 @@ public static class OmniControls
         ImGuiSliderFlags flags = ImGuiSliderFlags.None)
     {
         var tokens = OmniTheme.Tokens;
+        width = MathF.Max(width, MeasureFloatInput(value, format).X);
         id = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, false);
         using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
@@ -736,6 +785,8 @@ public static class OmniControls
         float width)
     {
         var tokens = OmniTheme.Tokens;
+        width = MathF.Max(width, MeasureFloatInput(value.X, format).X +
+            MeasureFloatInput(value.Y, format).X + ImGui.GetStyle().ItemInnerSpacing.X);
         id = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, false);
         using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
@@ -768,6 +819,7 @@ public static class OmniControls
             flags = flags & ~HEIGHT_MASK | ImGuiComboFlags.HeightLarge;
         }
 
+        width = MathF.Max(width, MeasureCombo(preview).X);
         var tokens = OmniTheme.Tokens;
         id = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, true);
@@ -792,8 +844,9 @@ public static class OmniControls
 
     public static Vector2 CompactButtonSize(string label, float minimumWidth = 64f, float horizontalPadding = 16f) =>
         new(
-            MathF.Max(OmniTheme.Scale(minimumWidth), ImGui.CalcTextSize(DisplayLabel(label)).X + OmniTheme.Scale(horizontalPadding)),
-            MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight()));
+            MathF.Ceiling(MathF.Max(OmniTheme.Scale(minimumWidth), ImGui.CalcTextSize(DisplayLabel(label)).X +
+                MathF.Max(OmniTheme.Scale(horizontalPadding), ImGui.GetStyle().FramePadding.X * 2f))),
+            MathF.Ceiling(MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight())));
 
     public static bool StepButton(string id, bool plus, Vector2 size)
     {
@@ -857,6 +910,7 @@ public static class OmniControls
 
     public static void SectionLabel(string label)
     {
+        using var wrap = ImRaii.TextWrapPos(0f);
         ImGui.PushStyleColor(ImGuiCol.Text, OmniTheme.Tokens.Text);
         ImGui.TextUnformatted(label);
         ImGui.PopStyleColor();
@@ -954,17 +1008,19 @@ public static class OmniControls
         drawList.PopClipRect();
     }
 
-    public static void DrawTextCentered(string text, Vector2 pos, Vector2 size, Vector4 color)
+    public static void DrawTextCentered(string text, Vector2 pos, Vector2 size, Vector4 color, bool wrap = false)
     {
-        var textSize = ImGui.CalcTextSize(text);
+        var wrapWidth = wrap && ImGui.CalcTextSize(text).X > size.X ? MathF.Max(1f, size.X) : 0f;
+        var textSize = ImGui.CalcTextSize(text, false, wrapWidth);
         ImGui.GetWindowDrawList().AddText(
+            ImGui.GetFont(), ImGui.GetFontSize(),
             pos + new Vector2(MathF.Max(0f, (size.X - textSize.X) * 0.5f), MathF.Max(0f, (size.Y - textSize.Y) * 0.5f)),
             OmniTheme.Color(color),
-            text);
+            text, wrapWidth);
     }
 
     public static void BeginTableHeaderRow() =>
-        ImGui.TableNextRow(ImGuiTableRowFlags.Headers, OmniTheme.SmallButtonSize().Y);
+        ImGui.TableNextRow(ImGuiTableRowFlags.Headers, MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight()));
 
     public static void BeginTableHeaderRow(float contentHeight) =>
         ImGui.TableNextRow(ImGuiTableRowFlags.Headers, contentHeight);
@@ -977,6 +1033,7 @@ public static class OmniControls
 
     public static void TableHeader(string label, string? tooltip = null)
     {
+        using var wrap = ImRaii.TextWrapPos(-1f);
         ImGui.TableNextColumn();
         ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, ImGui.GetColorU32(ImGuiCol.TableHeaderBg));
         if (tooltip is null)
@@ -985,11 +1042,8 @@ public static class OmniControls
             return;
         }
 
-        var icon = FontAwesomeIcon.InfoCircle.ToIconString();
         var spacing = OmniTheme.Scale(4f);
-        var iconSize = GetScaledIconSize(icon);
-        var textSize = ImGui.CalcTextSize(label);
-        var width = textSize.X + spacing + iconSize.X;
+        var width = MeasureTableHeader(label, true).X;
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - width) * 0.5f));
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted(label);
@@ -1009,13 +1063,11 @@ public static class OmniControls
 
     public static void AvailabilityTableHeader(string label, string introduction)
     {
+        using var wrap = ImRaii.TextWrapPos(-1f);
         ImGui.TableNextColumn();
         ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, ImGui.GetColorU32(ImGuiCol.TableHeaderBg));
-        var icon = FontAwesomeIcon.InfoCircle.ToIconString();
         var spacing = OmniTheme.Scale(4f);
-        var iconSize = GetScaledIconSize(icon);
-        var textSize = ImGui.CalcTextSize(label);
-        var width = textSize.X + spacing + iconSize.X;
+        var width = MeasureTableHeader(label, true).X;
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - width) * 0.5f));
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted(label);
@@ -1091,23 +1143,26 @@ public static class OmniControls
         ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, ImGui.GetColorU32(ImGuiCol.TableHeaderBg));
         var statusText = $"[{status}]";
         var spacing = OmniTheme.Scale(4f);
-        var width = ImGui.CalcTextSize(label).X + spacing + ImGui.CalcTextSize(statusText).X;
+        var width = MeasureTableHeader(label, status).X;
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - width) * 0.5f));
         ImGui.AlignTextToFramePadding();
+        using var wrap = ImRaii.TextWrapPos(0f);
         ImGui.TextUnformatted(label);
-        ImGui.SameLine(0f, spacing);
+        SameLineOrWrap(ImGui.CalcTextSize(statusText).X, spacing);
         ImGui.TextColored(statusColor, statusText);
     }
 
     public static void InlineStatusLabel(string label, Vector4 color, bool alignToFramePadding = true)
     {
-        ImGui.SameLine(0f, OmniTheme.Scale(4f));
+        var text = $"[{label}]";
+        SameLineOrWrap(ImGui.CalcTextSize(text).X, OmniTheme.Scale(4f));
         if (alignToFramePadding)
         {
             ImGui.AlignTextToFramePadding();
         }
 
-        ImGui.TextColored(color, $"[{label}]");
+        using var wrap = ImRaii.TextWrapPos(0f);
+        ImGui.TextColored(color, text);
     }
 
     public static void InlineAutoPathStatus(bool enabled, bool alignToFramePadding = true) =>
@@ -1121,27 +1176,49 @@ public static class OmniControls
         var cursor = ImGui.GetCursorPos();
         var availableWidth = ImGui.GetContentRegionAvail().X;
         ImGui.SetCursorPosX(cursor.X + MathF.Max(0f, (availableWidth - size.X) * 0.5f));
+        if (contentHeight > 0f)
+            ImGuiP.GetCurrentWindow().DC.CurrLineTextBaseOffset = 0f;
         if (contentHeight > size.Y)
         {
             ImGui.SetCursorPosY(cursor.Y + (contentHeight - size.Y) * 0.5f);
         }
     }
 
-    public static void TableTextCentered(string text, float contentHeight = 0f, Vector4? color = null)
+    public static void TableTextCentered(string text, float contentHeight = 0f, Vector4? color = null) =>
+        TableTextCentered(text, contentHeight, color, true);
+
+    public static void TableTextCentered(string text, float contentHeight, Vector4? color, bool centerHorizontally)
     {
+        if (contentHeight > 0f)
+            ImGuiP.GetCurrentWindow().DC.CurrLineTextBaseOffset = 0f;
+        var width = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+        var textSize = ImGui.CalcTextSize(text);
+        if (textSize.X > width)
+        {
+            textSize = ImGui.CalcTextSize(text, false, width);
+            var height = MathF.Max(contentHeight, textSize.Y);
+            var position = ImGui.GetCursorScreenPos();
+            ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+                position + new Vector2(0f, MathF.Max(0f, (height - textSize.Y) * 0.5f)),
+                ImGui.GetColorU32(color ?? ImGui.GetStyle().Colors[(int)ImGuiCol.Text]), text, width);
+            ImGui.Dummy(new Vector2(width, height));
+            return;
+        }
         if (contentHeight > 0f)
         {
             DrawTextCentered(
                 text,
                 ImGui.GetCursorScreenPos(),
-                new Vector2(ImGui.GetContentRegionAvail().X, contentHeight),
+                new Vector2(centerHorizontally ? width : textSize.X, contentHeight),
                 color ?? ImGui.GetStyle().Colors[(int)ImGuiCol.Text]);
-            ImGui.Dummy(new Vector2(0f, contentHeight));
+            ImGui.Dummy(new Vector2(width, contentHeight));
             return;
         }
 
-        CenterTableItem(ImGui.CalcTextSize(text), contentHeight);
+        if (centerHorizontally)
+            CenterTableItem(textSize, contentHeight);
         ImGui.AlignTextToFramePadding();
+        using var wrap = ImRaii.TextWrapPos(-1f);
 
         if (color is { } textColor)
         {
@@ -1171,6 +1248,16 @@ public static class OmniControls
         Vector4 normal,
         Vector4? textColor = null)
     {
+        var textSize = ImGui.CalcTextSize(DisplayLabel(label));
+        var padding = ImGui.GetStyle().FramePadding;
+        size = Vector2.Max(size, textSize + padding * 2f);
+        size = new(MathF.Ceiling(size.X), MathF.Ceiling(size.Y));
+        WrapControl(size.X);
+        size.X = MathF.Min(size.X, MathF.Max(1f, ImGui.GetContentRegionAvail().X));
+        var wrap = textSize.X > size.X - padding.X * 2f + 1f;
+        if (wrap)
+            textSize = ImGui.CalcTextSize(DisplayLabel(label), false, MathF.Max(1f, size.X - padding.X * 2f));
+        size.Y = MathF.Max(size.Y, textSize.Y + padding.Y * 2f);
         var pos = ImGui.GetCursorScreenPos();
         var clicked = false;
         if (OmniTheme.UsesMaterial)
@@ -1198,15 +1285,35 @@ public static class OmniControls
         {
             DrawMaterialControl(drawList, pos + new Vector2(0f, GlassMotion.ButtonOffset()), size,
                 GlassMotion.ButtonFill(normal), radius, GlassMotion.CurrentItemID);
-            DrawTextCentered(DisplayLabel(label), pos, size, textColor ?? tokens.Text);
+            DrawTextCentered(DisplayLabel(label), pos + padding, Vector2.Max(Vector2.One, size - padding * 2f), textColor ?? tokens.Text, wrap);
             return clicked;
         }
         DrawControlShadow(drawList, pos, size, radius);
         drawList.AddRectFilled(pos, pos + size, OmniTheme.Color(fill), radius);
         DrawControlFrame(drawList, pos, size, radius, OmniTheme.BorderThickness());
         DrawControlHighlight(drawList, pos, size, radius);
-        DrawTextCentered(DisplayLabel(label), pos, size, textColor ?? tokens.Text);
+        DrawTextCentered(DisplayLabel(label), pos + padding, Vector2.Max(Vector2.One, size - padding * 2f), textColor ?? tokens.Text, wrap);
         return ImGui.IsItemClicked();
+    }
+
+    public static void DrawPopupBackground()
+    {
+        var inset = OmniTheme.ChromeFrameInset();
+        var windowPosition = ImGui.GetWindowPos();
+        var windowSize = ImGui.GetWindowSize();
+        var position = windowPosition + new Vector2(inset);
+        var size = windowSize - new Vector2(inset * 2f);
+        var drawList = ImGui.GetWindowDrawList();
+        var scrollbarSize = ImGui.GetStyle().ScrollbarSize;
+        var clipEnd = windowPosition + windowSize - new Vector2(
+            ImGui.GetScrollMaxY() > 0f ? scrollbarSize : 0f,
+            ImGui.GetScrollMaxX() > 0f ? scrollbarSize : 0f);
+        drawList.PushClipRect(windowPosition, clipEnd, false);
+        if (OmniTheme.UsesMaterial)
+            DrawGlassSurface(drawList, position, size, OmniTheme.Tokens.Background,
+                OmniTheme.Scale(OmniTheme.Tokens.BorderRadius));
+        DrawPanelBackground(position, size, OmniTheme.Tokens.Surface);
+        drawList.PopClipRect();
     }
 
     internal static void DrawPanelBackground(Vector2 pos, Vector2 size, Vector4 fill)
@@ -1309,12 +1416,7 @@ public static class OmniControls
         }
 
         using var tooltipFont = BeginHelpTooltip();
-        ImGui.PushTextWrapPos(
-            ImGui.GetCursorPosX() + MathF.Min(
-                OmniTheme.Scale(520f),
-                MathF.Max(1f, ImGui.GetMainViewport().WorkSize.X - OmniTheme.Scale(32f))));
         ImGui.TextUnformatted(tooltip);
-        ImGui.PopTextWrapPos();
         EndHelpTooltip();
     }
 
@@ -1333,16 +1435,36 @@ public static class OmniControls
                 Color = textColor is { } color ? OmniTheme.Color(color) : null,
                 WrapWidth = MathF.Min(
                     OmniTheme.Scale(520f),
-                    MathF.Max(1f, ImGui.GetMainViewport().WorkSize.X - OmniTheme.Scale(32f)))
+                    MathF.Max(1f, ImGui.GetMainViewport().WorkSize.X - OmniTheme.Scale(16f) -
+                        ImGui.GetStyle().WindowPadding.X * 2f))
             });
         EndHelpTooltip();
     }
 
-    private static IDisposable BeginHelpTooltip()
+    public static void HelpTooltip(Action drawTooltip)
+    {
+        if (!ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            return;
+        using var tooltipFont = BeginHelpTooltip();
+        drawTooltip();
+        EndHelpTooltip();
+    }
+
+    public static void HelpTooltip(Action drawTooltip, uint sourceID, float width)
+    {
+        using var tooltipFont = BeginHelpTooltip(sourceID, width);
+        drawTooltip();
+        EndHelpTooltip();
+    }
+
+    public static IDisposable PushTooltipStyle()
     {
         var font = OmniFonts.GetUIFont().Push();
+        var scale = new OmniTheme.ScaleScope(ImGui.GetFont().FontSize * ImGui.GetIO().FontGlobalScale / OmniTheme.REFERENCE_FONT_SIZE);
         var tokens = OmniTheme.Tokens;
-        ImGui.PushStyleColor(ImGuiCol.PopupBg, OmniTheme.TooltipBackground with { W = 1f });
+        var background = OmniTheme.TooltipBackground with { W = 1f };
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, background);
+        ImGui.PushStyleColor(ImGuiCol.PopupBg, background);
         ImGui.PushStyleColor(ImGuiCol.Border, tokens.Border);
         ImGui.PushStyleColor(ImGuiCol.Text, tokens.Text);
         ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 1f);
@@ -1351,21 +1473,66 @@ public static class OmniControls
         ImGui.PushStyleVar(ImGuiStyleVar.PopupRounding, OmniTheme.Scale(tokens.BorderRadius));
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, OmniTheme.BorderThickness());
         ImGui.PushStyleVar(ImGuiStyleVar.PopupBorderSize, OmniTheme.BorderThickness());
-        ImGui.BeginTooltip();
-        if (OmniTheme.UsesMaterial)
-        {
-            DrawGlassSurface(ImGui.GetWindowDrawList(), ImGui.GetWindowPos(), ImGui.GetWindowSize(),
-                OmniTheme.TooltipBackground with { W = 0.92f }, OmniTheme.Scale(tokens.BorderRadius));
-        }
+        return new TooltipStyleScope(font, scale);
+    }
+
+    public static void DrawTooltipBackground()
+    {
+        if (!OmniTheme.UsesMaterial)
+            return;
+
+        DrawGlassSurface(ImGui.GetWindowDrawList(), ImGui.GetWindowPos(), ImGui.GetWindowSize(),
+            OmniTheme.TooltipBackground with { W = 0.92f }, OmniTheme.Scale(OmniTheme.Tokens.BorderRadius));
+    }
+
+    private static IDisposable BeginHelpTooltip(uint? tooltipSourceID = null, float width = 0f)
+    {
+        var sourceID = tooltipSourceID ?? GlassMotion.CurrentItemID;
+        var sourcePosition = ImGui.GetItemRectMin();
+        var frame = ImGui.GetFrameCount();
+        var resetScroll = sourceID != HelpTooltipSourceID || sourcePosition != HelpTooltipSourcePosition || frame > HelpTooltipFrame + 1;
+        HelpTooltipSourceID = sourceID;
+        HelpTooltipSourcePosition = sourcePosition;
+        HelpTooltipFrame = frame;
+        var tooltipStyle = PushTooltipStyle();
+        var maximumSize = OmniTheme.ClampWindowSize(ImGui.GetMainViewport().WorkSize - OmniTheme.Scale(new Vector2(16f)));
+        width = MathF.Min(width, maximumSize.X);
+        ImGui.SetNextWindowSizeConstraints(new Vector2(width, 0f),
+            new Vector2(width > 0f ? width : maximumSize.X, maximumSize.Y));
+        ImGuiP.BeginTooltipEx(ImGuiTooltipFlags.OverridePreviousTooltip,
+            ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+        if (resetScroll)
+            ImGui.SetScrollY(0f);
+        DrawTooltipBackground();
         ImGui.SetWindowFontScale(1f);
-        return font;
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + MathF.Min(OmniTheme.Scale(520f),
+            MathF.Max(1f, (width > 0f ? width : maximumSize.X) -
+                ImGui.GetStyle().WindowPadding.X * 2f)));
+        if (ImGui.GetScrollMaxY() > 0f &&
+            ImGui.IsMouseHoveringRect(ImGui.GetWindowPos(), ImGui.GetWindowPos() + ImGui.GetWindowSize(), false))
+        {
+            ImGuiP.SetItemUsingMouseWheel();
+            if (ImGui.GetIO().MouseWheel != 0f)
+                ImGui.SetScrollY(ImGui.GetScrollY() - ImGui.GetIO().MouseWheel * ImGui.GetTextLineHeightWithSpacing() * 3f);
+        }
+        return tooltipStyle;
     }
 
     private static void EndHelpTooltip()
     {
+        ImGui.PopTextWrapPos();
         ImGui.EndTooltip();
-        ImGui.PopStyleVar(6);
-        ImGui.PopStyleColor(3);
+    }
+
+    private readonly record struct TooltipStyleScope(IDisposable Font, OmniTheme.ScaleScope Scale) : IDisposable
+    {
+        public void Dispose()
+        {
+            ImGui.PopStyleVar(6);
+            ImGui.PopStyleColor(4);
+            Scale.Dispose();
+            Font.Dispose();
+        }
     }
 
     private static void DrawHelpIcon(float lineTop, float lineHeight, float verticalOffset = 0f)
@@ -1385,6 +1552,12 @@ public static class OmniControls
     {
         var iconText = icon.ToIconString();
         var iconSize = GetScaledIconSize(iconText);
+        WrapControl(iconSize.X);
+        if (ImGuiP.GetCurrentWindow().DC.IsSameLine == 0)
+        {
+            lineTop = ImGui.GetCursorScreenPos().Y;
+            lineHeight = MathF.Max(ImGui.GetFrameHeight(), iconSize.Y);
+        }
         var position = new Vector2(ImGui.GetCursorScreenPos().X, lineTop);
         ImGui.SetCursorScreenPos(position);
         ImGui.Dummy(new Vector2(iconSize.X, lineHeight));
@@ -1485,8 +1658,10 @@ public static class OmniControls
     {
         var separator = id.IndexOf("##", StringComparison.Ordinal);
         var label = separator < 0 ? id : id[..separator];
+        WrapControl(width + (label.Length == 0 ? 0f : ImGui.CalcTextSize(label).X + ImGui.GetStyle().ItemInnerSpacing.X));
         if (label.Length == 0)
         {
+            width = MathF.Max(1f, MathF.Min(width, ImGui.GetContentRegionAvail().X));
             return id;
         }
 
@@ -1494,8 +1669,9 @@ public static class OmniControls
         var labelWidth = ImGui.CalcTextSize(label).X;
         var available = ImGui.GetContentRegionAvail().X;
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted(label);
-        if (available >= labelWidth + spacing + MathF.Min(width, OmniTheme.Scale(64f)))
+        using (ImRaii.TextWrapPos(0f))
+            ImGui.TextUnformatted(label);
+        if (available + 1f >= labelWidth + spacing + width)
         {
             ImGui.SameLine(0f, spacing);
         }
