@@ -4,10 +4,12 @@ public sealed class ComicStyleScope : IDisposable
 {
     private const int VAR_COUNT = 9;
     private readonly int colorCount;
+    private readonly OmniTheme.ScaleScope scale;
     private bool disposed;
 
     public ComicStyleScope()
     {
+        scale = new(ImGui.GetFontSize() / OmniTheme.REFERENCE_FONT_SIZE);
         var tokens = OmniTheme.Tokens;
         var controlAccent = OmniTheme.ControlAccent;
         var pushedColors = 0;
@@ -109,5 +111,6 @@ public sealed class ComicStyleScope : IDisposable
         disposed = true;
         ImGui.PopStyleVar(VAR_COUNT);
         ImGui.PopStyleColor(colorCount);
+        scale.Dispose();
     }
 }

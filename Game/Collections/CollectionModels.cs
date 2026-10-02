@@ -64,6 +64,8 @@ public readonly record struct CollectionSource(
     CollectionSourceLocation? Location = null)
 {
     public uint MapTerritoryID { get; init; }
+
+    public uint TargetItemID { get; init; }
 }
 
 public readonly record struct CollectionSourceLocation(

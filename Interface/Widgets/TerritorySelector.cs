@@ -52,14 +52,13 @@ public sealed class TerritorySelector
             }
         }
 
-        ImGui.SameLine();
-        ImGui.AlignTextToFramePadding();
-        ImGui.TextDisabled(currentTerritoryID == 0
+        var currentText = currentTerritoryID == 0
             ? OmniLoc.Get("Common.TerritorySelector.LoggedOut")
-            : string.Format(
-                OmniLoc.Get("Common.TerritorySelector.Current"),
-                GetTerritoryName(currentTerritoryID),
-                currentTerritoryID));
+            : string.Format(OmniLoc.Get("Common.TerritorySelector.Current"), GetTerritoryName(currentTerritoryID), currentTerritoryID);
+        OmniControls.SameLineOrWrap(ImGui.CalcTextSize(currentText).X);
+        ImGui.AlignTextToFramePadding();
+        using (ImRaii.TextWrapPos(0f))
+            ImGui.TextDisabled(currentText);
 
         OmniControls.InputTextWithHint(
             $"##{id}Search",
@@ -86,12 +85,27 @@ public sealed class TerritorySelector
             return false;
         }
 
-        var tableHeight =
-            (OmniTheme.SmallButtonSize().Y + ImGui.GetStyle().CellPadding.Y * 2f) * 6f +
-            OmniTheme.BorderThickness() * 2f;
+        var available = ImGui.GetContentRegionAvail();
+        var checkWidth = OmniControls.MeasureCheckbox(string.Empty).X;
+        var idWidth = OmniControls.MeasureInput("65535", OmniTheme.Scale(74f)).X;
+        var nameWidth = (available.X - checkWidth - idWidth - ImGui.GetStyle().CellPadding.X * 8f - ImGui.GetStyle().ScrollbarSize) / 2.35f;
+        var detailLayout = nameWidth < ImGui.GetFontSize() * 4f;
+        var rowHeight = MathF.Max(ImGui.GetFrameHeight(), checkWidth);
+        if (!detailLayout)
+        {
+            foreach (var option in rows)
+            {
+                rowHeight = MathF.Max(rowHeight, ImGui.CalcTextSize(option.Name, false, MathF.Max(1f, nameWidth * 1.35f)).Y);
+                rowHeight = MathF.Max(rowHeight, ImGui.CalcTextSize(option.Region, false, MathF.Max(1f, nameWidth)).Y);
+            }
+        }
+        var headerHeight = MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight());
+        var tableHeight = MathF.Ceiling(headerHeight + ImGui.GetStyle().CellPadding.Y * 2f +
+            (rowHeight + ImGui.GetStyle().CellPadding.Y * 2f) * Math.Min(rows.Count, 6) +
+            OmniTheme.BorderThickness() * 2f);
         using var table = ImRaii.Table(
             $"##{id}Table",
-            4,
+            detailLayout ? 1 : 4,
             ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY |
             ImGuiTableFlags.SizingStretchProp,
             new Vector2(0f, tableHeight));
@@ -100,25 +114,30 @@ public sealed class TerritorySelector
             return false;
         }
 
-        ImGui.TableSetupColumn($"##{id}Check", ImGuiTableColumnFlags.WidthFixed, ImGui.GetFrameHeight());
+        if (!detailLayout)
+            ImGui.TableSetupColumn($"##{id}Check", ImGuiTableColumnFlags.WidthFixed, checkWidth);
         ImGui.TableSetupColumn(
             OmniLoc.Get("Common.TerritorySelector.Column.Map"),
             ImGuiTableColumnFlags.WidthStretch,
             1.35f);
-        ImGui.TableSetupColumn(
-            OmniLoc.Get("Common.TerritorySelector.Column.Region"),
-            ImGuiTableColumnFlags.WidthStretch,
-            1f);
-        ImGui.TableSetupColumn(
-            OmniLoc.Get("Common.TerritorySelector.Column.Id"),
-            ImGuiTableColumnFlags.WidthFixed,
-            OmniTheme.Scale(74f));
+        if (!detailLayout)
+        {
+            ImGui.TableSetupColumn(
+                OmniLoc.Get("Common.TerritorySelector.Column.Region"),
+                ImGuiTableColumnFlags.WidthStretch,
+                1f);
+            ImGui.TableSetupColumn(
+                OmniLoc.Get("Common.TerritorySelector.Column.Id"),
+                ImGuiTableColumnFlags.WidthFixed,
+                idWidth);
+        }
         ImGui.TableSetupScrollFreeze(0, 1);
         OmniControls.BeginTableHeaderRow();
         ImGui.TableNextColumn();
         ImGui.TableSetBgColor(ImGuiTableBgTarget.CellBg, ImGui.GetColorU32(ImGuiCol.TableHeaderBg));
         var selectAll = TerritoryOptions.Count > 0 && selectedTerritoryIds.Count == TerritoryOptions.Count;
-        OmniControls.CenterTableItem(new Vector2(OmniTheme.CheckboxSize()), OmniTheme.SmallButtonSize().Y);
+        if (!detailLayout)
+            OmniControls.CenterTableItem(new Vector2(checkWidth), OmniTheme.SmallButtonSize().Y);
         var changed = false;
         if (OmniControls.Checkbox($"##{id}SelectAll", ref selectAll))
         {
@@ -137,18 +156,35 @@ public sealed class TerritorySelector
             changed = true;
         }
 
-        OmniControls.TableHeader(OmniLoc.Get("Common.TerritorySelector.Column.Map"));
-        OmniControls.TableHeader(OmniLoc.Get("Common.TerritorySelector.Column.Region"));
-        OmniControls.TableHeader(OmniLoc.Get("Common.TerritorySelector.Column.Id"));
+        if (detailLayout)
+        {
+            OmniControls.SameLineOrWrap(ImGui.CalcTextSize(OmniLoc.Get("Common.TerritorySelector.Column.Map")).X);
+            ImGui.TextUnformatted(OmniLoc.Get("Common.TerritorySelector.Column.Map"));
+        }
+        else
+        {
+            OmniControls.TableHeader(OmniLoc.Get("Common.TerritorySelector.Column.Map"));
+            OmniControls.TableHeader(OmniLoc.Get("Common.TerritorySelector.Column.Region"));
+            OmniControls.TableHeader(OmniLoc.Get("Common.TerritorySelector.Column.Id"));
+            ImGui.TableSetColumnIndex(1);
+            var mapWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+            ImGui.TableSetColumnIndex(2);
+            var regionWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+            rowHeight = MathF.Max(ImGui.GetFrameHeight(), checkWidth);
+            foreach (var option in rows)
+            {
+                rowHeight = MathF.Max(rowHeight, ImGui.CalcTextSize(option.Name, false, mapWidth).Y);
+                rowHeight = MathF.Max(rowHeight, ImGui.CalcTextSize(option.Region, false, regionWidth).Y);
+            }
+        }
 
         foreach (var option in rows)
         {
             ImGui.PushID((int)option.ID);
-            ImGui.TableNextRow();
+            ImGui.TableNextRow(ImGuiTableRowFlags.None, detailLayout ? 0f : rowHeight);
             ImGui.TableNextColumn();
-            OmniControls.CenterTableItem(
-                new Vector2(OmniTheme.CheckboxSize()),
-                OmniTheme.SmallButtonSize().Y);
+            if (!detailLayout)
+                OmniControls.CenterTableItem(new Vector2(checkWidth), rowHeight);
             var selected = selectedTerritoryIds.Contains(option.ID);
             if (OmniControls.Checkbox($"##{id}Selected", ref selected))
             {
@@ -157,15 +193,15 @@ public sealed class TerritorySelector
                     : selectedTerritoryIds.Remove(option.ID);
             }
 
-            ImGui.TableNextColumn();
-            OmniControls.TableTextCentered(option.Name, OmniTheme.SmallButtonSize().Y);
-            ImGui.TableNextColumn();
+            OmniControls.NextTableField(OmniLoc.Get("Common.TerritorySelector.Column.Map"), detailLayout);
+            OmniControls.TableTextCentered(option.Name, detailLayout ? 0f : rowHeight);
+            OmniControls.NextTableField(OmniLoc.Get("Common.TerritorySelector.Column.Region"), detailLayout);
             OmniControls.TableTextCentered(
                 option.Region,
-                OmniTheme.SmallButtonSize().Y,
+                detailLayout ? 0f : rowHeight,
                 ImGui.GetStyle().Colors[(int)ImGuiCol.TextDisabled]);
-            ImGui.TableNextColumn();
-            OmniControls.TableTextCentered(option.ID.ToString(), OmniTheme.SmallButtonSize().Y);
+            OmniControls.NextTableField(OmniLoc.Get("Common.TerritorySelector.Column.Id"), detailLayout);
+            OmniControls.TableTextCentered(option.ID.ToString(), detailLayout ? 0f : rowHeight);
             ImGui.PopID();
         }
 

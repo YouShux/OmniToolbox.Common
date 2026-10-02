@@ -12,7 +12,23 @@ public static class OmniFontSelector
     private static KeyValuePair<string, string>[] SortedFonts = [];
     private static readonly StringComparer NameComparer = StringComparer.Create(CultureInfo.GetCultureInfo("zh-CN"), true);
 
-    public static bool Draw(string id, ref string path, ref string search, string defaultLabel, string defaultPath)
+    public static string GetPreviewText(string path, string defaultLabel, string defaultPath)
+    {
+        foreach (var font in OmniFonts.GameFonts)
+        {
+            if (font.Key == path)
+                return font.Value;
+        }
+
+        return string.IsNullOrWhiteSpace(path) || string.Equals(path, defaultPath, StringComparison.OrdinalIgnoreCase)
+            ? defaultLabel
+            : FontManager.Instance().InstalledFonts.GetValueOrDefault(path, Path.GetFileNameWithoutExtension(path));
+    }
+
+    public static bool Draw(string id, ref string path, ref string search, string defaultLabel, string defaultPath) =>
+        Draw(id, ref path, ref search, defaultLabel, defaultPath, ImGui.GetContentRegionAvail().X);
+
+    public static bool Draw(string id, ref string path, ref string search, string defaultLabel, string defaultPath, float width)
     {
         var installed = FontManager.Instance().InstalledFonts;
         if (!ReferenceEquals(InstalledSnapshot, installed))
@@ -25,18 +41,11 @@ public static class OmniFontSelector
             InstalledSnapshot = installed;
         }
         var isDefault = string.IsNullOrWhiteSpace(path) || string.Equals(path, defaultPath, StringComparison.OrdinalIgnoreCase);
-        var label = isDefault ? defaultLabel : installed.GetValueOrDefault(path, Path.GetFileNameWithoutExtension(path));
-        foreach (var font in OmniFonts.GameFonts)
-        {
-            if (font.Key == path)
-            {
-                label = font.Value;
-                break;
-            }
-        }
-        var height = MathF.Min(OmniTheme.Scale(360f), ImGui.GetMainViewport().WorkSize.Y - ImGui.GetStyle().WindowPadding.Y * 2f);
-        ImGui.SetNextWindowSizeConstraints(new Vector2(0f, height), new Vector2(float.MaxValue, height));
-        if (!OmniControls.BeginCombo(id, label, ImGui.GetContentRegionAvail().X))
+        var label = GetPreviewText(path, defaultLabel, defaultPath);
+        var maximum = OmniTheme.ClampWindowSize(ImGui.GetMainViewport().WorkSize - ImGui.GetStyle().WindowPadding * 2f);
+        var height = MathF.Min(OmniTheme.Scale(360f), maximum.Y);
+        ImGui.SetNextWindowSizeConstraints(new Vector2(0f, height), new Vector2(maximum.X, height));
+        if (!OmniControls.BeginCombo(id, label, width))
         {
             return false;
         }
@@ -52,7 +61,7 @@ public static class OmniFontSelector
                 {
                     ImGui.SetScrollY(0f);
                 }
-                if (ImGui.Selectable(defaultLabel, isDefault))
+                if (OmniControls.WrappedSelectable(defaultLabel, isDefault))
                 {
                     path = defaultPath;
                     changed = true;
@@ -66,7 +75,7 @@ public static class OmniFontSelector
                     {
                         continue;
                     }
-                    if (ImGui.Selectable($"{font.Value}##{font.Key}", path == font.Key))
+                    if (OmniControls.WrappedSelectable($"{font.Value}##{font.Key}", path == font.Key))
                     {
                         path = font.Key;
                         changed = true;

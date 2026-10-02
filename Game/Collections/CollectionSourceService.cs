@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lumina.Excel.Sheets;
 using OmenTools.Interop.Game.Lumina;
+using OmniToolbox.Items;
 
 namespace OmniToolbox.Collections;
 
@@ -17,6 +18,7 @@ public sealed partial class CollectionSourceService : IDisposable
 
     private readonly FrozenSet<uint> unobtainableItemIds;
     private readonly FrozenDictionary<uint, IReadOnlyList<CollectionSource>> itemSources;
+    private readonly FrozenDictionary<uint, uint[]> itemSetItemIDs;
     private readonly FrozenDictionary<uint, IReadOnlyList<uint>> blindBoxDropPools;
     private readonly FrozenDictionary<uint, IReadOnlyList<CollectionSource>> blueMageSources;
     private readonly FrozenDictionary<uint, IReadOnlyList<BlueSpellSource>> blueSpellRows;
@@ -38,6 +40,11 @@ public sealed partial class CollectionSourceService : IDisposable
         var itemsByID = LuminaGetter.Get<Item>()
             .Where(item => item.RowId != 0)
             .ToDictionary(item => item.RowId);
+        itemSetItemIDs = LuminaGetter.Get<MirageStoreSetItem>()
+            .Where(set => itemsByID.ContainsKey(set.RowId))
+            .ToFrozenDictionary(
+                set => set.RowId,
+                set => ItemSetCatalog.GetItemSlots(set.RowId).Where(itemID => itemID != 0).ToArray());
         var wikiSources = ReadWikiItemSources();
         unobtainableItemIds = wikiSources.UnobtainableItemIds;
         blindBoxDropPools = wikiSources.BlindBoxDropPools.ToFrozenDictionary(
@@ -61,6 +68,7 @@ public sealed partial class CollectionSourceService : IDisposable
         AddContainerSources(itemRows, itemsByID);
         AddCraftingSources(itemRows);
         AddTripleTriadSources(itemRows, itemsByID);
+        AddItemSetSources(itemRows, itemsByID);
 
         var contentFinderConditions = new Dictionary<uint, ContentFinderCondition>();
         foreach (var condition in LuminaGetter.Get<ContentFinderCondition>())

@@ -106,6 +106,33 @@ public sealed partial class CollectionSourceService
         }
     }
 
+    private void AddItemSetSources(
+        IDictionary<uint, HashSet<CollectionSource>> itemRows,
+        IReadOnlyDictionary<uint, Item> itemsByID)
+    {
+        foreach (var (setItemID, memberItemIDs) in itemSetItemIDs)
+        {
+            foreach (var memberItemID in memberItemIDs)
+            {
+                if (!itemsByID.TryGetValue(memberItemID, out var item) ||
+                    !itemRows.TryGetValue(memberItemID, out var sources))
+                {
+                    continue;
+                }
+
+                var name = item.Name.ExtractText();
+                foreach (var source in sources)
+                {
+                    AddSource(itemRows, setItemID, source with
+                    {
+                        TargetItemID = memberItemID,
+                        Detail = source.Detail.Length == 0 ? name : $"{name} | {source.Detail}"
+                    });
+                }
+            }
+        }
+    }
+
     private static void AddTripleTriadSources(
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
         IReadOnlyDictionary<uint, Item> itemsByID)
