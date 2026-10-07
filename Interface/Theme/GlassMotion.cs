@@ -6,6 +6,7 @@ public static class GlassMotion
 {
     private static readonly Dictionary<ulong, State> States = [];
     private static readonly List<ulong> Expired = [];
+
     public static UIMotionMode Mode { get; internal set; }
 
     public static unsafe uint CurrentItemID => new ImGuiContextPtr(ImGui.GetCurrentContext()).LastItemData.ID;

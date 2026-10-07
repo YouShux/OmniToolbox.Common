@@ -15,8 +15,6 @@ public interface IEscapeClosableWindow
 
 public sealed class EscapeCloseController
 {
-    private const int ESCAPE_VIRTUAL_KEY = 0x1B;
-
     private bool escapePressedLastFrame;
     private bool suppressEscapeUntilRelease;
 
@@ -87,4 +85,10 @@ public sealed class EscapeCloseController
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int virtualKey);
+
+    #region 常量
+
+    private const int ESCAPE_VIRTUAL_KEY = 0x1B;
+
+    #endregion
 }

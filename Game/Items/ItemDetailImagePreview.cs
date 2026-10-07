@@ -14,8 +14,6 @@ namespace OmniToolbox.Items;
 
 internal sealed unsafe class ItemDetailImagePreview : IDisposable
 {
-    private const string ADDON_NAME = "ItemDetail";
-
     private readonly ItemImagePreviewConfig config;
     private readonly ItemPreviewService itemPreviewService;
     private readonly AddonEventRegistry addonEvents = new(DalamudServices.AddonLifecycle);
@@ -213,4 +211,10 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
         preview = null;
         previewTexture = null;
     }
+
+    #region 常量
+
+    private const string ADDON_NAME = "ItemDetail";
+
+    #endregion
 }

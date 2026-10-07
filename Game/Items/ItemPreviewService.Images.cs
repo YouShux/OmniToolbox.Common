@@ -63,7 +63,7 @@ public sealed unsafe partial class ItemPreviewService
             return iconID;
         }
 
-        iconID = ResolveHairstyleForIcon(item.ID, itemID, character)?.Icon ?? item.IconID;
+        iconID = ResolveHairstyleForIcon(item.ID, character)?.Icon ?? item.IconID;
         hairstyleIconCache[key] = iconID;
         return iconID;
     }
@@ -159,7 +159,7 @@ public sealed unsafe partial class ItemPreviewService
             case CollectionType.Hairstyle when config.ShowHairstyles:
                 var character = GetLocalCharacter();
                 if (character == null ||
-                    ResolveHairstyleForIcon(target.ID, itemID, character) is not { } hairstyle)
+                    ResolveHairstyleForIcon(target.ID, character) is not { } hairstyle)
                 {
                     return false;
                 }
@@ -189,10 +189,9 @@ public sealed unsafe partial class ItemPreviewService
 
     private static CharaMakeCustomize? ResolveHairstyleForIcon(
         uint hairstyleID,
-        uint itemID,
         Character* character)
     {
-        if (ResolveHairstyle(hairstyleID, itemID, character) is not { } hairstyle)
+        if (ResolveHairstyle(hairstyleID, character) is not { } hairstyle)
         {
             return null;
         }

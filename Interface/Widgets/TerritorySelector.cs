@@ -180,7 +180,7 @@ public sealed class TerritorySelector
 
         foreach (var option in rows)
         {
-            ImGui.PushID((int)option.ID);
+            using var idScope = ImRaii.PushId((int)option.ID);
             ImGui.TableNextRow(ImGuiTableRowFlags.None, detailLayout ? 0f : rowHeight);
             ImGui.TableNextColumn();
             if (!detailLayout)
@@ -202,7 +202,6 @@ public sealed class TerritorySelector
                 ImGui.GetStyle().Colors[(int)ImGuiCol.TextDisabled]);
             OmniControls.NextTableField(OmniLoc.Get("Common.TerritorySelector.Column.Id"), detailLayout);
             OmniControls.TableTextCentered(option.ID.ToString(), detailLayout ? 0f : rowHeight);
-            ImGui.PopID();
         }
 
         return changed;

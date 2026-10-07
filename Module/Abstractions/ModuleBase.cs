@@ -5,6 +5,8 @@ namespace OmniToolbox.Common.Module.Abstractions;
 
 public abstract class ModuleBase : IDisposable
 {
+    public abstract ModuleInfo Info { get; }
+
     private bool disposed;
     private Action<uint>? iconSelection;
 
@@ -18,8 +20,6 @@ public abstract class ModuleBase : IDisposable
     }
 
     public string ModuleName { get; }
-
-    public abstract ModuleInfo Info { get; }
 
     public bool IsEnabled { get; private set; }
 

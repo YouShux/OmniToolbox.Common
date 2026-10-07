@@ -10,7 +10,9 @@ internal static class CombatCharacterSnapshot
     private static readonly List<IBattleChara> BattleCharaSnapshot = new(100);
     private static readonly Dictionary<uint, IGameObject> ObjectsByEntityID = new(100);
     private static readonly Dictionary<ulong, IGameObject> ObjectsByGameObjectID = new(100);
+
     public static IReadOnlyList<IPlayerCharacter> Players => PlayerSnapshot;
+
     public static IReadOnlyList<IBattleChara> BattleCharas => BattleCharaSnapshot;
 
     public static void Refresh()

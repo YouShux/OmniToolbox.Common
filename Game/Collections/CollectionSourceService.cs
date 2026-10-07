@@ -10,7 +10,6 @@ namespace OmniToolbox.Collections;
 
 public sealed partial class CollectionSourceService : IDisposable
 {
-
     private static readonly IReadOnlyList<CollectionSource> EmptySources = Array.Empty<CollectionSource>();
     private static readonly FrozenSet<CollectionSourceCategory> EmptyCategories =
         Array.Empty<CollectionSourceCategory>().ToFrozenSet();
@@ -81,7 +80,7 @@ public sealed partial class CollectionSourceService : IDisposable
         var categories = BuildCategorySeeds(itemRows, contentFinderConditions);
         AddCurrencyCategories(categories, itemsByID.Values);
         AddWikiGilCategories(categories, itemRows, itemsByID);
-        wikiShopDependencies = BuildWikiShopDependencies(itemRows, itemsByID);
+        wikiShopDependencies = BuildWikiShopDependencies(itemRows);
         exchangeTargetsByCostItemID = BuildExchangeTargetsByCostItemID(wikiShopDependencies);
         openingStageRestrictedItemIds = BuildOpeningStageRestrictedItems(
             itemRows,
@@ -114,7 +113,11 @@ public sealed partial class CollectionSourceService : IDisposable
                 blueSpellDetails[actionID] = details = [];
             }
 
-            details.Add(new(sourceType, mobDescription, locationDescription, x, y, level, note));
+            details.Add(new(sourceType, mobDescription, locationDescription, x, y, level, note)
+            {
+                DutyID = csv.GetField<uint>("DutyID"),
+                TerritoryID = csv.GetField<uint>("TerritoryID")
+            });
         });
 
         itemSources = Freeze(itemRows);

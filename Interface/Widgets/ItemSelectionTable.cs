@@ -47,81 +47,74 @@ public static class ItemSelectionTable
         var tableHeight = OmniTheme.SmallButtonSize().Y + cellPadding +
                           rowHeight * Math.Clamp(rows.Count, 1, 5) + OmniTheme.BorderThickness() * 2f;
 
-        ImGui.PushID(id);
-        try
+        using var idScope = ImRaii.PushId(id);
+        using var table = ImRaii.Table(
+            "##itemSelectionTable",
+            detailLayout ? 1 : showEnabledColumn ? 3 : 2,
+            ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY |
+            ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.NoSavedSettings,
+            new Vector2(ImGui.GetContentRegionAvail().X, tableHeight));
+        if (!table)
         {
-            using var table = ImRaii.Table(
-                "##itemSelectionTable",
-                detailLayout ? 1 : showEnabledColumn ? 3 : 2,
-                ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY |
-                ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.NoSavedSettings,
-                new Vector2(ImGui.GetContentRegionAvail().X, tableHeight));
-            if (!table)
-            {
-                return default;
-            }
+            return default;
+        }
 
-            if (showEnabledColumn && !detailLayout)
-            {
-                ImGui.TableSetupColumn(
-                    "##enabled",
-                    ImGuiTableColumnFlags.WidthFixed,
-                    OmniControls.MeasureCheckbox(string.Empty).X);
-            }
+        if (showEnabledColumn && !detailLayout)
+        {
+            ImGui.TableSetupColumn(
+                "##enabled",
+                ImGuiTableColumnFlags.WidthFixed,
+                OmniControls.MeasureCheckbox(string.Empty).X);
+        }
 
-            ImGui.TableSetupColumn(OmniLoc.Get("Common.Item"), ImGuiTableColumnFlags.WidthStretch);
-            if (!detailLayout)
-            {
-                ImGui.TableSetupColumn(
-                    OmniLoc.Get("Common.Action"),
-                    ImGuiTableColumnFlags.WidthFixed,
-                    deleteButtonSize.X);
-            }
+        ImGui.TableSetupColumn(OmniLoc.Get("Common.Item"), ImGuiTableColumnFlags.WidthStretch);
+        if (!detailLayout)
+        {
+            ImGui.TableSetupColumn(
+                OmniLoc.Get("Common.Action"),
+                ImGuiTableColumnFlags.WidthFixed,
+                deleteButtonSize.X);
+        }
 
-            ImGui.TableSetupScrollFreeze(0, 1);
-            var change = DrawHeader(rows, showEnabledColumn, detailLayout);
-            ImGui.TableSetColumnIndex(!detailLayout && showEnabledColumn ? 1 : 0);
-            nameWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
-            rowContentHeight = MathF.Max(iconSize, MathF.Max(OmniTheme.CheckboxSize(), deleteButtonSize.Y));
+        ImGui.TableSetupScrollFreeze(0, 1);
+        var change = DrawHeader(rows, showEnabledColumn, detailLayout);
+        ImGui.TableSetColumnIndex(!detailLayout && showEnabledColumn ? 1 : 0);
+        nameWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+        rowContentHeight = MathF.Max(iconSize, MathF.Max(OmniTheme.CheckboxSize(), deleteButtonSize.Y));
+        foreach (var row in rows)
+            rowContentHeight = MathF.Max(rowContentHeight, MeasureItemCellHeight(LuminaWrapper.GetItemName(row.ItemID), nameWidth, iconSize));
+        rowHeight = rowContentHeight + cellPadding;
+        if (detailLayout)
+        {
             foreach (var row in rows)
-                rowContentHeight = MathF.Max(rowContentHeight, MeasureItemCellHeight(LuminaWrapper.GetItemName(row.ItemID), nameWidth, iconSize));
-            rowHeight = rowContentHeight + cellPadding;
-            if (detailLayout)
             {
-                foreach (var row in rows)
+                ImGui.TableNextRow();
+                var rowChange = DrawRow(row, rowContentHeight, iconSize, deleteButtonSize, showEnabledColumn, true);
+                if (rowChange.Action != ItemSelectionTableAction.None)
                 {
-                    ImGui.TableNextRow();
-                    var rowChange = DrawRow(row, rowContentHeight, iconSize, deleteButtonSize, showEnabledColumn, true);
-                    if (rowChange.Action != ItemSelectionTableAction.None)
-                    {
-                        change = rowChange;
-                    }
-                }
-                return change;
-            }
-            var clipper = ImGui.ImGuiListClipper();
-            clipper.Begin(rows.Count, rowHeight);
-            while (clipper.Step())
-            {
-                for (var index = clipper.DisplayStart; index < clipper.DisplayEnd; index++)
-                {
-                    ImGui.TableNextRow(ImGuiTableRowFlags.None, rowContentHeight);
-                    var rowChange = DrawRow(rows[index], rowContentHeight, iconSize, deleteButtonSize, showEnabledColumn, false);
-                    if (rowChange.Action != ItemSelectionTableAction.None)
-                    {
-                        change = rowChange;
-                    }
+                    change = rowChange;
                 }
             }
-
-            clipper.End();
-            clipper.Destroy();
             return change;
         }
-        finally
+        var clipper = ImGui.ImGuiListClipper();
+        clipper.Begin(rows.Count, rowHeight);
+        while (clipper.Step())
         {
-            ImGui.PopID();
+            for (var index = clipper.DisplayStart; index < clipper.DisplayEnd; index++)
+            {
+                ImGui.TableNextRow(ImGuiTableRowFlags.None, rowContentHeight);
+                var rowChange = DrawRow(rows[index], rowContentHeight, iconSize, deleteButtonSize, showEnabledColumn, false);
+                if (rowChange.Action != ItemSelectionTableAction.None)
+                {
+                    change = rowChange;
+                }
+            }
         }
+
+        clipper.End();
+        clipper.Destroy();
+        return change;
     }
 
     private static ItemSelectionTableChange DrawHeader(
@@ -175,7 +168,7 @@ public static class ItemSelectionTable
         bool showEnabledColumn,
         bool detailLayout)
     {
-        ImGui.PushID((int)row.ItemID);
+        using var idScope = ImRaii.PushId((int)row.ItemID);
         var change = default(ItemSelectionTableChange);
         if (showEnabledColumn)
         {
@@ -209,7 +202,6 @@ public static class ItemSelectionTable
             OmniControls.TableTextCentered("-", detailLayout ? 0f : rowContentHeight);
         }
 
-        ImGui.PopID();
         return change;
     }
 

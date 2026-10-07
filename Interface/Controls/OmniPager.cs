@@ -4,7 +4,6 @@ namespace OmniToolbox.UI.Controls;
 
 public static class OmniPager
 {
-    private const int MAX_PAGE_TOKENS = 10;
     private static readonly List<(int Value, string Label)> PageTokens = new(MAX_PAGE_TOKENS);
 
     public static void Draw(string id, ref int page, ref int jumpPage, int itemCount, int pageSize)
@@ -86,7 +85,10 @@ public static class OmniPager
             if (OmniControls.SmallButton(
                     token.Label,
                     page == token.Value,
-                    OmniControls.CompactButtonSize(token.Label, 0f, 24f) with { Y = rowHeight }))
+                    OmniControls.CompactButtonSize(token.Label, 0f, 24f) with
+                    {
+                        Y = rowHeight
+                    }))
             {
                 page = token.Value;
             }
@@ -108,4 +110,10 @@ public static class OmniPager
 
         static void AddPageToken(int value) => PageTokens.Add((value, value.ToString()));
     }
+
+    #region 常量
+
+    private const int MAX_PAGE_TOKENS = 10;
+
+    #endregion
 }

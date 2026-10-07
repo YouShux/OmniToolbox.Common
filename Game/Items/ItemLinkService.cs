@@ -8,8 +8,6 @@ namespace OmniToolbox.Items;
 
 public static unsafe class ItemLinkService
 {
-    private static uint? ItemTextCommandParamID;
-
     public static bool TryInsert(uint itemID)
     {
         var agent = AgentChatLog.Instance();
@@ -22,12 +20,6 @@ public static unsafe class ItemLinkService
 
         try
         {
-            var textCommandParamID = GetItemTextCommandParamID();
-            if (textCommandParamID == 0)
-            {
-                return false;
-            }
-
             agent->LinkedItem.Clear();
             agent->LinkedItem.ItemId = itemID;
             agent->LinkedItem.Quantity = 1;
@@ -36,7 +28,7 @@ public static unsafe class ItemLinkService
             agent->LinkedItem.LinkedItemQuality = item.Rarity;
             agent->LinkedItemName.SetString(item.Name.ExtractText());
             agent->ContextItemId = itemID;
-            return agent->InsertTextCommandParam(textCommandParamID, false);
+            return agent->InsertTextCommandParam(ITEM_TEXT_COMMAND_PARAM_ID, false);
         }
         catch (Exception ex)
         {
@@ -45,25 +37,9 @@ public static unsafe class ItemLinkService
         }
     }
 
-    private static uint GetItemTextCommandParamID()
-    {
-        if (ItemTextCommandParamID is { } cachedId)
-        {
-            return cachedId;
-        }
+    #region 常量
 
-        foreach (var row in LuminaGetter.Get<TextCommandParam>())
-        {
-            if (row.Param.ExtractText() != "<item>")
-            {
-                continue;
-            }
+    private const uint ITEM_TEXT_COMMAND_PARAM_ID = 1096;
 
-            ItemTextCommandParamID = row.RowId;
-            return row.RowId;
-        }
-
-        ItemTextCommandParamID = 0;
-        return 0;
-    }
+    #endregion
 }

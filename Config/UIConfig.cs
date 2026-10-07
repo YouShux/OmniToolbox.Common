@@ -5,10 +5,6 @@ public sealed class UIConfig
 {
     public static readonly Vector2 DefaultMainWindowSize = new(1420f, 900f);
     public static readonly Vector2 DefaultItemInformationWindowSize = new(860f, 500f);
-    public const float DefaultLauncherIconSize = 60f;
-    public const float DefaultLauncherIconOpacity = 1f;
-    public const float DEFAULT_GLASS_MASK_OPACITY = 0.20f;
-    public const float DEFAULT_GLASS_BLUR_STRENGTH = 1.00f;
 
     public Vector2 MainWindowSize { get; set; } = DefaultMainWindowSize;
 
@@ -43,6 +39,18 @@ public sealed class UIConfig
     public float GlassBlurStrength = DEFAULT_GLASS_BLUR_STRENGTH;
 
     public NumberDisplayMode NumberDisplayMode { get; set; } = NumberDisplayMode.Standard;
+
+    #region 常量
+
+    public const float DefaultLauncherIconSize = 60f;
+
+    public const float DefaultLauncherIconOpacity = 1f;
+
+    public const float DEFAULT_GLASS_MASK_OPACITY = 0.20f;
+
+    public const float DEFAULT_GLASS_BLUR_STRENGTH = 1.00f;
+
+    #endregion
 }
 
 public enum UILanguage

@@ -10,7 +10,6 @@ public static partial class OmniLoc
 {
     private static readonly Dictionary<string, string> Texts = CreateCommonTexts();
     private static Lazy<IReadOnlyDictionary<string, string>> TraditionalTexts = new(BuildTraditionalTexts);
-    private const uint TRADITIONAL_CHINESE_MAP_FLAG = 0x04000000;
     private static UILanguage Language;
 
     public static void RegisterTexts(IReadOnlyDictionary<string, string> texts)
@@ -103,4 +102,10 @@ public static partial class OmniLoc
         nint versionInformation,
         nint reserved,
         nint sortHandle);
+
+    #region 常量
+
+    private const uint TRADITIONAL_CHINESE_MAP_FLAG = 0x04000000;
+
+    #endregion
 }

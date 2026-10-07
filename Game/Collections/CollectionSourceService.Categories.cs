@@ -13,7 +13,6 @@ namespace OmniToolbox.Collections;
 
 public sealed partial class CollectionSourceService
 {
-
     private static readonly (uint ItemId, CollectionSourceCategory Category)[] FixedCurrencyCategories =
     [
         (1, CollectionSourceCategory.Gil),
@@ -127,13 +126,10 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private static bool HasStandaloneGilPrice(uint itemID)
-    {
-        return ItemSourceInfo.Query(itemID) is { State: ItemSourceQueryState.Ready, Data: { } data } &&
+    private static bool HasStandaloneGilPrice(uint itemID) => ItemSourceInfo.Query(itemID) is { State: ItemSourceQueryState.Ready, Data: { } data } &&
                data.NPCInfos.Any(npc =>
                    npc.CostInfos.Any(cost => cost.ItemID == 1) &&
                    npc.CostInfos.All(cost => cost.ItemID == 1));
-    }
 
     private Dictionary<uint, HashSet<CollectionSourceCategory>> CreateCategoryMap()
     {
@@ -212,39 +208,21 @@ public sealed partial class CollectionSourceService
     }
 
     private static Dictionary<uint, HashSet<uint>> BuildWikiShopDependencies(
-        IReadOnlyDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, Item> itemsByID)
+        IReadOnlyDictionary<uint, HashSet<CollectionSource>> itemRows)
     {
-        var itemIdsByName = new Dictionary<string, uint>(itemsByID.Count, StringComparer.Ordinal);
-        foreach (var item in itemsByID.Values)
-        {
-            if (!item.Name.IsEmpty)
-            {
-                itemIdsByName.TryAdd(item.Name.ExtractText(), item.RowId);
-            }
-        }
-
         var dependencies = new Dictionary<uint, HashSet<uint>>();
         foreach (var (itemId, sources) in itemRows)
         {
             foreach (var source in sources)
             {
-                if (source.Category != CollectionSourceCategory.Shop ||
-                    !TryGetWikiShopRequirements(source.Detail, out var requirements))
+                if (source.Category != CollectionSourceCategory.Shop)
                 {
                     continue;
                 }
 
-                foreach (var requirement in requirements.Split(
-                             '、',
-                             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (var costItemID in source.CostItemIDs)
                 {
-                    var separatorIndex = requirement.IndexOf(' ');
-                    if (separatorIndex > 0 &&
-                        itemIdsByName.TryGetValue(requirement[(separatorIndex + 1)..].Trim(), out var costItemID))
-                    {
-                        AddDependency(dependencies, itemId, costItemID);
-                    }
+                    AddDependency(dependencies, itemId, costItemID);
                 }
             }
         }
@@ -283,9 +261,7 @@ public sealed partial class CollectionSourceService
 
             foreach (var source in sources)
             {
-                if (source.Category == CollectionSourceCategory.Shop &&
-                    source.Description.StartsWith("商店：", StringComparison.Ordinal) &&
-                    !TryGetWikiShopRequirements(source.Detail, out _))
+                if (source.Category == CollectionSourceCategory.Shop && source.IsGilShop)
                 {
                     AddCategory(categories, itemId, CollectionSourceCategory.Gil);
                     break;
