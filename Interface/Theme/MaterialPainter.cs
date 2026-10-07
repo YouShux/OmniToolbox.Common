@@ -16,7 +16,6 @@ internal static class MaterialPainter
         (new(0.82f, 0.18f), OfficeBlue),
         (new(0.51f, 0.04f), OfficePink)
     ];
-    private static readonly Vector2 LightDirection = Vector2.Normalize(new Vector2(-0.65f, -0.75f));
     private const int CONTOUR_CAPACITY = 240;
     private const int GEOMETRY_CACHE_CAPACITY = 256;
     private static readonly Dictionary<GeometryKey, Geometry> GeometryCache = [];
@@ -25,7 +24,7 @@ internal static class MaterialPainter
 
     public static void Draw(
         ImDrawListPtr drawList, Vector2 pos, Vector2 size, Vector4 fill, float radius,
-        float opacity, bool sampleBackground, ImDrawFlags corners, uint interactionID = 0)
+        float opacity, bool sampleBackground, ImDrawFlags corners, uint interactionID = 0, bool selected = false)
     {
         if (size.X <= 1f || size.Y <= 1f || opacity <= 0f)
         {
@@ -40,95 +39,39 @@ internal static class MaterialPainter
         {
             return;
         }
-        if (!OmniTheme.IsGlass)
+        if (OmniTheme.IsGlass)
         {
-            if (sampleBackground)
+            if (OmniTheme.GlassPainter?.Invoke(
+                    drawList, pos, size, fill, radius, opacity, sampleBackground, corners, interactionID, selected) == true)
             {
-                var offset = OmniTheme.Scale(new Vector2(0f, 2f));
-                drawList.AddRectFilled(pos + offset, pos + size + offset,
-                    OmniTheme.Color(OmniTheme.Tokens.Shadow with { W = OmniTheme.Tokens.Shadow.W * opacity }), radius, corners);
+                return;
             }
-            DrawGradient(drawList, pos, size, radius, fill with { W = fill.W * opacity },
-                new Vector4(fill.X * 0.96f, fill.Y * 0.96f, fill.Z * 0.96f, fill.W * opacity), corners);
-            DrawOfficeRim(drawList, pos, size, radius, opacity, interactionID, corners);
+
+            if (sampleBackground && !OmniTheme.HasCustomBackground)
+            {
+                fill.W = MathF.Max(fill.W, 0.96f);
+            }
+            drawList.AddRectFilled(pos, pos + size, OmniTheme.Color(fill with { W = fill.W * opacity }), radius, corners);
+            drawList.AddRect(pos, pos + size,
+                OmniTheme.Color(OmniTheme.Tokens.Border with { W = OmniTheme.Tokens.Border.W * opacity }),
+                radius, corners, OmniTheme.BorderThickness());
             return;
         }
-
-        var geometry = GetGeometry(size, radius, corners);
-        var contour = geometry.Points.AsSpan();
-        var normals = geometry.Normals.AsSpan();
-        var count = contour.Length;
-        Span<Vector4> colors = stackalloc Vector4[count];
-        var shadow = OmniTheme.Tokens.Shadow;
-        for (var index = 0; index < count; index++)
-        {
-            var shade = 0.3f + 0.7f * Math.Clamp(normals[index].Y, 0f, 1f);
-            colors[index] = shadow with
-            {
-                W = shadow.W * opacity * shade * (sampleBackground ? 1f : 0.35f)
-            };
-        }
-        DrawBand(drawList, contour, normals, colors,
-            [0f, extent * 0.35f, extent], [0.7f, 0.24f, 0f],
-            translation: pos + (!sampleBackground ? OmniTheme.Scale(new Vector2(0.6f, 1.5f)) : Vector2.Zero));
-        var blurred = sampleBackground &&
-                      GlassBackdrop.Draw(drawList, pos, pos + size, radius, opacity, corners);
-        if (sampleBackground && !blurred && !OmniTheme.HasCustomBackground)
-        {
-            fill.W = MathF.Max(fill.W, 0.96f);
-        }
-        if (!sampleBackground && !OmniTheme.HasCustomBackground &&
-            GlassBackdrop.TryGetSurfaceTexture(pos, pos + size, out var backdrop))
-        {
-            var bevel = GlassBevel(size, radius);
-            for (var index = 0; index < count; index++)
-            {
-                colors[index] = Vector4.One with { W = opacity * 0.18f };
-            }
-            // 只在倒角内偏移已有模糊纹理的采样位置，中心保留底板透色。
-            DrawBand(drawList, contour, normals, colors,
-                [-bevel, -bevel * 0.35f, 0f], [0f, 1f, 0f],
-                backdrop, [0f, OmniTheme.Scale(3f), OmniTheme.Scale(1f)], pos);
-        }
-
-        var top = fill;
-        var bottom = fill;
-        var sheen = sampleBackground ? 0.14f : 0.07f;
-        top.X += (1f - top.X) * sheen;
-        top.Y += (1f - top.Y) * sheen;
-        top.Z += (1f - top.Z) * sheen;
-        var shadeFactor = sampleBackground ? 0.86f : 0.96f;
-        bottom.X *= shadeFactor;
-        bottom.Y *= shadeFactor;
-        bottom.Z *= shadeFactor;
-        top.W *= opacity;
-        bottom.W *= opacity;
-        DrawGradient(drawList, pos, size, radius, top, bottom, corners);
-
-        var halfWidth = (sampleBackground ? OmniTheme.BorderThickness() : OmniTheme.Scale(1f)) * 0.5f;
         if (sampleBackground)
         {
-            DrawBand(drawList, contour, normals, geometry.Colors,
-                [-halfWidth - 1f, -halfWidth, halfWidth, halfWidth + 1f, halfWidth + extent],
-                [0f, 1f, 1f, 0.04f, 0f], translation: pos, opacity: opacity);
+            var offset = OmniTheme.Scale(new Vector2(0f, 2f));
+            drawList.AddRectFilled(pos + offset, pos + size + offset,
+                OmniTheme.Color(OmniTheme.Tokens.Shadow with { W = OmniTheme.Tokens.Shadow.W * opacity }), radius, corners);
         }
-        else
-        {
-            var bevel = GlassBevel(size, radius);
-            halfWidth = MathF.Min(halfWidth, bevel * 0.22f);
-            DrawBand(drawList, contour, normals, geometry.Colors,
-                [-bevel, -halfWidth, halfWidth, halfWidth + 1f, halfWidth + extent],
-                [0f, 0.80f, 0.40f, 0.025f, 0f], translation: pos, opacity: opacity);
-        }
+        DrawGradient(drawList, pos, size, radius, fill with { W = fill.W * opacity },
+            new Vector4(fill.X * 0.96f, fill.Y * 0.96f, fill.Z * 0.96f, fill.W * opacity), corners);
+        DrawOfficeRim(drawList, pos, size, radius, opacity, interactionID, corners);
     }
-
-    private static float GlassBevel(Vector2 size, float radius) =>
-        MathF.Min(OmniTheme.Scale(2.5f), MathF.Min(MathF.Min(size.X, size.Y) * 0.12f, radius > 0f ? radius * 0.40f : float.MaxValue));
 
     private static Geometry GetGeometry(Vector2 size, float radius, ImDrawFlags corners)
     {
         var key = new GeometryKey(size, radius, OmniTheme.ScaleValue, corners,
-            OmniTheme.IsGlass, OmniTheme.Tokens.Border, OmniTheme.HasCustomBorder);
+            OmniTheme.Tokens.Border, OmniTheme.HasCustomBorder);
         if (GeometryCache.TryGetValue(key, out var geometry))
         {
             return geometry;
@@ -140,19 +83,12 @@ internal static class MaterialPainter
         Span<Vector2> points = stackalloc Vector2[CONTOUR_CAPACITY];
         var count = BuildContour(points, Vector2.Zero, size, radius, corners);
         geometry = new Geometry(points[..count].ToArray(), new Vector2[count],
-            new Vector4[count], key.Glass ? [] : new Vector2[count]);
+            new Vector4[count], new Vector2[count]);
         for (var index = 0; index < count; index++)
         {
             geometry.Normals[index] = GetNormal(points[..count], index);
-            if (!key.Glass)
-            {
-                geometry.Colors[index] = new Vector4(GetOfficeColor(points[index] / size), 1f);
-                geometry.Directions[index] = Vector2.Normalize(points[index] - size * 0.5f);
-            }
-        }
-        if (key.Glass)
-        {
-            ShadeGlassRim(geometry.Points, geometry.Normals, geometry.Colors, Vector2.Zero, size, radius, 1f);
+            geometry.Colors[index] = new Vector4(GetOfficeColor(points[index] / size), 1f);
+            geometry.Directions[index] = Vector2.Normalize(points[index] - size * 0.5f);
         }
         // 缓存只保存局部坐标与静态光照，移动、滚动和透明度不改变几何数据。
         GeometryCache.Add(key, geometry);
@@ -182,14 +118,8 @@ internal static class MaterialPainter
     private static unsafe void DrawBand(
         ImDrawListPtr drawList, ReadOnlySpan<Vector2> contour, ReadOnlySpan<Vector2> normals,
         ReadOnlySpan<Vector4> colors, ReadOnlySpan<float> offsets, ReadOnlySpan<float> alpha,
-        GlassBackdrop.SurfaceTexture backdrop = default, ReadOnlySpan<float> refraction = default,
         Vector2 translation = default, float opacity = 1f)
     {
-        var textured = !refraction.IsEmpty;
-        if (textured)
-        {
-            drawList.PushTextureID(backdrop.Handle);
-        }
         var rows = offsets.Length;
         drawList.PrimReserve(contour.Length * (rows - 1) * 6, contour.Length * rows);
         var first = drawList.VtxCurrentIdx;
@@ -207,10 +137,7 @@ internal static class MaterialPainter
                 *vertex++ = new ImDrawVert
                 {
                     Pos = position,
-                    Uv = textured
-                        ? Vector2.Clamp((position + normals[point] * refraction[row] - backdrop.Origin) / backdrop.Size,
-                            backdrop.HalfTexel, Vector2.One - backdrop.HalfTexel)
-                        : uv,
+                    Uv = uv,
                     Col = (color & 0x00FFFFFFu) | ((uint)MathF.Round((color >> 24) * alpha[row]) << 24)
                 };
             }
@@ -231,41 +158,6 @@ internal static class MaterialPainter
         drawList.Handle->VtxWritePtr = vertex;
         drawList.Handle->IdxWritePtr = indices;
         drawList.VtxCurrentIdx += (uint)(contour.Length * rows);
-        if (textured)
-        {
-            drawList.PopTextureID();
-        }
-    }
-
-    private static void ShadeGlassRim(
-        ReadOnlySpan<Vector2> contour, ReadOnlySpan<Vector2> normals, Span<Vector4> colors,
-        Vector2 pos, Vector2 size, float radius, float opacity)
-    {
-        var tokens = OmniTheme.Tokens;
-        var baseColor = new Vector3(tokens.Border.X, tokens.Border.Y, tokens.Border.Z);
-        var reach = MathF.Min(OmniTheme.Scale(42f), MathF.Min(size.X, size.Y) * 1.2f);
-        for (var index = 0; index < contour.Length; index++)
-        {
-            var normal = Vector2.Normalize(normals[index]);
-            var direction = Vector2.Dot(normal, LightDirection);
-            var front = MathF.Pow(MathF.Max(0f, direction), 4f);
-            var back = MathF.Pow(MathF.Max(0f, -direction), 3f);
-            var local = contour[index] - pos;
-            var specular =
-                MathF.Exp(-Vector2.DistanceSquared(local, new Vector2(radius * 0.45f, radius * 0.3f)) / (reach * reach)) +
-                MathF.Exp(-Vector2.DistanceSquared(local, size - new Vector2(radius * 0.3f, radius * 0.45f)) / (reach * reach));
-            var uv = (contour[index] - pos) / size;
-            var tint = baseColor;
-            if (!OmniTheme.HasCustomBorder)
-            {
-                var ice = MathF.Exp(-Vector2.DistanceSquared(uv, new Vector2(0.92f, 0.82f)) * 12f);
-                var violet = MathF.Exp(-Vector2.DistanceSquared(uv, new Vector2(0.12f, 0.24f)) * 14f);
-                tint = Vector3.Lerp(tint, new Vector3(0.70f, 0.84f, 1f), ice * 0.32f);
-                tint = Vector3.Lerp(tint, new Vector3(0.88f, 0.82f, 0.98f), violet * 0.16f);
-            }
-            colors[index] = new Vector4(tint,
-                tokens.Border.W * opacity * Math.Clamp(0.10f + front * 0.34f + back * 0.32f + specular * 0.40f, 0f, 1f));
-        }
     }
 
     private static void DrawOfficeRim(
@@ -426,7 +318,7 @@ internal static class MaterialPainter
     }
 
     private readonly record struct GeometryKey(
-        Vector2 Size, float Radius, float Scale, ImDrawFlags Corners, bool Glass, Vector4 Border, bool CustomBorder);
+        Vector2 Size, float Radius, float Scale, ImDrawFlags Corners, Vector4 Border, bool CustomBorder);
 
     private sealed record Geometry(Vector2[] Points, Vector2[] Normals, Vector4[] Colors, Vector2[] Directions);
 }

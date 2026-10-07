@@ -54,7 +54,10 @@ public static class OmniNotifier
         using var rented = new RentedSeStringBuilder();
         var builder = rented.Builder;
         builder.Append(ChatPrefix).Append(" ").Append(new ReadOnlySeString(message.Encode()));
-        NotifyHelper.Instance().Chat(builder.ToReadOnlySeString(), useDefaultPrefix: false);
+        NotifyHelper.Chat(new XivChatEntry
+        {
+            Message = builder.ToReadOnlySeString().ToDalamudString()
+        });
     }
 
     public static void Banner(string content)

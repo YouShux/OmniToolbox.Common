@@ -74,9 +74,14 @@ public static class GlassMotion
         active &= !IsDisabled;
         var hover = Value(id, 0, hovered ? 1f : 0f, 0.14f);
         var pressed = Value(id, 1, active ? 1f : 0f, active ? 0.08f : 0.18f);
-        var selected = Value(id, 3, normal == OmniTheme.Tokens.Accent ? 1f : 0f, 0.16f);
-        var fill = Vector4.Lerp(normal == OmniTheme.Tokens.Accent ? OmniTheme.Tokens.Surface : normal,
-            OmniTheme.Tokens.Accent, selected);
+        var selected = 0f;
+        var fill = normal;
+        if (!OmniTheme.IsGlass)
+        {
+            selected = Value(id, 3, normal == OmniTheme.Tokens.Accent ? 1f : 0f, 0.16f);
+            fill = Vector4.Lerp(normal == OmniTheme.Tokens.Accent ? OmniTheme.Tokens.Surface : normal,
+                OmniTheme.Tokens.Accent, selected);
+        }
         return Vector4.Lerp(
             Vector4.Lerp(fill, OmniTheme.HoverBackground, hover * (1f - selected * 0.45f)),
             OmniTheme.ActiveBackground, pressed);

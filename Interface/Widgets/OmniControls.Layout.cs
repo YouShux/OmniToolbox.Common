@@ -1,5 +1,8 @@
 using System.Text;
+using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface;
+using Dalamud.Interface.ImGuiSeStringRenderer;
+using Dalamud.Utility;
 using OmniToolbox.UI.Theme;
 
 namespace OmniToolbox.UI.Controls;
@@ -121,6 +124,48 @@ public static partial class OmniControls
         }
     }
 
+    public static unsafe void TableWorldNameCentered(string worldName, float contentHeight)
+    {
+        using var rented = new RentedSeStringBuilder();
+        var icon = rented.Builder
+            .AppendIcon((uint)BitmapFontIcon.CrossWorld)
+            .ToReadOnlySeString();
+        var textWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X - ImGui.GetTextLineHeight());
+        var textSize = ImGui.CalcTextSize(worldName, false, textWidth);
+        var height = MathF.Max(contentHeight, textSize.Y);
+        var style = new SeStringDrawParams
+        {
+            TargetDrawList = default(ImDrawListPtr),
+            ScreenOffset = Vector2.Zero,
+            Font = ImGui.GetFont(),
+            FontSize = ImGui.GetFontSize(),
+            WrapWidth = float.MaxValue
+        };
+        var iconSize = ImGuiHelpers.SeStringWrapped(icon, style).Size;
+        var position = ImGui.GetCursorScreenPos();
+        var groupWidth = iconSize.X + textSize.X;
+        var groupLeft = position.X + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - groupWidth) * 0.5f);
+        var textTop = position.Y + (height - textSize.Y) * 0.5f;
+        var textCenter = textSize.Y * 0.5f;
+        if (worldName.Length > 0)
+        {
+            var font = ImGui.GetFont();
+            var glyph = font.FindGlyph(worldName[0]);
+            if (glyph is not null)
+                textCenter = (glyph->Y0 + glyph->Y1) * 0.5f * ImGui.GetFontSize() / font.FontSize;
+        }
+
+        style.TargetDrawList = ImGui.GetWindowDrawList();
+        style.ScreenOffset = new Vector2(groupLeft, textTop + textCenter - iconSize.Y * 0.5f);
+        ImGuiHelpers.SeStringWrapped(icon, style);
+        ImGui.GetWindowDrawList().AddText(
+            ImGui.GetFont(), ImGui.GetFontSize(),
+            new Vector2(groupLeft + iconSize.X, textTop),
+            ImGui.GetColorU32(ImGuiCol.Text),
+            worldName, textWidth);
+        ImGui.Dummy(new Vector2(0f, height));
+    }
+
     public static bool WrappedSelectable(string label, bool selected = false,
         ImGuiSelectableFlags flags = ImGuiSelectableFlags.None, Vector2 size = default)
     {
@@ -156,9 +201,9 @@ public static partial class OmniControls
         var innerPadding = (flags & ImGuiTableFlags.NoPadInnerX) == 0 ? ImGui.GetStyle().CellPadding.X * 2f : 0f;
         var outerPadding = (flags & ImGuiTableFlags.NoPadOuterX) == 0 ? ImGui.GetStyle().CellPadding.X * 2f : 0f;
         var fixedColumns = (flags & ImGuiTableFlags.SizingMask) == ImGuiTableFlags.SizingFixedFit;
-        Span<float> widths = stackalloc float[groups.Length];
-        Span<float> columnWeights = stackalloc float[groups.Length];
         var columns = Math.Min(layoutColumns, groups.Length);
+        Span<float> widths = stackalloc float[columns];
+        Span<float> columnWeights = stackalloc float[columns];
         var requiredWidth = 0f;
         var totalWeight = 0f;
         for (; columns > 0; columns--)
@@ -186,7 +231,9 @@ public static partial class OmniControls
         if (columnsPerRow > 0 && !fixedColumns)
         {
             var contentWidth = available - innerPadding * (columns - 1) - outerPadding;
-            var slotWidth = MathF.Max(1f, contentWidth / columns);
+            var slotColumns = columns < Math.Min(layoutColumns, groups.Length) ? columns : layoutColumns;
+            var slotWidth = MathF.Max(1f,
+                (available - innerPadding * (slotColumns - 1) - outerPadding) / slotColumns);
             Span<float> desiredWidths = stackalloc float[columns];
             for (var index = 0; index < columns; index++)
                 desiredWidths[index] = MathF.Max(widths[index], slotWidth);
@@ -205,7 +252,8 @@ public static partial class OmniControls
                     widths[index] = MathF.Min(widths[index], MathF.Max(1f, available - outerPadding));
                 var columnWidth = MathF.Max(1f, widths[index] +
                     (!fixedColumns && totalWeight > 0f ? extraWidth * columnWeights[index] / totalWeight : 0f));
-                ImGui.TableSetupColumn(labels[index], fixedColumns ? ImGuiTableColumnFlags.WidthFixed : ImGuiTableColumnFlags.WidthStretch,
+                ImGui.TableSetupColumn(index < labels.Length ? labels[index] : string.Empty,
+                    fixedColumns ? ImGuiTableColumnFlags.WidthFixed : ImGuiTableColumnFlags.WidthStretch,
                     columnWidth);
                 ref var column = ref nativeTable.Columns.Data[index];
                 if (fixedColumns)

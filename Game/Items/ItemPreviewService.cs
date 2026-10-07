@@ -664,20 +664,6 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         return null;
     }
 
-    private static IEnumerable<uint> GetHairstyleRows(HairMakeType hairMakeType)
-    {
-        for (var menuIndex = 0; menuIndex < hairMakeType.CharaMakeStruct.Count; menuIndex++)
-        {
-            foreach (var rowID in hairMakeType.CharaMakeStruct[menuIndex].SubMenuParam)
-            {
-                if (rowID != 0)
-                {
-                    yield return rowID;
-                }
-            }
-        }
-    }
-
     private static CharaMakeCustomize? GetHairstyleVariant(uint unlockLink, byte tribe, byte sex)
     {
         if (unlockLink == 0)

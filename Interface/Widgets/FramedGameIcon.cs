@@ -56,7 +56,8 @@ internal static class FramedGameIcon
         bool drawFrame = true,
         bool preserveAspectRatio = false)
     {
-        if (iconID == IconBrowser.LauncherIconID)
+        var isBuiltInIcon = IconBrowser.GetBuiltInIconPath(iconID) is not null;
+        if (isBuiltInIcon)
         {
             drawFrame = false;
         }
@@ -67,7 +68,7 @@ internal static class FramedGameIcon
             ? position + size - size * new Vector2(0.042f, 0.078f)
             : position + size;
         IDalamudTextureWrap? texture = null;
-        if (iconID == IconBrowser.LauncherIconID)
+        if (isBuiltInIcon)
         {
             texture = IconBrowser.GetIconTexture(iconID);
         }

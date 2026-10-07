@@ -8,7 +8,7 @@ namespace OmniToolbox.UI;
 
 public static partial class OmniLoc
 {
-    private static readonly Dictionary<string, string> Texts = BuildTexts();
+    private static readonly Dictionary<string, string> Texts = CreateCommonTexts();
     private static Lazy<IReadOnlyDictionary<string, string>> TraditionalTexts = new(BuildTraditionalTexts);
     private const uint TRADITIONAL_CHINESE_MAP_FLAG = 0x04000000;
     private static UILanguage Language;
@@ -40,13 +40,6 @@ public static partial class OmniLoc
         ItemAvailability.Unobtainable => "Status.Unobtainable",
         _ => throw new ArgumentOutOfRangeException(nameof(availability), availability, null)
     });
-
-    private static Dictionary<string, string> BuildTexts()
-    {
-        var texts = new Dictionary<string, string>(StringComparer.Ordinal);
-        AddTexts(texts, CreateCommonTexts());
-        return texts;
-    }
 
     private static void AddTexts(
         Dictionary<string, string> texts,

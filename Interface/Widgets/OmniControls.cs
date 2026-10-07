@@ -24,6 +24,7 @@ public static partial class OmniControls
     private static uint HelpTooltipSourceID;
     private static Vector2 HelpTooltipSourcePosition;
     private static int HelpTooltipFrame = -1;
+    private static int HelpTooltipIndex;
 
     public static bool RoundedSelectable(string label, bool selected = false,
         ImGuiSelectableFlags flags = ImGuiSelectableFlags.None, Vector2 size = default)
@@ -89,7 +90,10 @@ public static partial class OmniControls
         var width = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
         var stacked = width < iconSize + style.ItemInnerSpacing.X + style.FramePadding.X * 2f + ImGui.GetFontSize() * 2f;
         var textWidth = MathF.Max(1f, width - style.FramePadding.X * 2f - (stacked ? 0f : iconSize + style.ItemInnerSpacing.X));
-        var textSize = ImGui.CalcTextSize(label, false, textWidth);
+        var textSize = ImGui.CalcTextSize(label);
+        var wrapWidth = textSize.X > textWidth ? textWidth : 0f;
+        if (wrapWidth > 0f)
+            textSize = ImGui.CalcTextSize(label, false, wrapWidth);
         var height = stacked ? iconSize + style.ItemInnerSpacing.Y + textSize.Y : MathF.Max(iconSize, textSize.Y);
         bool clicked;
         using (ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero))
@@ -108,7 +112,7 @@ public static partial class OmniControls
         var textPosition = ImGui.GetItemRectMin() + new Vector2(style.FramePadding.X + (stacked ? 0f : iconSize + style.ItemInnerSpacing.X),
             stacked ? iconSize + style.ItemInnerSpacing.Y : MathF.Max(0f, (height - textSize.Y) * 0.5f));
         drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(), textPosition,
-            OmniTheme.Color(OmniTheme.Tokens.Text), label, textWidth);
+            OmniTheme.Color(OmniTheme.Tokens.Text), label, wrapWidth);
         return clicked;
     }
 
@@ -117,7 +121,7 @@ public static partial class OmniControls
         var tokens = OmniTheme.Tokens;
         var size = NavButtonSize(label);
         size.X = MathF.Max(size.X, minimumWidth);
-        return DrawOutlinedButton(label, size, active ? tokens.Accent : tokens.Surface);
+        return DrawOutlinedButton(label, size, active ? tokens.Accent : tokens.Surface, selected: active);
     }
 
     public static Vector2 NavButtonSize(string label) =>
@@ -135,13 +139,13 @@ public static partial class OmniControls
     public static bool SmallButton(string label, bool active, Vector2 size)
     {
         var tokens = OmniTheme.Tokens;
-        return DrawOutlinedButton(label, size, active ? tokens.Accent : tokens.Surface);
+        return DrawOutlinedButton(label, size, active ? tokens.Accent : tokens.Surface, selected: active);
     }
 
     public static bool SmallButton(string label, bool active, Vector2 size, Vector4 textColor)
     {
         var tokens = OmniTheme.Tokens;
-        return DrawOutlinedButton(label, size, active ? tokens.Accent : tokens.Surface, textColor);
+        return DrawOutlinedButton(label, size, active ? tokens.Accent : tokens.Surface, textColor, active);
     }
 
     public static bool IconButton(string id, FontAwesomeIcon icon, bool active, string tooltip)
@@ -176,7 +180,7 @@ public static partial class OmniControls
             var clickedGlass = ImGui.Button(id, size);
             var glassPos = pos + new Vector2(0f, GlassMotion.ButtonOffset());
             DrawMaterialControl(drawList, glassPos, size, GlassMotion.ButtonFill(active ? tokens.Accent : tokens.Surface),
-                radius, GlassMotion.CurrentItemID);
+                radius, GlassMotion.CurrentItemID, active);
             if (iconVisible)
             {
                 DrawScaledIcon(drawList, icon.ToIconString(), pos + size * 0.5f,
@@ -354,7 +358,7 @@ public static partial class OmniControls
             var hovered = ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(pos, pos + size, true);
             DrawMaterialControl(ImGui.GetWindowDrawList(), pos, size,
                 GlassMotion.ControlFill(id, value ? tokens.Accent : tokens.Surface, hovered, GlassMotion.ActiveItemID == id),
-                OmniTheme.Scale(tokens.ButtonRadius), id);
+                OmniTheme.IsGlass ? radius : OmniTheme.Scale(tokens.ButtonRadius), id, value);
         }
         else
         {
@@ -410,7 +414,7 @@ public static partial class OmniControls
             var hovered = ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(pos, pos + size, true);
             DrawMaterialControl(drawList, pos, size,
                 GlassMotion.ControlFill(id, active ? tokens.Accent : tokens.Surface, hovered, GlassMotion.ActiveItemID == id),
-                radius, id);
+                radius, id, active);
         }
         else
         {
@@ -670,8 +674,10 @@ public static partial class OmniControls
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var separatorWidth = OmniTheme.Scale(24f);
         var inputWidth = MathF.Max(
-            OmniTheme.Scale(64f),
-            (ImGui.GetContentRegionAvail().X - separatorWidth - spacing * 2f) * 0.5f);
+            MathF.Max(
+                MeasureInput(lowerBound.ToString(CultureInfo.InvariantCulture), OmniTheme.Scale(64f)).X,
+                MeasureInput(upperBound.ToString(CultureInfo.InvariantCulture), OmniTheme.Scale(64f)).X),
+            MathF.Floor((ImGui.GetContentRegionAvail().X - separatorWidth - spacing * 2f) * 0.5f));
         InputInt($"{id}Min", ref minimum, inputWidth);
         var changed = ImGui.IsItemDeactivatedAfterEdit();
         SameLineOrWrap(separatorWidth, spacing);
@@ -932,11 +938,12 @@ public static partial class OmniControls
             return;
         }
 
-        using var tooltipFont = BeginHelpTooltip();
+        using var tooltipScope = BeginHelpTooltip();
+        if (!tooltipScope.IsVisible)
+            return;
         if (!ImageHelper.Instance().TryGetImage(url, out var texture))
         {
             ImGui.TextDisabled($"{OmniLoc.Get("ItemSearch.Price.Loading")}...");
-            EndHelpTooltip();
             return;
         }
 
@@ -947,7 +954,6 @@ public static partial class OmniControls
                 MathF.Min(OmniTheme.Scale(720f), availableSize.X) / texture.Size.X,
                 MathF.Min(OmniTheme.Scale(540f), availableSize.Y) / texture.Size.Y));
         ImGui.Image(texture.Handle, texture.Size * MathF.Max(0.01f, scale));
-        EndHelpTooltip();
     }
 
     public static void DrawWindowBackground(Vector2 pos, Vector2 size, bool collapsed)
@@ -1106,9 +1112,10 @@ public static partial class OmniControls
             return;
         }
 
-        using var tooltipFont = BeginHelpTooltip();
+        using var tooltipScope = BeginHelpTooltip();
+        if (!tooltipScope.IsVisible)
+            return;
         drawTooltip();
-        EndHelpTooltip();
     }
 
     public static void HelpIcon(string tooltip, string markerText, Vector4 markerColor)
@@ -1122,13 +1129,13 @@ public static partial class OmniControls
             return;
         }
 
-        using var tooltipFont = BeginHelpTooltip();
+        using var tooltipScope = BeginHelpTooltip();
+        if (!tooltipScope.IsVisible)
+            return;
         foreach (var line in tooltip.Split('\n'))
         {
             HelpTooltipLine(line, markerText, markerColor);
         }
-
-        EndHelpTooltip();
     }
 
     public static void AvailabilityHelpIcon()
@@ -1246,7 +1253,8 @@ public static partial class OmniControls
         string label,
         Vector2 size,
         Vector4 normal,
-        Vector4? textColor = null)
+        Vector4? textColor = null,
+        bool selected = false)
     {
         var textSize = ImGui.CalcTextSize(DisplayLabel(label));
         var padding = ImGui.GetStyle().FramePadding;
@@ -1284,7 +1292,7 @@ public static partial class OmniControls
         if (OmniTheme.UsesMaterial)
         {
             DrawMaterialControl(drawList, pos + new Vector2(0f, GlassMotion.ButtonOffset()), size,
-                GlassMotion.ButtonFill(normal), radius, GlassMotion.CurrentItemID);
+                GlassMotion.ButtonFill(normal), radius, GlassMotion.CurrentItemID, selected);
             DrawTextCentered(DisplayLabel(label), pos + padding, Vector2.Max(Vector2.One, size - padding * 2f), textColor ?? tokens.Text, wrap);
             return clicked;
         }
@@ -1344,9 +1352,10 @@ public static partial class OmniControls
         hoverProgress = Math.Clamp(hoverProgress, 0f, 1f);
         if (OmniTheme.UsesMaterial)
         {
-            DrawGlassSurface(drawList, pos, size,
-                Vector4.Lerp(active ? tokens.Accent : tokens.Surface, OmniTheme.HoverBackground, hoverProgress),
-                radius, sampleBackground: false);
+            var baseFill = active ? tokens.Accent : tokens.Surface;
+            MaterialPainter.Draw(drawList, pos, size,
+                Vector4.Lerp(baseFill, OmniTheme.HoverBackground, hoverProgress),
+                radius, 1f, false, ImDrawFlags.RoundCornersAll, selected: active);
             return;
         }
         var border = OmniTheme.BorderThickness() + OmniTheme.Scale(1f) * hoverProgress;
@@ -1402,8 +1411,8 @@ public static partial class OmniControls
     }
 
     private static void DrawMaterialControl(
-        ImDrawListPtr drawList, Vector2 pos, Vector2 size, Vector4 fill, float radius, uint id) =>
-        MaterialPainter.Draw(drawList, pos, size, fill, radius, 1f, false, ImDrawFlags.RoundCornersAll, id);
+        ImDrawListPtr drawList, Vector2 pos, Vector2 size, Vector4 fill, float radius, uint id, bool selected = false) =>
+        MaterialPainter.Draw(drawList, pos, size, fill, radius, 1f, false, ImDrawFlags.RoundCornersAll, id, selected);
 
     internal static void DrawControlFrame(Vector2 pos, Vector2 size, float radius) =>
         DrawControlFrame(ImGui.GetWindowDrawList(), pos, size, radius, OmniTheme.BorderThickness());
@@ -1415,9 +1424,10 @@ public static partial class OmniControls
             return;
         }
 
-        using var tooltipFont = BeginHelpTooltip();
+        using var tooltipScope = BeginHelpTooltip();
+        if (!tooltipScope.IsVisible)
+            return;
         ImGui.TextUnformatted(tooltip);
-        EndHelpTooltip();
     }
 
     public static void HelpTooltip(ReadOnlySeString tooltip, Vector4? textColor = null)
@@ -1427,7 +1437,9 @@ public static partial class OmniControls
             return;
         }
 
-        using var tooltipFont = BeginHelpTooltip();
+        using var tooltipScope = BeginHelpTooltip();
+        if (!tooltipScope.IsVisible)
+            return;
         ImGuiHelpers.SeStringWrapped(
             tooltip,
             new SeStringDrawParams
@@ -1438,23 +1450,24 @@ public static partial class OmniControls
                     MathF.Max(1f, ImGui.GetMainViewport().WorkSize.X - OmniTheme.Scale(16f) -
                         ImGui.GetStyle().WindowPadding.X * 2f))
             });
-        EndHelpTooltip();
     }
 
     public static void HelpTooltip(Action drawTooltip)
     {
         if (!ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             return;
-        using var tooltipFont = BeginHelpTooltip();
+        using var tooltipScope = BeginHelpTooltip();
+        if (!tooltipScope.IsVisible)
+            return;
         drawTooltip();
-        EndHelpTooltip();
     }
 
     public static void HelpTooltip(Action drawTooltip, uint sourceID, float width)
     {
-        using var tooltipFont = BeginHelpTooltip(sourceID, width);
+        using var tooltipScope = BeginHelpTooltip(sourceID, width);
+        if (!tooltipScope.IsVisible)
+            return;
         drawTooltip();
-        EndHelpTooltip();
     }
 
     public static IDisposable PushTooltipStyle()
@@ -1462,10 +1475,10 @@ public static partial class OmniControls
         var font = OmniFonts.GetUIFont().Push();
         var scale = new OmniTheme.ScaleScope(ImGui.GetFont().FontSize * ImGui.GetIO().FontGlobalScale / OmniTheme.REFERENCE_FONT_SIZE);
         var tokens = OmniTheme.Tokens;
-        var background = OmniTheme.TooltipBackground with { W = 1f };
+        var background = OmniTheme.IsGlass ? Vector4.Zero : OmniTheme.TooltipBackground with { W = 1f };
         ImGui.PushStyleColor(ImGuiCol.WindowBg, background);
         ImGui.PushStyleColor(ImGuiCol.PopupBg, background);
-        ImGui.PushStyleColor(ImGuiCol.Border, tokens.Border);
+        ImGui.PushStyleColor(ImGuiCol.Border, OmniTheme.IsGlass ? Vector4.Zero : tokens.Border);
         ImGui.PushStyleColor(ImGuiCol.Text, tokens.Text);
         ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 1f);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, OmniTheme.Scale(new Vector2(10f, 7f)));
@@ -1481,31 +1494,64 @@ public static partial class OmniControls
         if (!OmniTheme.UsesMaterial)
             return;
 
+        if (OmniTheme.IsGlass)
+        {
+            var tokens = OmniTheme.Tokens with { Background = OmniTheme.TooltipBackground };
+            using var colors = new OmniTheme.ColorScope(tokens, OmniTheme.ControlAccent);
+            var drawList = ImGui.GetWindowDrawList();
+            var position = ImGui.GetWindowPos();
+            var size = ImGui.GetWindowSize();
+            var border = new Vector2(OmniTheme.BorderThickness());
+            // 底板覆盖窗口内边距，文字和控件仍使用原有内容裁剪区域。
+            drawList.PushClipRect(position - border, position + size + border, false);
+            DrawGlassSurface(drawList, position, size, tokens.Background, OmniTheme.Scale(tokens.BorderRadius));
+            drawList.PopClipRect();
+            return;
+        }
+
         DrawGlassSurface(ImGui.GetWindowDrawList(), ImGui.GetWindowPos(), ImGui.GetWindowSize(),
             OmniTheme.TooltipBackground with { W = 0.92f }, OmniTheme.Scale(OmniTheme.Tokens.BorderRadius));
     }
 
-    private static IDisposable BeginHelpTooltip(uint? tooltipSourceID = null, float width = 0f)
+    private static HelpTooltipScope BeginHelpTooltip(uint? tooltipSourceID = null, float width = 0f)
     {
         var sourceID = tooltipSourceID ?? GlassMotion.CurrentItemID;
         var sourcePosition = ImGui.GetItemRectMin();
         var frame = ImGui.GetFrameCount();
         var resetScroll = sourceID != HelpTooltipSourceID || sourcePosition != HelpTooltipSourcePosition || frame > HelpTooltipFrame + 1;
+        if (frame == HelpTooltipFrame)
+        {
+            var previousTooltip = ImGuiP.FindWindowByName($"##OmniToolboxHelpTooltip{HelpTooltipIndex}");
+            if (!previousTooltip.IsNull)
+            {
+                previousTooltip.Hidden = true;
+                previousTooltip.HiddenFramesCanSkipItems = 1;
+            }
+            HelpTooltipIndex++;
+        }
+        else
+            HelpTooltipIndex = 0;
+
         HelpTooltipSourceID = sourceID;
         HelpTooltipSourcePosition = sourcePosition;
         HelpTooltipFrame = frame;
         var tooltipStyle = PushTooltipStyle();
         var maximumSize = OmniTheme.ClampWindowSize(ImGui.GetMainViewport().WorkSize - OmniTheme.Scale(new Vector2(16f)));
         width = MathF.Min(width, maximumSize.X);
-        ImGui.SetNextWindowSizeConstraints(new Vector2(width, 0f),
+        SetNextAutoResizeWindowSizeConstraints(new Vector2(width, 0f),
             new Vector2(width > 0f ? width : maximumSize.X, maximumSize.Y));
-        ImGuiP.BeginTooltipEx(ImGuiTooltipFlags.OverridePreviousTooltip,
-            ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+        // 独立窗口隔离提示内容与绘制列表，保留原生 Tooltip 定位与同帧替换行为。
+        var isVisible = ImGui.Begin($"##OmniToolboxHelpTooltip{HelpTooltipIndex}",
+            ImGuiWindowFlags.Tooltip | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoTitleBar |
+            ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoSavedSettings |
+            ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+        if (!isVisible)
+            return new HelpTooltipScope(tooltipStyle, false);
         if (resetScroll)
             ImGui.SetScrollY(0f);
         DrawTooltipBackground();
         ImGui.SetWindowFontScale(1f);
-        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + MathF.Min(OmniTheme.Scale(520f),
+        var textWrap = ImRaii.TextWrapPos(ImGui.GetCursorPosX() + MathF.Min(OmniTheme.Scale(520f),
             MathF.Max(1f, (width > 0f ? width : maximumSize.X) -
                 ImGui.GetStyle().WindowPadding.X * 2f)));
         if (ImGui.GetScrollMaxY() > 0f &&
@@ -1515,13 +1561,17 @@ public static partial class OmniControls
             if (ImGui.GetIO().MouseWheel != 0f)
                 ImGui.SetScrollY(ImGui.GetScrollY() - ImGui.GetIO().MouseWheel * ImGui.GetTextLineHeightWithSpacing() * 3f);
         }
-        return tooltipStyle;
+        return new HelpTooltipScope(tooltipStyle, true, textWrap);
     }
 
-    private static void EndHelpTooltip()
+    private readonly record struct HelpTooltipScope(IDisposable Style, bool IsVisible, IDisposable? TextWrap = null) : IDisposable
     {
-        ImGui.PopTextWrapPos();
-        ImGui.EndTooltip();
+        public void Dispose()
+        {
+            TextWrap?.Dispose();
+            ImGui.End();
+            Style.Dispose();
+        }
     }
 
     private readonly record struct TooltipStyleScope(IDisposable Font, OmniTheme.ScaleScope Scale) : IDisposable
@@ -1610,7 +1660,9 @@ public static partial class OmniControls
             return;
         }
 
-        using var tooltipFont = BeginHelpTooltip();
+        using var tooltipScope = BeginHelpTooltip();
+        if (!tooltipScope.IsVisible)
+            return;
         if (introduction is not null)
         {
             foreach (var line in introduction.Split('\n'))
@@ -1634,7 +1686,6 @@ public static partial class OmniControls
             OmniLoc.Get("ItemSearch.Availability.Help.Unobtainable"),
             OmniLoc.Get(ItemAvailability.Unobtainable),
             OmniTheme.AvailabilityColor(ItemAvailability.Unobtainable));
-        EndHelpTooltip();
     }
 
     public static void HelpTooltipLine(string template, string markerText, Vector4 markerColor)
@@ -1703,7 +1754,8 @@ public static partial class OmniControls
         var hovered = ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(pos, pos + size, true) && !GlassMotion.IsDisabled;
         if (OmniTheme.UsesMaterial)
         {
-            radius = OmniTheme.Scale(tokens.ButtonRadius);
+            if (!OmniTheme.IsGlass)
+                radius = OmniTheme.Scale(tokens.ButtonRadius);
             DrawMaterialControl(drawList, pos, size,
                 GlassMotion.ControlFill(itemID, tokens.Surface, hovered, GlassMotion.ActiveItemID == itemID), radius, itemID);
             ImGui.SetNextItemWidth(size.X);

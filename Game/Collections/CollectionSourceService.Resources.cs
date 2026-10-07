@@ -14,6 +14,7 @@ using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.Data;
 using OmniToolbox.Host;
 using OmniToolbox.Items;
+using OmniToolbox.UI;
 
 namespace OmniToolbox.Collections;
 
@@ -79,11 +80,35 @@ public sealed partial class CollectionSourceService
                 description = quest.Name.ExtractText();
             }
 
+            var detail = source.GetProperty("d").GetString() ?? string.Empty;
+            if (source.TryGetProperty("q", out var questIDs))
+            {
+                var questNames = new List<string>();
+                foreach (var questID in questIDs.EnumerateArray())
+                {
+                    if (LuminaGetter.TryGetRow<Quest>(questID.GetUInt32(), out var requiredQuest))
+                    {
+                        var questName = requiredQuest.Name.ExtractText();
+                        if (questName.Length != 0)
+                        {
+                            questNames.Add(questName);
+                        }
+                    }
+                }
+
+                if (questNames.Count != 0)
+                {
+                    detail += string.Format(
+                        OmniLoc.Get("Collection.Source.RequiredQuests"),
+                        string.Join(OmniLoc.Get("Common.ListSeparator"), questNames));
+                }
+            }
+
             sources[sourceIndex++] = new(
                 (CollectionSourceCategory)category,
                 sourceID,
                 description,
-                source.GetProperty("d").GetString() ?? string.Empty,
+                detail,
                 location);
         }
 

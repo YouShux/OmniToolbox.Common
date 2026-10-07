@@ -19,12 +19,22 @@ public sealed class IconBrowser : IEscapeClosableWindow
 {
     private const float SEARCH_CONTROL_WIDTH = 160f;
     // 插件内置图标使用独立标识，不占用游戏图标 ID。
+    internal const uint CUSTOM_ICON_ID = int.MaxValue - 1;
     internal const uint LauncherIconID = int.MaxValue;
+    internal static string CustomIconPath => System.IO.Path.Combine(
+        DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Resources", "CustomIcon.png");
     internal static string LauncherIconPath => System.IO.Path.Combine(
         DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Resources", "XIVLauncherCN.png");
 
-    internal static IDalamudTextureWrap? GetIconTexture(uint iconID) => iconID == LauncherIconID
-        ? DalamudServices.TextureProvider.GetFromFile(LauncherIconPath).GetWrapOrDefault()
+    internal static string? GetBuiltInIconPath(uint iconID) => iconID switch
+    {
+        CUSTOM_ICON_ID => CustomIconPath,
+        LauncherIconID => LauncherIconPath,
+        _ => null
+    };
+
+    internal static IDalamudTextureWrap? GetIconTexture(uint iconID) => GetBuiltInIconPath(iconID) is { } path
+        ? DalamudServices.TextureProvider.GetFromFile(path).GetWrapOrDefault()
         : ImageHelper.GetGameIcon(iconID);
 
     private static readonly IconTabDefinition[] GameIconTabs =
@@ -300,6 +310,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
             flags |= ImGuiWindowFlags.NoResize;
         }
 
+        OmniWindowChrome.SetNextWindowPosition("###OmniIconBrowser");
         var drawWindow = ImGui.Begin("###OmniIconBrowser", flags);
         isFocused = ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
         if (!drawWindow)
@@ -310,12 +321,6 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
         var windowPosition = ImGui.GetWindowPos();
         var windowSize = ImGui.GetWindowSize();
-        var clampedPosition = OmniTheme.ClampWindowPosition(windowPosition, windowSize);
-        if (clampedPosition != windowPosition)
-        {
-            ImGui.SetWindowPos(clampedPosition);
-            windowPosition = clampedPosition;
-        }
         if (!isCollapsed)
         {
             expandedWindowSize = OmniTheme.Unscale(OmniTheme.PreserveWindowSize(windowSize, OmniTheme.Scale(expandedWindowSize)));
@@ -417,6 +422,11 @@ public sealed class IconBrowser : IEscapeClosableWindow
                 }
                 else if (!string.IsNullOrWhiteSpace(gameIconFilter))
                 {
+                    if (OmniLoc.Get("IconBrowser.CustomIcon").Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase) ||
+                        "CustomIcon".Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase))
+                    {
+                        filteredGameIcons.Add((int)CUSTOM_ICON_ID);
+                    }
                     if (OmniLoc.Get("IconBrowser.LauncherIcon").Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase) ||
                         "XIVLauncherCN".Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase))
                     {
@@ -561,6 +571,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
         cache = new IconTabCache(tab.Ranges.Length == 0 ? 0 : tab.Ranges[0].Start);
         if (tab.LabelKey == "IconBrowser.Tab.Featured")
         {
+            cache.Icons.Add((int)CUSTOM_ICON_ID);
             cache.Icons.Add((int)LauncherIconID);
         }
         if (tab.LabelKey == "IconBrowser.Tab.MapSymbols")
@@ -653,9 +664,9 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
     private static bool IconExists(uint icon)
     {
-        if (icon == LauncherIconID)
+        if (GetBuiltInIconPath(icon) is { } path)
         {
-            return System.IO.File.Exists(LauncherIconPath);
+            return System.IO.File.Exists(path);
         }
         var folder = icon / 1000;
         return DalamudServices.DataManager.FileExists($"ui/icon/{folder:D3}000/{icon:D6}.tex")
@@ -716,9 +727,9 @@ public sealed class IconBrowser : IEscapeClosableWindow
         if (sharedTexture is null && textureRequestBudget > 0)
         {
             textureRequestBudget--;
-            if (icon == LauncherIconID)
+            if (GetBuiltInIconPath((uint)icon) is { } path)
             {
-                sharedTexture = DalamudServices.TextureProvider.GetFromFile(LauncherIconPath);
+                sharedTexture = DalamudServices.TextureProvider.GetFromFile(path);
                 gameIconTextures.Add(icon, sharedTexture);
             }
             else if (DalamudServices.TextureProvider.TryGetFromGameIcon(
@@ -764,8 +775,14 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Right) || texture is null)
         {
-            OmniControls.HelpTooltip(icon == LauncherIconID
-                ? $"{OmniLoc.Get("IconBrowser.LauncherIcon")}\nID: {icon}"
+            var iconName = ((uint)icon) switch
+            {
+                CUSTOM_ICON_ID => OmniLoc.Get("IconBrowser.CustomIcon"),
+                LauncherIconID => OmniLoc.Get("IconBrowser.LauncherIcon"),
+                _ => null
+            };
+            OmniControls.HelpTooltip(iconName is not null
+                ? $"{iconName}\nID: {icon}"
                 : icon.ToString(CultureInfo.InvariantCulture));
             return;
         }
