@@ -19,9 +19,9 @@ public sealed class ComicStyleScope : IDisposable
         PushColor(
             ImGuiCol.ChildBg,
             tokens.Surface with { W = OmniTheme.UsesDarkPalette ? 0.28f : 0.18f });
-        PushColor(ImGuiCol.PopupBg, OmniTheme.UsesMaterial
-            ? OmniTheme.TooltipBackground with { W = 0.98f }
-            : tokens.Primary with { W = 1f });
+        PushColor(ImGuiCol.PopupBg, OmniTheme.IsGlass ? OmniTheme.TooltipBackground :
+            OmniTheme.UsesMaterial ? OmniTheme.TooltipBackground with { W = 0.98f } :
+            tokens.Primary with { W = 1f });
         PushColor(ImGuiCol.Border, tokens.Border);
         PushColor(ImGuiCol.BorderShadow, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Shadow);
         PushColor(ImGuiCol.Button, tokens.Surface);
@@ -37,6 +37,7 @@ public sealed class ComicStyleScope : IDisposable
         PushColor(ImGuiCol.HeaderActive, tokens.Secondary);
         PushColor(
             ImGuiCol.TableHeaderBg,
+            OmniTheme.IsGlass ? tokens.Surface :
             OmniTheme.UsesDarkPalette ? tokens.Primary with { W = 0.70f } : tokens.Surface);
         PushColor(ImGuiCol.TableBorderStrong, tokens.Border);
         PushColor(ImGuiCol.TableBorderLight, tokens.Border with { W = OmniTheme.UsesDarkPalette ? 0.34f : 0.30f });

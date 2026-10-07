@@ -7,6 +7,8 @@ public sealed class UIConfig
     public static readonly Vector2 DefaultItemInformationWindowSize = new(860f, 500f);
     public const float DefaultLauncherIconSize = 60f;
     public const float DefaultLauncherIconOpacity = 1f;
+    public const float DEFAULT_GLASS_MASK_OPACITY = 0.20f;
+    public const float DEFAULT_GLASS_BLUR_STRENGTH = 1.00f;
 
     public Vector2 MainWindowSize { get; set; } = DefaultMainWindowSize;
 
@@ -30,9 +32,15 @@ public sealed class UIConfig
 
     public UITheme Theme { get; set; } = UITheme.LineGreen;
 
-    public GlassQuality GlassQuality { get; set; } = GlassQuality.Standard;
+    public bool LiquidGlassEnabled = true;
 
-    public UIMotionMode MotionMode { get; set; } = UIMotionMode.Full;
+    public bool GlassBlurEnabled = true;
+
+    public bool GlassBorderEnabled = true;
+
+    public float GlassMaskOpacity = DEFAULT_GLASS_MASK_OPACITY;
+
+    public float GlassBlurStrength = DEFAULT_GLASS_BLUR_STRENGTH;
 
     public NumberDisplayMode NumberDisplayMode { get; set; } = NumberDisplayMode.Standard;
 }
@@ -49,16 +57,8 @@ public enum UITheme
     LinePeachBloom = 5,
     LineMidnightIris = 2,
     LineGraphite = 8,
-    GlassLight = 9,
-    GlassDark = 10,
-    OfficeGlow = 11
-}
-
-public enum GlassQuality
-{
-    Standard,
-    Light,
-    Compatible
+    OfficeGlow = 11,
+    LiquidGlass = 12
 }
 
 public enum UIMotionMode

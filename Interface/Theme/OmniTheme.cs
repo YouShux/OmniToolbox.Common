@@ -6,7 +6,7 @@ namespace OmniToolbox.UI.Theme;
 
 public static class OmniTheme
 {
-    private static readonly ThemeTokens LineGreenTokens = new(
+    internal static readonly ThemeTokens LineGreenTokens = new(
         new Vector4(0.663f, 0.702f, 0.533f, 0.80f),
         new Vector4(0.560f, 0.620f, 0.470f, 0.86f),
         new Vector4(0.996f, 0.980f, 0.878f, 0.50f),
@@ -71,42 +71,6 @@ public static class OmniTheme
         HighlightStrength = 0.06f
     };
 
-    private static readonly ThemeTokens GlassLightTokens = LineGreenTokens with
-    {
-        Primary = new Vector4(0.90f, 0.94f, 0.98f, 0.54f),
-        Secondary = new Vector4(0.46f, 0.57f, 0.72f, 0.64f),
-        Accent = new Vector4(0.62f, 0.77f, 0.94f, 0.30f),
-        Background = new Vector4(0.86f, 0.90f, 0.94f, 0.56f),
-        Surface = new Vector4(0.96f, 0.98f, 1f, 0.12f),
-        Text = new Vector4(0.09f, 0.13f, 0.14f, 1f),
-        Success = new Vector4(0.10f, 0.47f, 0.32f, 1f),
-        Warning = new Vector4(0.65f, 0.40f, 0.08f, 1f),
-        Error = new Vector4(0.71f, 0.19f, 0.29f, 1f),
-        Border = new Vector4(0.98f, 0.99f, 1f, 0.95f),
-        Shadow = new Vector4(0.02f, 0.03f, 0.04f, 0.30f),
-        ShadowOffset = 4f,
-        BorderRadius = 16f,
-        ButtonRadius = 13f,
-        BorderThickness = 1.25f,
-        HighlightStrength = 0.48f
-    };
-
-    private static readonly ThemeTokens GlassDarkTokens = GlassLightTokens with
-    {
-        Primary = new Vector4(0.18f, 0.21f, 0.21f, 0.68f),
-        Secondary = new Vector4(0.32f, 0.40f, 0.54f, 0.72f),
-        Accent = new Vector4(0.60f, 0.75f, 0.96f, 0.22f),
-        Background = new Vector4(0.12f, 0.15f, 0.17f, 0.66f),
-        Surface = new Vector4(0.90f, 0.93f, 1f, 0.08f),
-        Text = new Vector4(0.93f, 0.97f, 0.96f, 1f),
-        Success = new Vector4(0.36f, 0.80f, 0.57f, 1f),
-        Warning = new Vector4(0.95f, 0.74f, 0.32f, 1f),
-        Error = new Vector4(0.98f, 0.48f, 0.55f, 1f),
-        Border = new Vector4(0.94f, 0.98f, 1f, 0.86f),
-        Shadow = new Vector4(0f, 0f, 0f, 0.24f),
-        HighlightStrength = 0.38f
-    };
-
     private static readonly ThemeTokens OfficeGlowTokens = LineGraphiteTokens with
     {
         Primary = new Vector4(48f / 255f, 52f / 255f, 58f / 255f, 1f),
@@ -143,6 +107,14 @@ public static class OmniTheme
 
     public static UITheme CurrentTheme { get; set; } = UITheme.LineGreen;
 
+    internal static ThemeTokens? LiquidGlassTokens { get; set; }
+
+    internal delegate bool GlassSurfacePainter(
+        ImDrawListPtr drawList, Vector2 pos, Vector2 size, Vector4 fill, float radius,
+        float opacity, bool sampleBackground, ImDrawFlags corners, uint interactionID, bool selected);
+
+    internal static GlassSurfacePainter? GlassPainter { get; set; }
+
     [ThreadStatic] private static ThemeTokens? scopedTokens;
     [ThreadStatic] private static Vector4? scopedControlAccent;
     [ThreadStatic] private static float? scopedScale;
@@ -154,13 +126,12 @@ public static class OmniTheme
         UITheme.LinePeachBloom => LinePeachBloomTokens,
         UITheme.LineGraphite => LineGraphiteTokens,
         UITheme.LineMidnightIris => LineMidnightIrisTokens,
-        UITheme.GlassLight => GlassLightTokens,
-        UITheme.GlassDark => GlassDarkTokens,
+        UITheme.LiquidGlass => LiquidGlassTokens ?? LineGraphiteTokens,
         UITheme.OfficeGlow => OfficeGlowTokens,
         _ => LineGreenTokens
     };
 
-    public static bool IsGlass => CurrentTheme is UITheme.GlassLight or UITheme.GlassDark;
+    public static bool IsGlass => CurrentTheme == UITheme.LiquidGlass;
 
     public static bool UsesMaterial => IsGlass || CurrentTheme == UITheme.OfficeGlow;
 
@@ -170,7 +141,7 @@ public static class OmniTheme
 
     public static bool UsesDarkPalette => CurrentTheme is
         UITheme.OfficeGlow or
-        UITheme.GlassDark or
+        UITheme.LiquidGlass or
         UITheme.LineMidnightIris or
         UITheme.LineGraphite;
 
@@ -189,11 +160,16 @@ public static class OmniTheme
         UITheme.LineMidnightIris => new Vector4(0.616f, 0.655f, 0.737f, 1f),
         UITheme.LinePeachBloom => new Vector4(0.784f, 0.451f, 0.494f, 1f),
         UITheme.LineGraphite => new Vector4(0.608f, 0.643f, 0.686f, 1f),
-        UITheme.GlassLight => new Vector4(0.22f, 0.38f, 0.60f, 1f),
-        UITheme.GlassDark => new Vector4(0.68f, 0.80f, 0.98f, 1f),
+        UITheme.LiquidGlass => Tokens.Accent with { W = 1f },
         UITheme.OfficeGlow => new Vector4(125f / 255f, 211f / 255f, 252f / 255f, 1f),
         _ => Tokens.Success
     });
+
+    internal static void ResetMaterialState()
+    {
+        GlassMotion.Clear();
+        MaterialPainter.Clear();
+    }
 
     internal static Vector4 TooltipBackground => scopedTokens?.Background ?? Tokens.Primary;
 

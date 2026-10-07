@@ -13,6 +13,28 @@ public readonly record struct OmniWindowChromeResult(
 
 public static class OmniWindowChrome
 {
+    public static unsafe void SetNextWindowPosition(string windowName)
+    {
+        var window = ImGuiP.FindWindowByName(windowName);
+        if (window.IsNull)
+            return;
+
+        var size = window.Size;
+        var nextWindow = new ImGuiContextPtr(ImGui.GetCurrentContext()).NextWindowData;
+        if ((nextWindow.Flags & ImGuiNextWindowDataFlags.HasSize) != 0 &&
+            (nextWindow.SizeCond == ImGuiCond.Always ||
+             (window.SetWindowSizeAllowFlags & nextWindow.SizeCond) != 0))
+        {
+            if (nextWindow.SizeVal.X > 0f)
+                size.X = nextWindow.SizeVal.X;
+            if (nextWindow.SizeVal.Y > 0f)
+                size.Y = nextWindow.SizeVal.Y;
+        }
+
+        // 在 Begin 生成裁剪区域之前约束位置，使内容与窗口边界保持一致。
+        ImGui.SetNextWindowPos(OmniTheme.ClampWindowPosition(window.Pos, size));
+    }
+
     public static unsafe void DragBackground()
     {
         if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left) ||
