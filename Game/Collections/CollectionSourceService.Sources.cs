@@ -13,7 +13,6 @@ namespace OmniToolbox.Collections;
 
 public sealed partial class CollectionSourceService
 {
-
     private static readonly Regex CoordinateOnlyLineRegex = new(
         @"^\s*[（(]\s*[\d.]+\s*[,，]\s*[\d.]+\s*[）)]\s*$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -262,10 +261,11 @@ public sealed partial class CollectionSourceService
         }
 
         if (source.Category == CollectionSourceCategory.Duty &&
+            LuminaGetter.TryGetRow<ContentFinderCondition>(source.SourceID, out var condition) &&
             sources.Any(existing =>
                 existing.Category == CollectionSourceCategory.Duty &&
                 existing.Detail.Length != 0 &&
-                existing.Description.EndsWith(source.Description, StringComparison.Ordinal)))
+                existing.SourceID == condition.Content.RowId))
         {
             return;
         }

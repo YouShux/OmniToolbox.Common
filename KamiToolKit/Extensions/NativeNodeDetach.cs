@@ -1,7 +1,7 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using KamiToolKit;
+using KamiToolKit.BaseTypes;
+using KamiToolKit.BaseTypes.ComponentNode;
 using KamiToolKit.Extensions;
-using KamiToolKit.Nodes;
 
 namespace OmniToolbox.UI;
 
@@ -29,10 +29,7 @@ internal static unsafe class NativeNodeDetach
     }
 
     // 组件内部根节点由原生 UldManager 终结；托管递归释放会过早销毁它。
-    public static void DetachAndDestroyComponent(ComponentNode? node)
-    {
-        DetachAndDestroy(node);
-    }
+    public static void DetachAndDestroyComponent(ComponentNode? node) => DetachAndDestroy(node);
 
     // KamiToolKit 拆挂非首子节点时不会减少非组件父节点的 ChildCount，累积后游戏会按错误计数遍历节点链表。
     public static bool DetachAndDispose(NodeBase? node)

@@ -5,7 +5,6 @@ namespace OmniToolbox.Items;
 
 internal static class HairstyleData
 {
-    private const uint UNLOCK_LINK_ITEM_ACTION_ID = 2633;
     private static Dictionary<uint, Item>? UnlockItemsByLink;
 
     public static IEnumerable<CharaMakeCustomize> GetPurchasableRows()
@@ -69,4 +68,10 @@ internal static class HairstyleData
 
         return items;
     }
+
+    #region 常量
+
+    private const uint UNLOCK_LINK_ITEM_ACTION_ID = 2633;
+
+    #endregion
 }

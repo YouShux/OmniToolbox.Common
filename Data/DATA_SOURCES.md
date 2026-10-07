@@ -11,6 +11,8 @@ OmniToolbox 的 `WikiItemSources.json` 来源于“最终幻想XIV中文维基�
 
 OmniToolbox 对原始数据进行了字段筛选、格式转换、分类、去重和补充处理。由该数据生成的派生数据文件同样按照 CC BY-NC-SA 3.0 提供。
 
+`WikiItemSources.json` 使用版本 2 结构。商店来源的 `r` 字段保存兑换材料的 `Item.RowId`，`g` 字段标记金币商店；描述与详情仅用于展示。已有快照中的兑换材料与本地国服 `2026.09.15.0000.0000` 的 `Item` 表核对，更新脚本直接保留上游结构化材料 ID 与商店类型。
+
 2026-09-10 全量抓取的物品快照包含 51,227 件物品，其中 44,350 件有获取来源，去重后共 27,217 条来源，版本标记最高为 7.56。更新使用 `tools/update-wiki-item-sources.ps1`，强制读取最新页面并校验分页数量、物品 ID 和来源类型。同期鱼糕补充数据因上游资源结构变化未更新，保留已有 `FishingSources.json`。
 
 ## 职业数据与配装等级
@@ -28,6 +30,8 @@ BIS 使用集中定义的特职上限：驯兽师 50、青魔法师 80，依据[
 ## 青魔法获取数据
 
 `BlueSpells.csv` 来源于[青魔法来源查询](https://bluemagic.badend.cn/)。更新脚本读取网站公开前端资源中的技能与获取途径数据，过滤站点标记为失效的途径后生成本地快照。
+
+`DutyID` 与 `TerritoryID` 分别保存 `ContentFinderCondition.RowId` 和 `TerritoryType.RowId`，0 表示来源没有对应入口。地点关联与缺失坐标补全在资源生成时完成，插件运行时直接读取 ID 与坐标。2026-10-08 使用本地国服 `2026.09.15.0000.0000` 的 `ContentFinderCondition`、`TerritoryType`、`Map` 和 `PlaceName` 核对了 374 条来源；129 个副本 ID 和 37 个区域 ID 与 FFCafe 在线数据一致。在线响应版本为 `20260929-0264d14`，Schema 为 `exdschema@2:rev:e773c41a90aed788cf4c1c48469fa85618ef01fb`。更新脚本通过同一表关系生成稳定 ID，攻略文本继续保留来源站原文。
 
 ## 特殊武器数据
 

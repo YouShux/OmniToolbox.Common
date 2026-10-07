@@ -14,7 +14,6 @@ internal static class FramedGameIcon
     private static ISharedImmediateTexture? ActiveTexture;
     private static ISharedImmediateTexture? CollectionStatusTexture;
     private static ISharedImmediateTexture? FrameTexture;
-    private const string COLLECTION_STATUS_TEXTURE_PATH = "ui/uld/ReadyCheck_hr1.tex";
 
     public static void DrawItem(LuminaItem item, Vector2 size) =>
         DrawAtCursor(item.Icon, size, !ItemCategoryMap.IsCurrency(item));
@@ -102,7 +101,10 @@ internal static class FramedGameIcon
             var textSize = ImGui.CalcTextSize("?");
             drawList.AddText(
                 iconPosition + (iconMaximum - iconPosition - textSize) * 0.5f,
-                OmniTheme.Color(OmniTheme.Tokens.Text with { W = 0.55f }),
+                OmniTheme.Color(OmniTheme.Tokens.Text with
+                {
+                    W = 0.55f
+                }),
                 "?");
         }
 
@@ -194,15 +196,12 @@ internal static class FramedGameIcon
         IDalamudTextureWrap texture,
         Vector2 min,
         Vector2 max,
-        bool collected)
-    {
-        drawList.AddImage(
+        bool collected) => drawList.AddImage(
             texture.Handle,
             min,
             max,
             collected ? Vector2.Zero : new Vector2(0.5f, 0f),
             collected ? new Vector2(0.5f, 1f) : Vector2.One);
-    }
 
     private static IDalamudTextureWrap? GetCollectionStatusTexture()
     {
@@ -246,4 +245,10 @@ internal static class FramedGameIcon
         frame = null!;
         return false;
     }
+
+    #region 常量
+
+    private const string COLLECTION_STATUS_TEXTURE_PATH = "ui/uld/ReadyCheck_hr1.tex";
+
+    #endregion
 }

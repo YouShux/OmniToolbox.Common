@@ -14,7 +14,10 @@ public static class ItemRequirementLine
         var hasPart = false;
         var lineStart = ImGui.GetCursorPosX();
         var lineEnd = lineStart + ImGui.GetContentRegionAvail().X;
-        var neutral = OmniTheme.Tokens.Text with { W = 0.62f };
+        var neutral = OmniTheme.Tokens.Text with
+        {
+            W = 0.62f
+        };
         if (itemID is { } id &&
             LuminaGetter.TryGetRow<Item>(id, out var item) &&
             item.ClassJobCategory.RowId != 0 &&

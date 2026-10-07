@@ -12,9 +12,6 @@ namespace OmniToolbox.UI;
 
 internal static class PluginIconResolver
 {
-    private const BindingFlags INSTANCE_MEMBER_FLAGS =
-        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-
     private static readonly object? ImageCache =
         DalamudReflector.GetService("Dalamud.Interface.Internal.Windows.PluginImageCache");
     private static readonly FieldInfo? LocalPluginField = typeof(IExposedPlugin).Assembly
@@ -91,13 +88,10 @@ internal static class PluginIconResolver
         LocalIconPaths.Clear();
     }
 
-    private static IDalamudTextureWrap? GetDefaultIcon()
-    {
-        return DefaultIconProperty?.GetValue(ImageCache) is IDalamudTextureWrap texture &&
+    private static IDalamudTextureWrap? GetDefaultIcon() => DefaultIconProperty?.GetValue(ImageCache) is IDalamudTextureWrap texture &&
                IsUsableTexture(texture)
             ? texture
             : null;
-    }
 
     private static object? GetLocalPlugin(IExposedPlugin plugin)
     {
@@ -210,4 +204,11 @@ internal static class PluginIconResolver
 
         return null;
     }
+
+    #region 常量
+
+    private const BindingFlags INSTANCE_MEMBER_FLAGS =
+        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+    #endregion
 }

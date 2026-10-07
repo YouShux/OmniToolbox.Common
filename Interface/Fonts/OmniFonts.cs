@@ -61,11 +61,20 @@ public static class OmniFonts
         DService.Instance().UIBuilder.FontAtlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
         {
             var font = tk.AddGameGlyphs(new GameFontStyle(family, size), null, default);
-            tk.AddGameSymbol(new() { SizePx = size, MergeFont = font });
-            tk.AddFontAwesomeIconFont(new() { SizePx = size, MergeFont = font });
+            tk.AddGameSymbol(new()
+            {
+                SizePx = size, MergeFont = font
+            });
+            tk.AddFontAwesomeIconFont(new()
+            {
+                SizePx = size, MergeFont = font
+            });
             // 游戏字体缺少的中文及其他字符由随 Dalamud 分发的字体补齐。
             tk.AddDalamudAssetFont(DalamudAsset.NotoSansCjkRegular,
-                new() { SizePx = size, MergeFont = font, FontNo = 2, GlyphRanges = [0x20, 0xFFEF, 0] });
+                new()
+                {
+                    SizePx = size, MergeFont = font, FontNo = 2, GlyphRanges = [0x20, 0xFFEF, 0]
+                });
             tk.Font = font;
         }));
 

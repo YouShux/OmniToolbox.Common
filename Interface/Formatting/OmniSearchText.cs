@@ -18,7 +18,7 @@ public static class OmniSearchText
 
     private static string BuildPinyinInitials(string text)
     {
-        Span<char> buffer = text.Length <= 256 ? stackalloc char[text.Length] : new char[text.Length];
+        var buffer = text.Length <= 256 ? stackalloc char[text.Length] : new char[text.Length];
         var length = 0;
         foreach (var character in text)
         {

@@ -17,12 +17,9 @@ namespace OmniToolbox.UI;
 
 public sealed class IconBrowser : IEscapeClosableWindow
 {
-    private const float SEARCH_CONTROL_WIDTH = 160f;
-    // 插件内置图标使用独立标识，不占用游戏图标 ID。
-    internal const uint CUSTOM_ICON_ID = int.MaxValue - 1;
-    internal const uint LauncherIconID = int.MaxValue;
     internal static string CustomIconPath => System.IO.Path.Combine(
         DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Resources", "CustomIcon.png");
+
     internal static string LauncherIconPath => System.IO.Path.Combine(
         DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Resources", "XIVLauncherCN.png");
 
@@ -935,6 +932,17 @@ public sealed class IconBrowser : IEscapeClosableWindow
         string DecimalValue,
         string HexValue,
         string SearchText);
+
+    #region 常量
+
+    private const float SEARCH_CONTROL_WIDTH = 160f;
+
+    // 插件内置图标使用独立标识，不占用游戏图标 ID。
+    internal const uint CUSTOM_ICON_ID = int.MaxValue - 1;
+
+    internal const uint LauncherIconID = int.MaxValue;
+
+    #endregion
 }
 
 [Serializable]

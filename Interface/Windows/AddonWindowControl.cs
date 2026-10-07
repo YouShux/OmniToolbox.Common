@@ -8,7 +8,7 @@ internal static unsafe class AddonWindowControl
 {
     public static void Close(string addonName)
     {
-        if (!AddonHelper.TryGetByName(addonName, out AtkUnitBase* addon) || !addon->IsVisible)
+        if (!AddonHelper.TryGetByName(addonName, out var addon) || !addon->IsVisible)
         {
             return;
         }

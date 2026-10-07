@@ -88,12 +88,6 @@ public static class OmniTheme
         HighlightStrength = 0.08f
     };
 
-    public const float DefaultFontSize = 16f;
-    public const float MinimumFontSize = 4f;
-    public const float REFERENCE_FONT_SIZE = 18f;
-    public const float MaximumFontSize = 48f;
-    public const ushort OrangeColorType = 500;
-    public const ushort ShopColorType = 43;
     public static string DefaultFontPath { get; } = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.Fonts),
         "msyh.ttc");
@@ -148,12 +142,21 @@ public static class OmniTheme
     public static Vector4 HoverBackground => IsGlass
         ? Vector4.Lerp(Tokens.Surface, Tokens.Accent, 0.30f)
         : UsesDarkPalette
-            ? Vector4.Lerp(Tokens.Surface, Tokens.Secondary, 0.75f) with { W = 1f }
-            : Tokens.Primary with { W = Math.Clamp(Tokens.HighlightStrength * 5f, 0f, 1f) };
+            ? Vector4.Lerp(Tokens.Surface, Tokens.Secondary, 0.75f) with
+            {
+                W = 1f
+            }
+            : Tokens.Primary with
+            {
+                W = Math.Clamp(Tokens.HighlightStrength * 5f, 0f, 1f)
+            };
 
     public static Vector4 ActiveBackground => IsGlass
         ? Vector4.Lerp(Tokens.Surface, Tokens.Accent, 0.60f)
-        : Tokens.Secondary with { W = 1f };
+        : Tokens.Secondary with
+        {
+            W = 1f
+        };
 
     public static Vector4 ControlAccent => scopedControlAccent ?? (CurrentTheme switch
     {
@@ -173,42 +176,7 @@ public static class OmniTheme
 
     internal static Vector4 TooltipBackground => scopedTokens?.Background ?? Tokens.Primary;
 
-    // 仅覆盖当前绘制调用链，退出后恢复，避免工具栏配色影响其他窗口。
-    public readonly struct ColorScope : IDisposable
-    {
-        private readonly ThemeTokens? previousTokens;
-        private readonly Vector4? previousAccent;
-
-        public ColorScope(ThemeTokens tokens, Vector4? controlAccent = null)
-        {
-            previousTokens = scopedTokens;
-            previousAccent = scopedControlAccent;
-            scopedTokens = tokens;
-            scopedControlAccent = controlAccent;
-        }
-
-        public void Dispose()
-        {
-            scopedTokens = previousTokens;
-            scopedControlAccent = previousAccent;
-        }
-    }
-
     public static float Scale(float value) => value * ScaleValue;
-
-    // 局部窗口按当前字号布局，退出后恢复外层尺寸，支持嵌套弹窗。
-    public readonly struct ScaleScope : IDisposable
-    {
-        private readonly float? previousScale;
-
-        public ScaleScope(float scale)
-        {
-            previousScale = scopedScale;
-            scopedScale = scale;
-        }
-
-        public void Dispose() => scopedScale = previousScale;
-    }
 
     public static Vector2 Scale(Vector2 value) => value * ScaleValue;
 
@@ -281,8 +249,6 @@ public static class OmniTheme
 
     public static float ContentGap() => Scale(Tokens.WindowPadding.X);
 
-    public static float SectionHeaderHeight() => Scale(34f);
-
     public static float BorderThickness() => Scale(Tokens.BorderThickness);
 
     public static float MainPanelBorderThickness() => Scale(2.4f);
@@ -313,5 +279,59 @@ public static class OmniTheme
     public static Vector4 Favorite => new(1f, 0.71f, 0.76f, 1f);
 
     public static uint Color(Vector4 color) =>
-        ImGui.ColorConvertFloat4ToU32(color with { W = color.W * ImGui.GetStyle().Alpha });
+        ImGui.ColorConvertFloat4ToU32(color with
+        {
+            W = color.W * ImGui.GetStyle().Alpha
+        });
+
+    // 仅覆盖当前绘制调用链，退出后恢复，避免工具栏配色影响其他窗口。
+    public readonly struct ColorScope : IDisposable
+    {
+        private readonly ThemeTokens? previousTokens;
+        private readonly Vector4? previousAccent;
+
+        public ColorScope(ThemeTokens tokens, Vector4? controlAccent = null)
+        {
+            previousTokens = scopedTokens;
+            previousAccent = scopedControlAccent;
+            scopedTokens = tokens;
+            scopedControlAccent = controlAccent;
+        }
+
+        public void Dispose()
+        {
+            scopedTokens = previousTokens;
+            scopedControlAccent = previousAccent;
+        }
+    }
+
+    // 局部窗口按当前字号布局，退出后恢复外层尺寸，支持嵌套弹窗。
+    public readonly struct ScaleScope : IDisposable
+    {
+        private readonly float? previousScale;
+
+        public ScaleScope(float scale)
+        {
+            previousScale = scopedScale;
+            scopedScale = scale;
+        }
+
+        public void Dispose() => scopedScale = previousScale;
+    }
+
+    #region 常量
+
+    public const float DefaultFontSize = 16f;
+
+    public const float MinimumFontSize = 4f;
+
+    public const float REFERENCE_FONT_SIZE = 18f;
+
+    public const float MaximumFontSize = 48f;
+
+    public const ushort OrangeColorType = 500;
+
+    public const ushort ShopColorType = 43;
+
+    #endregion
 }

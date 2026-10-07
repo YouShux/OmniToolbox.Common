@@ -16,8 +16,6 @@ internal static class MaterialPainter
         (new(0.82f, 0.18f), OfficeBlue),
         (new(0.51f, 0.04f), OfficePink)
     ];
-    private const int CONTOUR_CAPACITY = 240;
-    private const int GEOMETRY_CACHE_CAPACITY = 256;
     private static readonly Dictionary<GeometryKey, Geometry> GeometryCache = [];
 
     internal static void Clear() => GeometryCache.Clear();
@@ -51,9 +49,15 @@ internal static class MaterialPainter
             {
                 fill.W = MathF.Max(fill.W, 0.96f);
             }
-            drawList.AddRectFilled(pos, pos + size, OmniTheme.Color(fill with { W = fill.W * opacity }), radius, corners);
+            drawList.AddRectFilled(pos, pos + size, OmniTheme.Color(fill with
+            {
+                W = fill.W * opacity
+            }), radius, corners);
             drawList.AddRect(pos, pos + size,
-                OmniTheme.Color(OmniTheme.Tokens.Border with { W = OmniTheme.Tokens.Border.W * opacity }),
+                OmniTheme.Color(OmniTheme.Tokens.Border with
+                {
+                    W = OmniTheme.Tokens.Border.W * opacity
+                }),
                 radius, corners, OmniTheme.BorderThickness());
             return;
         }
@@ -61,9 +65,15 @@ internal static class MaterialPainter
         {
             var offset = OmniTheme.Scale(new Vector2(0f, 2f));
             drawList.AddRectFilled(pos + offset, pos + size + offset,
-                OmniTheme.Color(OmniTheme.Tokens.Shadow with { W = OmniTheme.Tokens.Shadow.W * opacity }), radius, corners);
+                OmniTheme.Color(OmniTheme.Tokens.Shadow with
+                {
+                    W = OmniTheme.Tokens.Shadow.W * opacity
+                }), radius, corners);
         }
-        DrawGradient(drawList, pos, size, radius, fill with { W = fill.W * opacity },
+        DrawGradient(drawList, pos, size, radius, fill with
+        {
+            W = fill.W * opacity
+        },
             new Vector4(fill.X * 0.96f, fill.Y * 0.96f, fill.Z * 0.96f, fill.W * opacity), corners);
         DrawOfficeRim(drawList, pos, size, radius, opacity, interactionID, corners);
     }
@@ -130,7 +140,10 @@ internal static class MaterialPainter
         // 闭合轮廓共享顶点，使颜色沿边和径向连续插值。
         for (var point = 0; point < contour.Length; point++)
         {
-            var color = ImGui.ColorConvertFloat4ToU32(colors[point] with { W = colors[point].W * styleAlpha });
+            var color = ImGui.ColorConvertFloat4ToU32(colors[point] with
+            {
+                W = colors[point].W * styleAlpha
+            });
             for (var row = 0; row < rows; row++)
             {
                 var position = contour[point] + normals[point] * offsets[row] + translation;
@@ -186,7 +199,10 @@ internal static class MaterialPainter
         var baseAlpha = border.W * opacity;
         if (glow < 0.001f && spectrum < 0.001f)
         {
-            drawList.AddRect(pos, pos + size, OmniTheme.Color(border with { W = baseAlpha }),
+            drawList.AddRect(pos, pos + size, OmniTheme.Color(border with
+            {
+                W = baseAlpha
+            }),
                 radius, corners, OmniTheme.Scale(1f));
             return;
         }
@@ -321,4 +337,12 @@ internal static class MaterialPainter
         Vector2 Size, float Radius, float Scale, ImDrawFlags Corners, Vector4 Border, bool CustomBorder);
 
     private sealed record Geometry(Vector2[] Points, Vector2[] Normals, Vector4[] Colors, Vector2[] Directions);
+
+    #region 常量
+
+    private const int CONTOUR_CAPACITY = 240;
+
+    private const int GEOMETRY_CACHE_CAPACITY = 256;
+
+    #endregion
 }

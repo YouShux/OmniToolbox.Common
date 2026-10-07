@@ -11,14 +11,6 @@ namespace OmniToolbox.UI.Controls;
 
 public static partial class OmniControls
 {
-    private const int BORDER_HIGHLIGHT_BANDS = 12;
-    private const float BUTTON_HOVER_ALPHA = 0.60f;
-    private const float BUTTON_ACTIVE_ALPHA = 0.80f;
-    private const float SLIDER_BG_ALPHA = 0.04f;
-    private const float SLIDER_HOVER_ALPHA = 0.10f;
-    private const float SLIDER_ACTIVE_ALPHA = 0.14f;
-    private const float ICON_GLYPH_SCALE = 0.82f;
-    private const float TITLE_GLYPH_SCALE = 0.72f;
     private static readonly List<FavoriteParticle> FavoriteParticles = [];
     private static double FavoriteEffectsDrawnAt = -1d;
     private static uint HelpTooltipSourceID;
@@ -192,8 +184,14 @@ public static partial class OmniControls
         DrawControlShadow(drawList, pos, size, radius);
         using var textColor = ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero);
         using var colors = ImRaii.PushColor(ImGuiCol.Button, active && !useFavoriteStyle ? tokens.Accent : tokens.Surface)
-            .Push(ImGuiCol.ButtonHovered, OmniTheme.UsesDarkPalette ? OmniTheme.HoverBackground : tokens.Accent with { W = BUTTON_HOVER_ALPHA })
-            .Push(ImGuiCol.ButtonActive, OmniTheme.UsesDarkPalette ? OmniTheme.ActiveBackground : tokens.Accent with { W = BUTTON_ACTIVE_ALPHA })
+            .Push(ImGuiCol.ButtonHovered, OmniTheme.UsesDarkPalette ? OmniTheme.HoverBackground : tokens.Accent with
+            {
+                W = BUTTON_HOVER_ALPHA
+            })
+            .Push(ImGuiCol.ButtonActive, OmniTheme.UsesDarkPalette ? OmniTheme.ActiveBackground : tokens.Accent with
+            {
+                W = BUTTON_ACTIVE_ALPHA
+            })
             .Push(ImGuiCol.Border, tokens.Border);
         using var border = ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(ImGuiStyleVar.FrameRounding, radius);
@@ -320,7 +318,10 @@ public static partial class OmniControls
                 ImGui.GetFont(),
                 ImGui.GetFontSize() * ICON_GLYPH_SCALE * scale,
                 position - iconSize * 0.5f,
-                OmniTheme.Color(OmniTheme.Favorite with { W = 1f - progress }),
+                OmniTheme.Color(OmniTheme.Favorite with
+                {
+                    W = 1f - progress
+                }),
                 icon);
         }
     }
@@ -370,9 +371,18 @@ public static partial class OmniControls
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
         using var colors = ImRaii.PushColor(ImGuiCol.Text, tokens.Text)
-            .Push(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with { W = 0.06f })
-            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with { W = 0.12f })
-            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with { W = 0.16f })
+            .Push(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with
+            {
+                W = 0.06f
+            })
+            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with
+            {
+                W = 0.12f
+            })
+            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with
+            {
+                W = 0.16f
+            })
             .Push(ImGuiCol.CheckMark, tokens.Text);
         var changed = ImGui.Checkbox(label, ref value);
         if (!OmniTheme.UsesMaterial)
@@ -425,9 +435,18 @@ public static partial class OmniControls
             .Push(ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
         using var colors = ImRaii.PushColor(ImGuiCol.Text, tokens.Text)
-            .Push(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with { W = 0.06f })
-            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with { W = 0.12f })
-            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with { W = 0.16f })
+            .Push(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with
+            {
+                W = 0.06f
+            })
+            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with
+            {
+                W = 0.12f
+            })
+            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with
+            {
+                W = 0.16f
+            })
             .Push(ImGuiCol.CheckMark, tokens.Text);
         var clicked = ImGui.RadioButton(label, active);
         if (!OmniTheme.UsesMaterial)
@@ -481,7 +500,10 @@ public static partial class OmniControls
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
         using var colors = ImRaii.PushColor(ImGuiCol.Text, tokens.Text)
-            .Push(ImGuiCol.TextDisabled, tokens.Text with { W = 0.70f })
+            .Push(ImGuiCol.TextDisabled, tokens.Text with
+            {
+                W = 0.70f
+            })
             .Push(ImGuiCol.FrameBg, Vector4.Zero)
             .Push(ImGuiCol.FrameBgHovered, Vector4.Zero)
             .Push(ImGuiCol.FrameBgActive, Vector4.Zero)
@@ -719,9 +741,18 @@ public static partial class OmniControls
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_BG_ALPHA })
-            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_HOVER_ALPHA })
-            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_ACTIVE_ALPHA })
+        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+        {
+            W = SLIDER_BG_ALPHA
+        })
+            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+            {
+                W = SLIDER_HOVER_ALPHA
+            })
+            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+            {
+                W = SLIDER_ACTIVE_ALPHA
+            })
             .Push(ImGuiCol.SliderGrab, OmniTheme.ControlAccent)
             .Push(ImGuiCol.SliderGrabActive, OmniTheme.UsesMaterial ? OmniTheme.ControlAccent : tokens.Secondary)
             .Push(ImGuiCol.Text, tokens.Text);
@@ -742,9 +773,18 @@ public static partial class OmniControls
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_BG_ALPHA })
-            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_HOVER_ALPHA })
-            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_ACTIVE_ALPHA })
+        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+        {
+            W = SLIDER_BG_ALPHA
+        })
+            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+            {
+                W = SLIDER_HOVER_ALPHA
+            })
+            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+            {
+                W = SLIDER_ACTIVE_ALPHA
+            })
             .Push(ImGuiCol.SliderGrab, OmniTheme.ControlAccent)
             .Push(ImGuiCol.SliderGrabActive, OmniTheme.UsesMaterial ? OmniTheme.ControlAccent : tokens.Secondary)
             .Push(ImGuiCol.Text, tokens.Text);
@@ -772,9 +812,18 @@ public static partial class OmniControls
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_BG_ALPHA })
-            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_HOVER_ALPHA })
-            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_ACTIVE_ALPHA })
+        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+        {
+            W = SLIDER_BG_ALPHA
+        })
+            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+            {
+                W = SLIDER_HOVER_ALPHA
+            })
+            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+            {
+                W = SLIDER_ACTIVE_ALPHA
+            })
             .Push(ImGuiCol.Text, tokens.Text);
         var changed = ImGui.DragFloat(id, ref value, speed, min, max, format, flags);
         EndNativeControl(frame);
@@ -800,9 +849,18 @@ public static partial class OmniControls
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_BG_ALPHA })
-            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_HOVER_ALPHA })
-            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with { W = SLIDER_ACTIVE_ALPHA })
+        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+        {
+            W = SLIDER_BG_ALPHA
+        })
+            .Push(ImGuiCol.FrameBgHovered, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+            {
+                W = SLIDER_HOVER_ALPHA
+            })
+            .Push(ImGuiCol.FrameBgActive, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+            {
+                W = SLIDER_ACTIVE_ALPHA
+            })
             .Push(ImGuiCol.Text, tokens.Text);
         var changed = ImGui.DragFloat2(id, ref value, speed, min, max, format);
         EndNativeControl(frame);
@@ -891,9 +949,15 @@ public static partial class OmniControls
             false);
         var hovered = ImGui.IsMouseHoveringRect(frame.Pos, frame.Pos + frame.Size, true);
         var fill = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left)
-            ? tokens.Accent with { W = BUTTON_ACTIVE_ALPHA }
+            ? tokens.Accent with
+            {
+                W = BUTTON_ACTIVE_ALPHA
+            }
             : hovered
-                ? tokens.Accent with { W = BUTTON_HOVER_ALPHA }
+                ? tokens.Accent with
+                {
+                    W = BUTTON_HOVER_ALPHA
+                }
                 : tokens.Primary;
         if (!OmniTheme.UsesMaterial)
         {
@@ -931,7 +995,10 @@ public static partial class OmniControls
             FontAwesomeIcon.Image,
             lineTop,
             lineHeight,
-            OmniTheme.Tokens.Text with { W = 0.70f },
+            OmniTheme.Tokens.Text with
+            {
+                W = 0.70f
+            },
             OmniTheme.Scale(1.5f));
         if (!ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
@@ -992,7 +1059,10 @@ public static partial class OmniControls
         drawList.AddRectFilled(
             pos,
             pos + size,
-            OmniTheme.Color(collapsed ? tokens.Primary with { W = 1f } : tokens.Background),
+            OmniTheme.Color(collapsed ? tokens.Primary with
+            {
+                W = 1f
+            } : tokens.Background),
             radius);
         if (!collapsed)
         {
@@ -1283,9 +1353,15 @@ public static partial class OmniControls
         }
         var tokens = OmniTheme.Tokens;
         var fill = ImGui.IsItemActive()
-            ? OmniTheme.UsesDarkPalette ? OmniTheme.ActiveBackground : tokens.Accent with { W = BUTTON_ACTIVE_ALPHA }
+            ? OmniTheme.UsesDarkPalette ? OmniTheme.ActiveBackground : tokens.Accent with
+            {
+                W = BUTTON_ACTIVE_ALPHA
+            }
             : ImGui.IsItemHovered()
-                ? OmniTheme.UsesDarkPalette ? OmniTheme.HoverBackground : tokens.Accent with { W = BUTTON_HOVER_ALPHA }
+                ? OmniTheme.UsesDarkPalette ? OmniTheme.HoverBackground : tokens.Accent with
+                {
+                    W = BUTTON_HOVER_ALPHA
+                }
                 : normal;
         var radius = OmniTheme.Scale(tokens.ButtonRadius);
         var drawList = ImGui.GetWindowDrawList();
@@ -1335,7 +1411,10 @@ public static partial class OmniControls
         var radius = OmniTheme.Scale(OmniTheme.Tokens.BorderRadius);
         if (OmniTheme.UsesMaterial)
         {
-            drawList.AddRectFilled(pos, pos + size, OmniTheme.Color(fill with { W = fill.W * 0.30f }), 0f);
+            drawList.AddRectFilled(pos, pos + size, OmniTheme.Color(fill with
+            {
+                W = fill.W * 0.30f
+            }), 0f);
             return;
         }
         DrawControlShadow(drawList, pos, size, radius);
@@ -1372,7 +1451,10 @@ public static partial class OmniControls
                 drawList,
                 pos,
                 pos + size,
-                OmniTheme.Color(tokens.Border with { W = 0.18f * hoverProgress }),
+                OmniTheme.Color(tokens.Border with
+                {
+                    W = 0.18f * hoverProgress
+                }),
                 radius,
                 OmniTheme.Scale(6f) * hoverProgress,
                 10);
@@ -1405,10 +1487,7 @@ public static partial class OmniControls
 
     public static void DrawGlassSurface(
         ImDrawListPtr drawList, Vector2 pos, Vector2 size, Vector4 fill, float radius,
-        float opacity = 1f, bool sampleBackground = true, ImDrawFlags corners = ImDrawFlags.RoundCornersAll)
-    {
-        MaterialPainter.Draw(drawList, pos, size, fill, radius, opacity, sampleBackground, corners);
-    }
+        float opacity = 1f, bool sampleBackground = true, ImDrawFlags corners = ImDrawFlags.RoundCornersAll) => MaterialPainter.Draw(drawList, pos, size, fill, radius, opacity, sampleBackground, corners);
 
     private static void DrawMaterialControl(
         ImDrawListPtr drawList, Vector2 pos, Vector2 size, Vector4 fill, float radius, uint id, bool selected = false) =>
@@ -1475,7 +1554,10 @@ public static partial class OmniControls
         var font = OmniFonts.GetUIFont().Push();
         var scale = new OmniTheme.ScaleScope(ImGui.GetFont().FontSize * ImGui.GetIO().FontGlobalScale / OmniTheme.REFERENCE_FONT_SIZE);
         var tokens = OmniTheme.Tokens;
-        var background = OmniTheme.IsGlass ? Vector4.Zero : OmniTheme.TooltipBackground with { W = 1f };
+        var background = OmniTheme.IsGlass ? Vector4.Zero : OmniTheme.TooltipBackground with
+        {
+            W = 1f
+        };
         ImGui.PushStyleColor(ImGuiCol.WindowBg, background);
         ImGui.PushStyleColor(ImGuiCol.PopupBg, background);
         ImGui.PushStyleColor(ImGuiCol.Border, OmniTheme.IsGlass ? Vector4.Zero : tokens.Border);
@@ -1496,7 +1578,10 @@ public static partial class OmniControls
 
         if (OmniTheme.IsGlass)
         {
-            var tokens = OmniTheme.Tokens with { Background = OmniTheme.TooltipBackground };
+            var tokens = OmniTheme.Tokens with
+            {
+                Background = OmniTheme.TooltipBackground
+            };
             using var colors = new OmniTheme.ColorScope(tokens, OmniTheme.ControlAccent);
             var drawList = ImGui.GetWindowDrawList();
             var position = ImGui.GetWindowPos();
@@ -1510,7 +1595,10 @@ public static partial class OmniControls
         }
 
         DrawGlassSurface(ImGui.GetWindowDrawList(), ImGui.GetWindowPos(), ImGui.GetWindowSize(),
-            OmniTheme.TooltipBackground with { W = 0.92f }, OmniTheme.Scale(OmniTheme.Tokens.BorderRadius));
+            OmniTheme.TooltipBackground with
+            {
+                W = 0.92f
+            }, OmniTheme.Scale(OmniTheme.Tokens.BorderRadius));
     }
 
     private static HelpTooltipScope BeginHelpTooltip(uint? tooltipSourceID = null, float width = 0f)
@@ -1564,33 +1652,15 @@ public static partial class OmniControls
         return new HelpTooltipScope(tooltipStyle, true, textWrap);
     }
 
-    private readonly record struct HelpTooltipScope(IDisposable Style, bool IsVisible, IDisposable? TextWrap = null) : IDisposable
-    {
-        public void Dispose()
-        {
-            TextWrap?.Dispose();
-            ImGui.End();
-            Style.Dispose();
-        }
-    }
-
-    private readonly record struct TooltipStyleScope(IDisposable Font, OmniTheme.ScaleScope Scale) : IDisposable
-    {
-        public void Dispose()
-        {
-            ImGui.PopStyleVar(6);
-            ImGui.PopStyleColor(4);
-            Scale.Dispose();
-            Font.Dispose();
-        }
-    }
-
     private static void DrawHelpIcon(float lineTop, float lineHeight, float verticalOffset = 0f)
         => DrawInlineIcon(
             FontAwesomeIcon.InfoCircle,
             lineTop,
             lineHeight,
-            OmniTheme.Tokens.Text with { W = 0.70f },
+            OmniTheme.Tokens.Text with
+            {
+                W = 0.70f
+            },
             verticalOffset);
 
     private static void DrawInlineIcon(
@@ -1767,7 +1837,10 @@ public static partial class OmniControls
             drawList.AddRectFilled(
                 pos,
                 pos + size,
-                OmniTheme.Color(tokens.Surface with { W = 1f }),
+                OmniTheme.Color(tokens.Surface with
+                {
+                    W = 1f
+                }),
                 radius,
                 ImDrawFlags.RoundCornersAll);
         }
@@ -1785,7 +1858,10 @@ public static partial class OmniControls
             if (focus > 0.01f)
             {
                 frame.DrawList.AddRect(frame.Pos, frame.Pos + frame.Size,
-                    OmniTheme.Color(OmniTheme.ControlAccent with { W = focus }),
+                    OmniTheme.Color(OmniTheme.ControlAccent with
+                    {
+                        W = focus
+                    }),
                     frame.Radius, ImDrawFlags.RoundCornersAll, OmniTheme.BorderThickness());
             }
             return;
@@ -1793,9 +1869,6 @@ public static partial class OmniControls
         DrawControlFrame(frame.DrawList, frame.Pos, frame.Size, frame.Radius, OmniTheme.BorderThickness());
         DrawControlHighlight(frame.DrawList, frame.Pos, frame.Size, frame.Radius);
     }
-
-    private readonly record struct NativeControlFrame(
-        ImDrawListPtr DrawList, Vector2 Pos, Vector2 Size, float Radius, uint ID);
 
     private static void DrawControlShadow(ImDrawListPtr drawList, Vector2 pos, Vector2 size, float radius, float opacity = 1f)
     {
@@ -1813,7 +1886,10 @@ public static partial class OmniControls
                 var spread = OmniTheme.Scale(band * 1.25f);
                 drawList.AddRect(pos + new Vector2(0f, offset) - new Vector2(spread),
                     pos + size + new Vector2(0f, offset) + new Vector2(spread),
-                    OmniTheme.Color(tokens.Shadow with { W = tokens.Shadow.W * opacity * (5 - band) / 10f }),
+                    OmniTheme.Color(tokens.Shadow with
+                    {
+                        W = tokens.Shadow.W * opacity * (5 - band) / 10f
+                    }),
                     radius + spread, ImDrawFlags.RoundCornersAll, OmniTheme.Scale(1.5f));
             }
             return;
@@ -1849,7 +1925,10 @@ public static partial class OmniControls
             drawList.AddRectFilled(
                 pos,
                 max,
-                OmniTheme.Color(Vector4.One with { W = alpha * (1f - (i + 0.5f) / BORDER_HIGHLIGHT_BANDS) }),
+                OmniTheme.Color(Vector4.One with
+                {
+                    W = alpha * (1f - (i + 0.5f) / BORDER_HIGHLIGHT_BANDS)
+                }),
                 radius,
                 ImDrawFlags.RoundCornersAll);
             drawList.PopClipRect();
@@ -1876,10 +1955,54 @@ public static partial class OmniControls
     private static string DisplayLabel(string label) =>
         label.Contains("##", StringComparison.Ordinal) ? label[..label.IndexOf("##", StringComparison.Ordinal)] : label;
 
+    private readonly record struct HelpTooltipScope(IDisposable Style, bool IsVisible, IDisposable? TextWrap = null) : IDisposable
+    {
+        public void Dispose()
+        {
+            TextWrap?.Dispose();
+            ImGui.End();
+            Style.Dispose();
+        }
+    }
+
+    private readonly record struct TooltipStyleScope(IDisposable Font, OmniTheme.ScaleScope Scale) : IDisposable
+    {
+        public void Dispose()
+        {
+            ImGui.PopStyleVar(6);
+            ImGui.PopStyleColor(4);
+            Scale.Dispose();
+            Font.Dispose();
+        }
+    }
+
+    private readonly record struct NativeControlFrame(
+        ImDrawListPtr DrawList, Vector2 Pos, Vector2 Size, float Radius, uint ID);
+
     private readonly record struct FavoriteParticle(
         Vector2 Origin,
         Vector2 Velocity,
         float Scale,
         float Lifetime,
         double StartedAt);
+
+    #region 常量
+
+    private const int BORDER_HIGHLIGHT_BANDS = 12;
+
+    private const float BUTTON_HOVER_ALPHA = 0.60f;
+
+    private const float BUTTON_ACTIVE_ALPHA = 0.80f;
+
+    private const float SLIDER_BG_ALPHA = 0.04f;
+
+    private const float SLIDER_HOVER_ALPHA = 0.10f;
+
+    private const float SLIDER_ACTIVE_ALPHA = 0.14f;
+
+    private const float ICON_GLYPH_SCALE = 0.82f;
+
+    private const float TITLE_GLYPH_SCALE = 0.72f;
+
+    #endregion
 }

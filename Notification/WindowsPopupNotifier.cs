@@ -6,8 +6,6 @@ namespace OmniToolbox.Notifications;
 
 internal sealed class WindowsPopupNotifier : IDisposable
 {
-    private const uint ICON_ID = 0x4F4D4E49;
-
     private readonly Icon icon;
     private readonly nint windowHandle;
     private bool disposed;
@@ -167,4 +165,10 @@ internal sealed class WindowsPopupNotifier : IDisposable
         User = 0x04,
         LargeIcon = 0x20
     }
+
+    #region 常量
+
+    private const uint ICON_ID = 0x4F4D4E49;
+
+    #endregion
 }

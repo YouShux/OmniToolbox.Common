@@ -23,12 +23,6 @@ public sealed class ItemCategoryMap
         59
     ];
 
-    internal static bool IsCurrency(Item item) =>
-        CurrencyFilterGroups.Contains(item.FilterGroup) ||
-        item.ItemUICategory.RowId == 63 &&
-        item.ItemSearchCategory.RowId == 0 &&
-        item.ItemSortCategory.RowId == 3;
-
     public static readonly uint[] JobIds = DalamudServices.DataManager.GetExcelSheet<ClassJob>()
         .Where(job => job.UIPriority > 0 && (job.JobIndex > 0 || job.DohDolJobIndex >= 0))
         .OrderBy(job => job.UIPriority)
@@ -105,6 +99,12 @@ public sealed class ItemCategoryMap
     }
 
     public IReadOnlyList<ItemSubcategory> Get(ItemCategory category) => subcategories[category];
+
+    internal static bool IsCurrency(Item item) =>
+        CurrencyFilterGroups.Contains(item.FilterGroup) ||
+        item.ItemUICategory.RowId == 63 &&
+        item.ItemSearchCategory.RowId == 0 &&
+        item.ItemSortCategory.RowId == 3;
 
     public static ItemCategory Classify(uint itemUICategoryID, uint equipSlotCategoryID)
     {

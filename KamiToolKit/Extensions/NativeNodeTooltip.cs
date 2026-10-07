@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using KamiToolKit;
-using KamiToolKit.Nodes;
+using KamiToolKit.BaseTypes;
+using KamiToolKit.BaseTypes.ComponentNode;
 using Lumina.Text.ReadOnly;
 using OmenTools.Extensions;
 

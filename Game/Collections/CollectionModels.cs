@@ -66,6 +66,10 @@ public readonly record struct CollectionSource(
     public uint MapTerritoryID { get; init; }
 
     public uint TargetItemID { get; init; }
+
+    internal IReadOnlyList<uint> CostItemIDs { get; init; } = [];
+
+    internal bool IsGilShop { get; init; }
 }
 
 public readonly record struct CollectionSourceLocation(
@@ -73,7 +77,6 @@ public readonly record struct CollectionSourceLocation(
     float X,
     float Y);
 
-// 青魔来源行，保留怪物名及补全后的坐标供青魔法书导航使用。
 public readonly record struct BlueSpellSource(
     string SourceType,
     string MobDescription,
@@ -81,7 +84,12 @@ public readonly record struct BlueSpellSource(
     float? X,
     float? Y,
     uint? Level,
-    string Note);
+    string Note)
+{
+    internal uint DutyID { get; init; }
+
+    internal uint TerritoryID { get; init; }
+}
 
 public sealed record CollectionEntry
 {

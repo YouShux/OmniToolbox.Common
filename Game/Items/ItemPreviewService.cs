@@ -89,14 +89,13 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
     }
 
     public bool Preview(uint itemID) =>
-        itemPreviewTargets.TryGetValue(itemID, out var target) && Preview(target, itemID);
+        itemPreviewTargets.TryGetValue(itemID, out var target) && Preview(target);
 
     public bool Preview(CollectionEntry item) =>
         CanPreview(item) && Preview(
             item.Type == CollectionType.Equipment
                 ? new(CollectionType.Equipment, item.ItemID!.Value)
-                : new(item.Type, item.ID),
-            item.ItemID);
+                : new PreviewTarget(item.Type, item.ID));
 
     public void Tick(IFramework _)
     {
@@ -358,7 +357,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         _ => false
     };
 
-    private bool Preview(PreviewTarget target, uint? itemID)
+    private bool Preview(PreviewTarget target)
     {
         try
         {
@@ -370,7 +369,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
                 CollectionType.Minion => PreviewCompanion(target.ID),
                 CollectionType.Emote => PreviewEmote(target.ID),
                 CollectionType.FashionAccessory => PreviewOrnament(target.ID),
-                CollectionType.Hairstyle => PreviewHairstyle(target.ID, itemID),
+                CollectionType.Hairstyle => PreviewHairstyle(target.ID),
                 CollectionType.Barding => PreviewBarding(target.ID),
                 _ => false
             };
@@ -524,19 +523,15 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             return true;
         }
 
-        if (!PlayLocalEmote(character, emote))
-        {
-            return false;
-        }
-
+        PlayLocalEmote(character, emote);
         originalEmoteState ??= originalState;
         return true;
     }
 
-    private bool PreviewHairstyle(uint hairstyleID, uint? itemID)
+    public bool PreviewHairstyle(uint hairstyleID)
     {
         if (!TryGetLocalCharacterForPreview(out var character) ||
-            ResolveHairstyle(hairstyleID, itemID, character) is not { } hairstyle)
+            ResolveHairstyle(hairstyleID, character) is not { } hairstyle)
         {
             return false;
         }
@@ -547,8 +542,6 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         ApplyHairstyle(character, previewHairstyleFeatureID.Value);
         return true;
     }
-
-    public bool PreviewHairstyle(uint hairstyleID) => PreviewHairstyle(hairstyleID, null);
 
     public bool IsHairstylePreviewApplied(uint hairstyleID)
     {
@@ -601,7 +594,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         return true;
     }
 
-    private static bool PlayLocalEmote(Character* character, Emote emote)
+    private static void PlayLocalEmote(Character* character, Emote emote)
     {
         var intro = (ushort)emote.ActionTimeline[1].RowId;
         var loop = (ushort)emote.ActionTimeline[0].RowId;
@@ -624,13 +617,10 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         {
             character->Timeline.TimelineSequencer.PlayTimeline(intro != 0 ? intro : (ushort)3);
         }
-
-        return true;
     }
 
     private static CharaMakeCustomize? ResolveHairstyle(
         uint hairstyleID,
-        uint? itemID,
         Character* character)
     {
         if (!LuminaGetter.TryGetRow<CharaMakeCustomize>(hairstyleID, out var selected))

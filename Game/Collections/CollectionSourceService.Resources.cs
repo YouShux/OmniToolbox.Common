@@ -20,7 +20,6 @@ namespace OmniToolbox.Collections;
 
 public sealed partial class CollectionSourceService
 {
-
     private static readonly Regex BlueMageChineseNumberSpacingRegex = new(
         @"(?<=[\p{IsCJKUnifiedIdeographs}])\s+(?=\d)|(?<=\d)\s+(?=[\p{IsCJKUnifiedIdeographs}])",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -36,7 +35,7 @@ public sealed partial class CollectionSourceService
         using var stream = EmbeddedData.Open("WikiItemSources.json");
         using var document = JsonDocument.Parse(stream);
         var root = document.RootElement;
-        if (root.GetProperty("schemaVersion").GetInt32() != 1)
+        if (root.GetProperty("schemaVersion").GetInt32() != 2)
         {
             throw new InvalidDataException("Unsupported WikiItemSources schema version.");
         }
@@ -52,6 +51,8 @@ public sealed partial class CollectionSourceService
 
         var sourceRows = root.GetProperty("sources");
         var sources = new CollectionSource[sourceRows.GetArrayLength()];
+        // 相同材料列表共享实例，保持来源记录的去重语义。
+        var costsByIDs = new Dictionary<string, IReadOnlyList<uint>>(StringComparer.Ordinal);
         var sourceIndex = 0;
         foreach (var source in sourceRows.EnumerateArray())
         {
@@ -104,12 +105,26 @@ public sealed partial class CollectionSourceService
                 }
             }
 
+            IReadOnlyList<uint> costs = [];
+            if (source.TryGetProperty("r", out var costItemIDs))
+            {
+                var key = costItemIDs.GetRawText();
+                if (!costsByIDs.TryGetValue(key, out costs!))
+                {
+                    costsByIDs[key] = costs = costItemIDs.EnumerateArray().Select(itemID => itemID.GetUInt32()).ToArray();
+                }
+            }
+
             sources[sourceIndex++] = new(
                 (CollectionSourceCategory)category,
                 sourceID,
                 description,
                 detail,
-                location);
+                location)
+            {
+                CostItemIDs = costs,
+                IsGilShop = source.TryGetProperty("g", out var gilShop) && gilShop.GetBoolean()
+            };
         }
 
         var itemSources = new Dictionary<uint, HashSet<CollectionSource>>();
