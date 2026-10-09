@@ -100,6 +100,25 @@ public sealed class ItemCategoryMap
 
     public IReadOnlyList<ItemSubcategory> Get(ItemCategory category) => subcategories[category];
 
+    internal static bool Matches(
+        ItemCategory mainCategory, uint itemUICategoryID, ulong jobMask,
+        ItemCategory category, ItemSubcategory subcategory)
+    {
+        if (subcategory.JobID != 0)
+        {
+            var jobIndex = Array.IndexOf(JobIds, subcategory.JobID);
+            return jobIndex >= 0 && (jobMask & 1UL << jobIndex) != 0;
+        }
+
+        if (subcategory.ItemUICategoryID != 0)
+            return mainCategory == subcategory.Category && itemUICategoryID == subcategory.ItemUICategoryID;
+
+        return category == ItemCategory.All ||
+               category == ItemCategory.Job && mainCategory is
+                   ItemCategory.Weapon or ItemCategory.Tool or ItemCategory.Armor or ItemCategory.Accessory ||
+               mainCategory == category;
+    }
+
     internal static bool IsCurrency(Item item) =>
         CurrencyFilterGroups.Contains(item.FilterGroup) ||
         item.ItemUICategory.RowId == 63 &&

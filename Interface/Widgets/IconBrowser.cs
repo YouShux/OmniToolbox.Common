@@ -323,14 +323,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
             expandedWindowSize = OmniTheme.Unscale(OmniTheme.PreserveWindowSize(windowSize, OmniTheme.Scale(expandedWindowSize)));
         }
 
-        var framePosition = isCollapsed
-            ? windowPosition + new Vector2(OmniTheme.CollapsedHeaderSafeInset(), OmniTheme.CollapsedHeaderTop())
-            : windowPosition + new Vector2(OmniTheme.ChromeFrameInset());
-        var frameSize = isCollapsed
-            ? new Vector2(
-                MathF.Max(1f, windowSize.X - OmniTheme.CollapsedHeaderSafeInset() * 2f),
-                OmniTheme.TitleBarHeight())
-            : windowSize - new Vector2(OmniTheme.ChromeFrameInset() * 2f);
+        var (framePosition, frameSize) = OmniWindowChrome.GetFrameBounds(windowPosition, windowSize, isCollapsed);
         var chrome = OmniWindowChrome.Draw(
             framePosition,
             frameSize,
@@ -360,14 +353,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
             return;
         }
 
-        var contentPosition = framePosition + new Vector2(
-            OmniTheme.WindowInset(),
-            OmniTheme.TitleBarHeight() + OmniTheme.WindowInset());
-        var contentSize = new Vector2(
-            MathF.Max(1f, frameSize.X - OmniTheme.WindowInset() * 2f),
-            MathF.Max(
-                1f,
-                frameSize.Y - OmniTheme.TitleBarHeight() - OmniTheme.WindowInset() * 2f));
+        var (contentPosition, contentSize) = OmniWindowChrome.GetContentBounds(framePosition, frameSize);
         ImGui.SetCursorScreenPos(contentPosition);
         OmniControls.DrawPanelBackground(contentPosition, contentSize, OmniTheme.Tokens.Surface);
         using (ImRaii.PushColor(ImGuiCol.ChildBg, Vector4.Zero))

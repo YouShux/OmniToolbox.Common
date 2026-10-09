@@ -13,6 +13,26 @@ public readonly record struct OmniWindowChromeResult(
 
 public static class OmniWindowChrome
 {
+    public static (Vector2 Position, Vector2 Size) GetFrameBounds(
+        Vector2 windowPosition, Vector2 windowSize, bool isCollapsed)
+    {
+        var position = isCollapsed
+            ? windowPosition + new Vector2(OmniTheme.CollapsedHeaderSafeInset(), OmniTheme.CollapsedHeaderTop())
+            : windowPosition + new Vector2(OmniTheme.ChromeFrameInset());
+        var size = isCollapsed
+            ? new Vector2(
+                MathF.Max(1f, windowSize.X - OmniTheme.CollapsedHeaderSafeInset() * 2f),
+                OmniTheme.TitleBarHeight())
+            : windowSize - new Vector2(OmniTheme.ChromeFrameInset() * 2f);
+        return (position, size);
+    }
+
+    public static (Vector2 Position, Vector2 Size) GetContentBounds(Vector2 framePosition, Vector2 frameSize) =>
+        (framePosition + new Vector2(OmniTheme.WindowInset(), OmniTheme.TitleBarHeight() + OmniTheme.WindowInset()),
+         new Vector2(
+             MathF.Max(1f, frameSize.X - OmniTheme.WindowInset() * 2f),
+             MathF.Max(1f, frameSize.Y - OmniTheme.TitleBarHeight() - OmniTheme.WindowInset() * 2f)));
+
     public static unsafe void SetNextWindowPosition(string windowName)
     {
         var window = ImGuiP.FindWindowByName(windowName);

@@ -11,10 +11,12 @@ public static partial class OmniControls
 {
     public static unsafe void SetNextAutoResizeWindowSizeConstraints(Vector2 minimumSize, Vector2 maximumSize)
     {
-        // ImGui 会向下取整约束尺寸；高度向上取整以容纳缩放后的非整数内边距。
+        // ImGui 会向下取整窗口尺寸，向上取整内容尺寸以容纳缩放后的非整数内边距。
+        maximumSize.X = MathF.Floor(maximumSize.X);
         maximumSize.Y = MathF.Floor(maximumSize.Y);
         ImGui.SetNextWindowSizeConstraints(minimumSize, maximumSize,
-            static data => data->DesiredSize.Y = MathF.Ceiling(data->DesiredSize.Y));
+            static data => data->DesiredSize = new Vector2(
+                MathF.Ceiling(data->DesiredSize.X), MathF.Ceiling(data->DesiredSize.Y)));
     }
 
     public static ImRaii.TableDisposable DataTable(string id, ReadOnlySpan<string> labels,
@@ -270,9 +272,22 @@ public static partial class OmniControls
         return table;
     }
 
+    private static float GetControlAvailableWidth()
+    {
+        var window = ImGuiP.GetCurrentWindow();
+        // 自动尺寸弹窗的隐藏测量帧尚无内容宽度，必须先提交控件的固有尺寸。
+        if ((window.Flags & ImGuiWindowFlags.AlwaysAutoResize) != 0 &&
+            window.HiddenFramesCannotSkipItems > 0 && ImGuiP.GetCurrentTable().IsNull)
+            return MathF.Max(1f, ImGui.GetMainViewport().WorkSize.X - ImGui.GetCursorPosX() - window.WindowPadding.X);
+        var available = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+        // 自动窗口的整数尺寸与非整数内边距相减时，避免控件每帧缩窄不足一像素。
+        return (window.Flags & ImGuiWindowFlags.AlwaysAutoResize) != 0 && ImGuiP.GetCurrentTable().IsNull
+            ? MathF.Ceiling(available) : available;
+    }
+
     private static void WrapControl(float width)
     {
-        if (ImGuiP.GetCurrentWindow().DC.IsSameLine != 0 && width > ImGui.GetContentRegionAvail().X + 1f)
+        if (ImGuiP.GetCurrentWindow().DC.IsSameLine != 0 && width > GetControlAvailableWidth() + 1f)
             ImGui.NewLine();
     }
 
