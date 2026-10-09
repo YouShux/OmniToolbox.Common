@@ -333,7 +333,7 @@ public static partial class OmniControls
     {
         WrapControl(MeasureCheckbox(label, controlSize).X);
         var text = DisplayLabel(label);
-        if (text.Length > 0 && MeasureCheckbox(label, controlSize).X > ImGui.GetContentRegionAvail().X + 1f)
+        if (text.Length > 0 && MeasureCheckbox(label, controlSize).X > GetControlAvailableWidth() + 1f)
         {
             using var group = ImRaii.Group();
             ImGuiP.PushOverrideID(ImGui.GetID(label));
@@ -402,7 +402,7 @@ public static partial class OmniControls
     {
         WrapControl(MeasureCheckbox(label).X);
         var text = DisplayLabel(label);
-        if (text.Length > 0 && MeasureCheckbox(label).X > ImGui.GetContentRegionAvail().X + 1f)
+        if (text.Length > 0 && MeasureCheckbox(label).X > GetControlAvailableWidth() + 1f)
         {
             using var group = ImRaii.Group();
             ImGuiP.PushOverrideID(ImGui.GetID(label));
@@ -1331,7 +1331,7 @@ public static partial class OmniControls
         size = Vector2.Max(size, textSize + padding * 2f);
         size = new(MathF.Ceiling(size.X), MathF.Ceiling(size.Y));
         WrapControl(size.X);
-        size.X = MathF.Min(size.X, MathF.Max(1f, ImGui.GetContentRegionAvail().X));
+        size.X = MathF.Min(size.X, GetControlAvailableWidth());
         var wrap = textSize.X > size.X - padding.X * 2f + 1f;
         if (wrap)
             textSize = ImGui.CalcTextSize(DisplayLabel(label), false, MathF.Max(1f, size.X - padding.X * 2f));
@@ -1782,21 +1782,21 @@ public static partial class OmniControls
         WrapControl(width + (label.Length == 0 ? 0f : ImGui.CalcTextSize(label).X + ImGui.GetStyle().ItemInnerSpacing.X));
         if (label.Length == 0)
         {
-            width = MathF.Max(1f, MathF.Min(width, ImGui.GetContentRegionAvail().X));
+            width = MathF.Max(1f, MathF.Min(width, GetControlAvailableWidth()));
             return id;
         }
 
         var spacing = ImGui.GetStyle().ItemInnerSpacing.X;
         var labelWidth = ImGui.CalcTextSize(label).X;
-        var available = ImGui.GetContentRegionAvail().X;
+        var available = GetControlAvailableWidth();
         ImGui.AlignTextToFramePadding();
-        using (ImRaii.TextWrapPos(0f))
+        using (ImRaii.TextWrapPos(ImGui.GetCursorPosX() + available))
             ImGui.TextUnformatted(label);
         if (available + 1f >= labelWidth + spacing + width)
         {
             ImGui.SameLine(0f, spacing);
         }
-        width = MathF.Max(1f, MathF.Min(width, ImGui.GetContentRegionAvail().X));
+        width = MathF.Max(1f, MathF.Min(width, GetControlAvailableWidth()));
         // 保留完整标识以区分同名控件，最后提交的项目仍是输入框，供编辑完成检测使用。
         return $"###{id}";
     }

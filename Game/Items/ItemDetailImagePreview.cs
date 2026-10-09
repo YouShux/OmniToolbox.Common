@@ -156,8 +156,8 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
             (image.Kind is ItemPreviewImageKind.Minion or
                 ItemPreviewImageKind.Hairstyle or
                 ItemPreviewImageKind.FashionAccessory
-                    ? 240f
-                    : 300f) * nativeScale * scale);
+                    ? 192f
+                    : 240f) * nativeScale * scale);
         var viewport = ImGui.GetMainViewport();
         var displaySize = viewport.Size;
         if (displaySize.X <= 0f || displaySize.Y <= 0f)
