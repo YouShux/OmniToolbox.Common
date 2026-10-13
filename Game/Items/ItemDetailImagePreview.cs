@@ -123,7 +123,7 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
         {
             ClearImage();
             lookupPending = false;
-            DalamudServices.PluginLog.Debug(ex, "Updating the ItemDetail image preview failed.");
+            DalamudServices.PluginLog.Warning(ex, "Updating the ItemDetail image preview failed.");
         }
     }
 
