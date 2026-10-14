@@ -55,10 +55,21 @@ public static class OmniWindowChrome
         ImGui.SetNextWindowPos(OmniTheme.ClampWindowPosition(window.Pos, size));
     }
 
+    public static unsafe void SetNextWindowPosition(string windowName, Vector2 position)
+    {
+        var window = ImGuiP.FindWindowByName(windowName);
+        var size = Vector2.Zero;
+        if (!window.IsNull)
+            size = (window.Flags & ImGuiWindowFlags.AlwaysAutoResize) != 0
+                ? ImGuiP.CalcWindowNextAutoFitSize(window)
+                : window.Size;
+        ImGui.SetNextWindowPos(OmniTheme.ClampWindowPosition(position, size));
+    }
+
     public static unsafe void DragBackground()
     {
         if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left) ||
-            !ImGui.IsWindowHovered(ImGuiHoveredFlags.RootAndChildWindows))
+            !ImGui.IsWindowHovered(ImGuiHoveredFlags.RootAndChildWindows | ImGuiHoveredFlags.NoPopupHierarchy))
             return;
 
         var context = new ImGuiContextPtr(ImGui.GetCurrentContext());

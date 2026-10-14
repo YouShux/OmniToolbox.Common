@@ -4,6 +4,7 @@ using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using KamiToolKit;
+using KamiToolKit.BaseTypes;
 using OmniToolbox.Host;
 
 namespace OmniToolbox.UI;
@@ -12,12 +13,15 @@ internal sealed class NativeAddonScaleRestoration : IDisposable
 {
     private readonly IDictionary addonConfigs;
     private readonly FieldInfo scaleField;
+    private readonly IEnumerable<NativeAddon> nativeAddons;
 
-    private NativeAddonScaleRestoration(IDictionary addonConfigs, FieldInfo scaleField)
+    private NativeAddonScaleRestoration(IDictionary addonConfigs, FieldInfo scaleField, IEnumerable<NativeAddon> nativeAddons)
     {
         this.addonConfigs = addonConfigs;
         this.scaleField = scaleField;
+        this.nativeAddons = nativeAddons;
         DalamudServices.AddonLifecycle.RegisterListener(AddonEvent.PreSetup, OnPreSetup);
+        DalamudServices.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, OnPostSetup);
     }
 
     public static NativeAddonScaleRestoration? Create()
@@ -35,7 +39,11 @@ internal sealed class NativeAddonScaleRestoration : IDisposable
             var configType = configsField.FieldType.GetGenericArguments()[1];
             var scale = configType.GetField("Scale")
                         ?? throw new MissingFieldException(configType.FullName, "Scale");
-            return new(configs, scale);
+            var addonsProperty = typeof(NativeAddon).GetProperty("CreatedAddons", BindingFlags.Static | BindingFlags.NonPublic)
+                                 ?? throw new MissingMemberException(typeof(NativeAddon).FullName, "CreatedAddons");
+            var addons = addonsProperty.GetValue(null) as IEnumerable<NativeAddon>
+                         ?? throw new InvalidOperationException("KamiToolKit 原生窗口列表尚未初始化。");
+            return new(configs, scale, addons);
         }
         catch (Exception ex)
         {
@@ -63,5 +71,25 @@ internal sealed class NativeAddonScaleRestoration : IDisposable
         }
     }
 
-    public void Dispose() => DalamudServices.AddonLifecycle.UnregisterListener(OnPreSetup);
+    private unsafe void OnPostSetup(AddonEvent type, AddonArgs args)
+    {
+        if (!args.AddonName.StartsWith("Omni", StringComparison.Ordinal))
+            return;
+
+        var addon = (AtkUnitBase*)args.Addon.Address;
+        foreach (var window in nativeAddons)
+        {
+            if ((AtkUnitBase*)window != addon)
+                continue;
+            addon->EnableTitleBarContextMenu = window.EnableContextMenu;
+            addon->DisableUserScaling = window.DisableScaleContextOption;
+            return;
+        }
+    }
+
+    public void Dispose()
+    {
+        DalamudServices.AddonLifecycle.UnregisterListener(OnPreSetup);
+        DalamudServices.AddonLifecycle.UnregisterListener(OnPostSetup);
+    }
 }

@@ -51,4 +51,10 @@ public sealed class DalamudServices
         isUnloading = false;
         pluginInterface.Create<DalamudServices>();
     }
+
+    internal static object? GetInternalService(string fullName)
+    {
+        var serviceType = typeof(IDalamudPluginInterface).Assembly.GetType(fullName);
+        return serviceType is null ? null : PluginInterface.GetService(serviceType);
+    }
 }

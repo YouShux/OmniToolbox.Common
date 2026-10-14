@@ -20,50 +20,59 @@ public static partial class OmniControls
 
     public static bool RoundedSelectable(string label, bool selected = false,
         ImGuiSelectableFlags flags = ImGuiSelectableFlags.None, Vector2 size = default)
-        => DrawRoundedSelectable(label, selected, flags, size, false);
+        => DrawSelectable(label, selected, flags, size, true, true);
 
     public static bool RoundedMenuItem(string label, bool enabled = true)
-        => DrawRoundedSelectable(label, false, enabled ? ImGuiSelectableFlags.None : ImGuiSelectableFlags.Disabled, default, true);
+        => RoundedMenuItem(label, default, enabled);
 
-    private static bool DrawRoundedSelectable(string label, bool selected, ImGuiSelectableFlags flags, Vector2 size, bool menuItem)
+    public static bool RoundedMenuItem(string label, Vector2 size, bool enabled = true)
+        => DrawSelectable(label, false, enabled ? ImGuiSelectableFlags.None : ImGuiSelectableFlags.Disabled, size, false, true);
+
+    private static bool DrawSelectable(string label, bool selected, ImGuiSelectableFlags flags, Vector2 size, bool wrapText, bool rounded)
     {
         using var disabled = ImRaii.Disabled((flags & ImGuiSelectableFlags.Disabled) != 0);
         var position = ImGui.GetCursorScreenPos();
         var text = DisplayLabel(label);
-        var width = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
-        var textSize = ImGui.CalcTextSize(text, false, menuItem ? 0f : width);
-        var rowSize = new Vector2(size.X > 0f ? MathF.Min(size.X, width) : width,
-            MathF.Max(size.Y, MathF.Max(textSize.Y, ImGui.GetTextLineHeight())));
-        if (!menuItem)
+        var availableWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+        var width = size.X > 0f ? MathF.Min(size.X, availableWidth) : availableWidth;
+        var padding = text.Length > 0 ? ImGui.GetStyle().FramePadding : Vector2.Zero;
+        if (!wrapText)
         {
-            textSize = ImGui.CalcTextSize(text, false, rowSize.X);
-            rowSize.Y = MathF.Max(rowSize.Y, textSize.Y);
+            padding.Y = 0f;
+            width = MathF.Ceiling(MathF.Max(1f, MathF.Max(size.X, ImGui.CalcTextSize(text).X + padding.X * 2f)));
         }
+        padding.X = MathF.Min(padding.X, MathF.Max(0f, (width - 1f) * 0.5f));
+        var wrapWidth = wrapText ? MathF.Max(1f, width - padding.X * 2f) : 0f;
+        var textSize = ImGui.CalcTextSize(text, false, wrapWidth);
+        var rowSize = new Vector2(width,
+            MathF.Ceiling(MathF.Max(size.Y, MathF.Max(textSize.Y, ImGui.GetTextLineHeight()) + padding.Y * 2f)));
         var textColor = ImGui.GetColorU32(ImGuiCol.Text);
         var selectedColor = ImGui.GetColorU32(ImGuiCol.Header);
         var hoveredColor = ImGui.GetColorU32(ImGuiCol.HeaderHovered);
         var activeColor = ImGui.GetColorU32(ImGuiCol.HeaderActive);
         bool clicked;
-        using (ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero)
-                   .Push(ImGuiCol.Header, Vector4.Zero)
-                   .Push(ImGuiCol.HeaderHovered, Vector4.Zero)
-                   .Push(ImGuiCol.HeaderActive, Vector4.Zero))
+        using (ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero))
         {
+            using var headers = rounded ? ImRaii.PushColor(ImGuiCol.Header, Vector4.Zero)
+                .Push(ImGuiCol.HeaderHovered, Vector4.Zero)
+                .Push(ImGuiCol.HeaderActive, Vector4.Zero) : null;
+            ImGuiP.GetCurrentWindow().DC.CurrLineTextBaseOffset = 0f;
             // 保留原生选择项的 ID、点击、弹层关闭和导航行为，仅替换绘制。
-            clicked = menuItem ? ImGui.MenuItem(label, string.Empty, selected, (flags & ImGuiSelectableFlags.Disabled) == 0)
-                : ImGui.Selectable(label, selected, flags, rowSize);
+            clicked = ImGui.Selectable(label, selected, flags, rowSize);
         }
         var drawList = ImGui.GetWindowDrawList();
-        if (selected || ImGui.IsItemHovered() || ImGui.IsItemActive())
+        if (rounded && (selected || ImGui.IsItemHovered() || ImGui.IsItemActive()))
         {
             drawList.AddRectFilled(position, position + rowSize,
                 ImGui.IsItemActive() ? activeColor : ImGui.IsItemHovered() ? hoveredColor : selectedColor,
                 MathF.Min(rowSize.Y * 0.5f, OmniTheme.Scale(OmniTheme.Tokens.ButtonRadius)));
         }
-        drawList.PushClipRect(position, position + rowSize, true);
+        var contentSize = Vector2.Max(Vector2.Zero, rowSize - padding * 2f);
+        var textPosition = position + padding + Vector2.Max(Vector2.Zero, contentSize - textSize) *
+            new Vector2(ImGui.GetStyle().SelectableTextAlign.X, 0.5f);
+        drawList.PushClipRect(position + padding, position + rowSize - padding, true);
         drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
-            position + Vector2.Max(Vector2.Zero, rowSize - textSize) * ImGui.GetStyle().SelectableTextAlign,
-            textColor, text, menuItem ? 0f : rowSize.X);
+            textPosition, textColor, text, wrapWidth);
         drawList.PopClipRect();
         return clicked;
     }
@@ -241,7 +250,7 @@ public static partial class OmniControls
     {
         var position = ImGui.GetCursorScreenPos();
         ImGui.InvisibleButton(id, size);
-        DrawTitleGlyph(
+        DrawIconGlyph(
             FontAwesomeIcon.Times,
             position + size * 0.5f,
             MathF.Min(size.X, size.Y) * TITLE_GLYPH_SCALE);
@@ -254,7 +263,7 @@ public static partial class OmniControls
         var size = OmniTheme.TitleIconSize();
         var position = ImGui.GetCursorScreenPos();
         ImGui.InvisibleButton(id, size);
-        DrawTitleGlyph(
+        DrawIconGlyph(
             collapsed ? FontAwesomeIcon.CaretRight : FontAwesomeIcon.CaretDown,
             position + size * 0.5f,
             MathF.Min(size.X, size.Y) * TITLE_GLYPH_SCALE);
@@ -314,15 +323,17 @@ public static partial class OmniControls
             var iconSize = GetScaledIconSize(icon) * scale;
             var position = particle.Origin + particle.Velocity * elapsed +
                            new Vector2(0f, OmniTheme.Scale(260f) * elapsed * elapsed * 0.5f);
-            drawList.AddText(
-                ImGui.GetFont(),
-                ImGui.GetFontSize() * ICON_GLYPH_SCALE * scale,
-                position - iconSize * 0.5f,
-                OmniTheme.Color(OmniTheme.Favorite with
-                {
-                    W = 1f - progress
-                }),
-                icon);
+            var fontSize = ImGui.GetFontSize() * ICON_GLYPH_SCALE * scale;
+            using (ImRaii.PushFont(UiBuilder.IconFont))
+                drawList.AddText(
+                    ImGui.GetFont(),
+                    fontSize,
+                    position - iconSize * 0.5f,
+                    OmniTheme.Color(OmniTheme.Favorite with
+                    {
+                        W = 1f - progress
+                    }),
+                    icon);
         }
     }
 
@@ -877,10 +888,9 @@ public static partial class OmniControls
                                            ImGuiComboFlags.HeightRegular |
                                            ImGuiComboFlags.HeightLarge |
                                            ImGuiComboFlags.HeightLargest;
-        if ((flags & HEIGHT_MASK) == ImGuiComboFlags.None ||
-            (flags & ImGuiComboFlags.HeightLargest) != ImGuiComboFlags.None)
+        if ((flags & HEIGHT_MASK) == ImGuiComboFlags.None)
         {
-            flags = flags & ~HEIGHT_MASK | ImGuiComboFlags.HeightLarge;
+            flags |= ImGuiComboFlags.HeightLargest;
         }
 
         width = MathF.Max(width, MeasureCombo(preview).X);
@@ -1689,21 +1699,44 @@ public static partial class OmniControls
     }
 
     private static Vector2 GetScaledIconSize(string icon, float glyphScale = ICON_GLYPH_SCALE) =>
-        ImGui.CalcTextSize(icon) * glyphScale;
+        ImGui.CalcTextSizeA(UiBuilder.IconFont, ImGui.GetFontSize() * glyphScale,
+            float.MaxValue, -1f, icon, out _);
 
-    private static unsafe void DrawTitleGlyph(FontAwesomeIcon icon, Vector2 center, float targetSize)
+    public static unsafe void DrawIconGlyph(FontAwesomeIcon icon, Vector2 center, float targetSize,
+        float angle = 0f, float alpha = 1f)
     {
+        using var iconFont = ImRaii.PushFont(UiBuilder.IconFont);
         var iconText = icon.ToIconString();
         var font = ImGui.GetFont();
         var glyph = new ImFontGlyphPtr(font.FindGlyph(iconText[0]));
         var scale = targetSize / MathF.Max(glyph.X1 - glyph.X0, glyph.Y1 - glyph.Y0);
         var position = center - new Vector2(glyph.X0 + glyph.X1, glyph.Y0 + glyph.Y1) * (scale * 0.5f);
-        ImGui.GetWindowDrawList().AddText(
+        var drawList = ImGui.GetWindowDrawList();
+        var firstVertex = drawList.VtxBuffer.Size;
+        drawList.AddText(
             font,
             font.FontSize * scale,
             new Vector2(MathF.Round(position.X), MathF.Round(position.Y)),
-            OmniTheme.Color(OmniTheme.Tokens.Text),
+            OmniTheme.Color(OmniTheme.Tokens.Text with
+            {
+                W = OmniTheme.Tokens.Text.W * alpha
+            }),
             iconText);
+        if (angle == 0f)
+            return;
+
+        var cosine = MathF.Cos(angle);
+        var sine = MathF.Sin(angle);
+        var vertices = drawList.VtxBuffer;
+        for (var index = firstVertex; index < vertices.Size; index++)
+        {
+            var vertex = vertices[index];
+            var offset = vertex.Pos - center;
+            vertex.Pos = center + new Vector2(
+                offset.X * cosine - offset.Y * sine,
+                offset.X * sine + offset.Y * cosine);
+            vertices[index] = vertex;
+        }
     }
 
     private static void DrawScaledIcon(
@@ -1715,9 +1748,11 @@ public static partial class OmniControls
         float glyphScale = ICON_GLYPH_SCALE)
     {
         var iconSize = GetScaledIconSize(icon, glyphScale);
+        var fontSize = ImGui.GetFontSize() * glyphScale;
+        using var iconFont = ImRaii.PushFont(UiBuilder.IconFont);
         drawList.AddText(
             ImGui.GetFont(),
-            ImGui.GetFontSize() * glyphScale,
+            fontSize,
             center - iconSize * 0.5f + OmniTheme.Scale(new Vector2(horizontalOffset, 1f)),
             OmniTheme.Color(color),
             icon);

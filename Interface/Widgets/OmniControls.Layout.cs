@@ -170,20 +170,7 @@ public static partial class OmniControls
 
     public static bool WrappedSelectable(string label, bool selected = false,
         ImGuiSelectableFlags flags = ImGuiSelectableFlags.None, Vector2 size = default)
-    {
-        var width = MathF.Max(1f, size.X > 0f ? size.X : ImGui.GetContentRegionAvail().X);
-        var text = DisplayLabel(label);
-        var textSize = ImGui.CalcTextSize(text, false, width);
-        size = new(width, MathF.Max(size.Y, textSize.Y));
-        var position = ImGui.GetCursorScreenPos();
-        bool clicked;
-        using (ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero))
-            clicked = ImGui.Selectable(label, selected, flags, size);
-        ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), ImGui.GetFontSize(),
-            position + new Vector2(0f, MathF.Max(0f, (size.Y - textSize.Y) * 0.5f)),
-            ImGui.GetColorU32(ImGuiCol.Text), text, width);
-        return clicked;
-    }
+        => DrawSelectable(label, selected, flags, size, true, false);
 
     public static ImRaii.TableDisposable SettingsTable(string id, ReadOnlySpan<Vector2> groups,
         ReadOnlySpan<string> labels, ReadOnlySpan<float> weights = default,
