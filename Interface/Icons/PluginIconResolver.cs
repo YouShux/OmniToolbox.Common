@@ -5,7 +5,6 @@ using System.Reflection;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin;
-using OmenTools.Dalamud.Helpers;
 using OmniToolbox.Host;
 
 namespace OmniToolbox.UI;
@@ -13,7 +12,7 @@ namespace OmniToolbox.UI;
 internal static class PluginIconResolver
 {
     private static readonly object? ImageCache =
-        DalamudReflector.GetService("Dalamud.Interface.Internal.Windows.PluginImageCache");
+        DalamudServices.GetInternalService("Dalamud.Interface.Internal.Windows.PluginImageCache");
     private static readonly FieldInfo? LocalPluginField = typeof(IExposedPlugin).Assembly
         .GetType("Dalamud.Plugin.ExposedPlugin")?
         .GetField("<plugin>P", INSTANCE_MEMBER_FLAGS);
