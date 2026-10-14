@@ -899,6 +899,8 @@ public static partial class OmniControls
         var frame = BeginNativeControl(id, width, true);
         using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
+            .Push(ImGuiStyleVar.WindowPadding,
+                new Vector2(ImGui.GetStyle().WindowPadding.X, MathF.Ceiling(ImGui.GetStyle().WindowPadding.Y)))
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));

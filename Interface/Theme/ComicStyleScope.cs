@@ -138,7 +138,9 @@ public sealed class ComicStyleScope : IDisposable
         });
         PushColor(ImGuiCol.MenuBarBg, tokens.Surface);
         colorCount = pushedColors;
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, OmniTheme.Scale(tokens.WindowPadding));
+        var windowPadding = OmniTheme.Scale(tokens.WindowPadding);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,
+            new Vector2(MathF.Ceiling(windowPadding.X), MathF.Ceiling(windowPadding.Y)));
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, OmniTheme.Scale(tokens.FramePadding));
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, OmniTheme.Scale(tokens.ItemSpacing));
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, OmniTheme.Scale(tokens.BorderRadius));
