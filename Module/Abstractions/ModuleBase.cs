@@ -23,6 +23,8 @@ public abstract class ModuleBase : IDisposable
 
     public bool IsEnabled { get; private set; }
 
+    internal event Action<ModuleBase>? EnabledChanged;
+
     public virtual bool HasSettings => false;
 
     public void SetEnabled(bool enabled)
@@ -37,6 +39,7 @@ public abstract class ModuleBase : IDisposable
         {
             OnEnable();
             IsEnabled = true;
+            EnabledChanged?.Invoke(this);
             return;
         }
 
@@ -48,6 +51,7 @@ public abstract class ModuleBase : IDisposable
         {
             CancelIconSelection();
             IsEnabled = false;
+            EnabledChanged?.Invoke(this);
         }
     }
 
@@ -56,7 +60,7 @@ public abstract class ModuleBase : IDisposable
     public virtual bool ResetSettings() => false;
 
     /// <summary>
-    /// 处理 /omni 模块类名 后的参数。仅在模块启用时由宿主调用；返回 false 表示不支持该指令。
+    /// 处理命令定义中的功能参数。仅在模块启用时由宿主调用；返回 false 表示不支持该指令。
     /// </summary>
     public virtual bool TryHandleCommand(string arguments) => false;
 
@@ -97,6 +101,7 @@ public abstract class ModuleBase : IDisposable
                 CancelIconSelection();
                 HostIconBrowser = null;
                 SaveHostConfig = null;
+                EnabledChanged = null;
                 IsEnabled = false;
                 disposed = true;
             }

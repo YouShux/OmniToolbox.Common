@@ -26,6 +26,8 @@ public sealed class UIConfig
 
     public UILanguage Language { get; set; } = UILanguage.SimplifiedChinese;
 
+    public CommandDisplayMode CommandDisplayMode { get; set; } = CommandDisplayMode.Chinese;
+
     public UITheme Theme { get; set; } = UITheme.LineGreen;
 
     public bool LiquidGlassEnabled = true;

@@ -2,6 +2,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using OmniToolbox.Collections;
+using OmniToolbox.Commands;
 using OmniToolbox.Config;
 
 namespace OmniToolbox.UI;
@@ -20,16 +21,19 @@ public static partial class OmniLoc
 
     public static void SetLanguage(UILanguage value) => Language = value;
 
-    public static string Get(string key)
+    public static string Get(string key) => Get(key, Language);
+
+    public static string Get(string key, UILanguage language)
     {
         if (!Texts.TryGetValue(key, out var text))
         {
             return key;
         }
 
-        return Language == UILanguage.TraditionalChinese
+        var localized = language == UILanguage.TraditionalChinese
             ? TraditionalTexts.Value[key]
             : text;
+        return OmniCommandCatalog.FormatDisplayText(localized, language);
     }
 
     public static string Get(ItemAvailability availability) => Get(availability switch
@@ -59,7 +63,7 @@ public static partial class OmniLoc
             static entry => ConvertToTraditional(entry.Value),
             StringComparer.Ordinal);
 
-    private static string ConvertToTraditional(string text)
+    internal static string ConvertToTraditional(string text)
     {
         var length = LCMapStringEx(
             "zh-TW",
