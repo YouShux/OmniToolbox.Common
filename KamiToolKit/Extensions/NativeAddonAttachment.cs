@@ -8,7 +8,7 @@ internal static unsafe class NativeAddonAttachment
 {
     // 在首次显示和后续跟随时调用；间距与垂直偏移使用源窗口的设计尺寸。
     public static void SyncBeside(
-        NativeAddon window, AtkUnitBase* addon, AtkUnitBase* sourceAddon, float gap, float verticalOffset)
+        NativeAddon window, AtkUnitBase* addon, AtkUnitBase* sourceAddon, float gap, float verticalOffset, bool preferRight = false)
     {
         addon->EnableTitleBarContextMenu = false;
         addon->DisableUserScaling = false;
@@ -33,10 +33,11 @@ internal static unsafe class NativeAddonAttachment
 
         var source = sourceNode->GetNodeState();
         var target = targetNode->GetNodeState();
-        var desired = new Vector2(source.X - target.Width - gap * scale.X, source.Y + verticalOffset * scale.Y);
+        var x = preferRight ? source.X + source.Width + gap * scale.X : source.X - target.Width - gap * scale.X;
+        var desired = new Vector2(x, source.Y + verticalOffset * scale.Y);
         var viewport = ImGui.GetMainViewport();
         var screenStart = viewport.WorkPos - viewport.Pos;
-        if (desired.X < screenStart.X)
+        if (!preferRight && desired.X < screenStart.X)
             desired.X = source.X + source.Width + gap * scale.X;
         desired = Vector2.Clamp(desired, screenStart,
             Vector2.Max(screenStart, screenStart + viewport.WorkSize - new Vector2(target.Width, target.Height)));
