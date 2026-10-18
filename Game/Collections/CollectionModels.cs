@@ -18,7 +18,16 @@ public enum CollectionType
     BlueMageSpell = 11,
     BlindBox = 12,
     Relic = 13,
-    Bestiary = 14
+    Bestiary = 14,
+    RidingMap = 15,
+    SecretRecipeBook = 16,
+    FolkloreTome = 17,
+    FacePaint = 18,
+    MahjongVoice = 19,
+    IslandLandmark = 20,
+    FieldNote = 21,
+    OccultRecord = 22,
+    SoulShard = 23
 }
 
 public enum CollectionSourceCategory
