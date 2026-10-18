@@ -14,12 +14,7 @@ public abstract class ModuleBase : IDisposable
 
     internal Action? SaveHostConfig { get; set; }
 
-    protected ModuleBase()
-    {
-        ModuleName = GetType().Name;
-    }
-
-    public string ModuleName { get; }
+    public virtual string ModuleName => GetType().Name;
 
     public bool IsEnabled { get; private set; }
 

@@ -10,7 +10,6 @@ public static class OmniFontSelector
 {
     private static object? InstalledSnapshot;
     private static KeyValuePair<string, string>[] SortedFonts = [];
-    private static readonly StringComparer NameComparer = StringComparer.Create(CultureInfo.GetCultureInfo("zh-CN"), true);
 
     public static string GetPreviewText(string path, string defaultLabel, string defaultPath)
     {
@@ -30,16 +29,6 @@ public static class OmniFontSelector
 
     public static bool Draw(string id, ref string path, ref string search, string defaultLabel, string defaultPath, float width)
     {
-        var installed = FontManager.Instance().InstalledFonts;
-        if (!ReferenceEquals(InstalledSnapshot, installed))
-        {
-            SortedFonts = installed.Concat(OmniFonts.GameFonts)
-                .OrderBy(font => font.Value.Any(c => c is >= '\u3400' and <= '\u9fff') ? 0 : 1)
-                .ThenBy(font => font.Value, NameComparer)
-                .ThenBy(font => font.Key, StringComparer.Ordinal)
-                .ToArray();
-            InstalledSnapshot = installed;
-        }
         var isDefault = string.IsNullOrWhiteSpace(path) || string.Equals(path, defaultPath, StringComparison.OrdinalIgnoreCase);
         var label = GetPreviewText(path, defaultLabel, defaultPath);
         var maximum = OmniTheme.ClampWindowSize(ImGui.GetMainViewport().WorkSize - ImGui.GetStyle().WindowPadding * 2f);
@@ -48,6 +37,17 @@ public static class OmniFontSelector
         if (!OmniControls.BeginCombo(id, label, width))
         {
             return false;
+        }
+
+        var installed = FontManager.Instance().InstalledFonts;
+        if (!ReferenceEquals(InstalledSnapshot, installed))
+        {
+            SortedFonts = installed.Concat(OmniFonts.GameFonts)
+                .OrderBy(font => font.Value.Any(c => c is >= '\u3400' and <= '\u9fff') ? 0 : 1)
+                .ThenBy(font => font.Value, StringComparer.Create(CultureInfo.GetCultureInfo("zh-CN"), true))
+                .ThenBy(font => font.Key, StringComparer.Ordinal)
+                .ToArray();
+            InstalledSnapshot = installed;
         }
 
         var changed = false;
