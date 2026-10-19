@@ -21,7 +21,7 @@ OmniToolbox 对原始数据进行了字段筛选、格式转换、分类、去�
 
 在线交叉核对请求：[ClassJob 36/43](https://xivapi-v2.xivcdn.com/api/sheet/ClassJob?language=chs&fields=Name,Abbreviation,IsLimitedJob,JobIndex,Role,PrimaryStat,ModifierStrength,ModifierIntelligence&rows=36,43)。响应 `version=2026071600010000`、`schema=exdschema@2:rev:83e965d091116f895d5b17573cc5d12909a5f407`。在线 `ItemUICategory:113` 名称仍为空，以目标客户端为准；本次 EXDViewer 未返回版本号。
 
-BIS 使用集中定义的特职上限：驯兽师 50、青魔法师 80，依据[官方驯兽师指南](https://na.finalfantasyxiv.com/jobguide/beastmaster/)和[官方青魔法师指南](https://na.finalfantasyxiv.com/jobguide/bluemage/)。已检查的 FFCS/Omen 未提供离线按任意职业查询上限的接口，`PlayerState.MaxLevel` 属于当前角色状态。驯兽师支持本地计算与保存；外部 ffxiv-gearing v5 分享协议没有特职编码，维持原有职业编码表。
+BIS 使用集中定义的特职上限：驯兽师 50、青魔法师 80，依据[官方驯兽师指南](https://na.finalfantasyxiv.com/jobguide/beastmaster/)和[官方青魔法师指南](https://na.finalfantasyxiv.com/jobguide/bluemage/)。已检查的 FFCS/Omen 未提供离线按任意职业查询上限的接口，`PlayerState.MaxLevel` 属于当前角色状态。驯兽师支持本地计算与保存；外部 ffxiv-gearing v5/v6 分享协议没有特职编码，维持原有职业编码表。
 
 青魔法师配装采用独立的直伤估算模型，依据 [Allagan Studies 青魔伤害文档](https://docs.google.com/document/d/1-NBJDkyl8h_UXFcOba-CrPPcFXZrDs2QXX53pSS3QJc/edit)及 [Blue Academy 所链接的 DPS 模拟表](https://docs.google.com/spreadsheets/d/1IZBK7MMMuS4KABnWxDCUNrPRAf_hzUz89BmqYxjpMMA/edit)。2026-09-10 读取该表的 `Tables` 页，使用前两列的装备智力与额外武器伤害断点。原伤害文档标注 6.38；模拟表将 1260/1290 智力断点标为已验证，930 至 1230 的断点仍属于待验证区间。因此此实现是社区模型估算，不能作为当前客户端逐点实测证明。
 

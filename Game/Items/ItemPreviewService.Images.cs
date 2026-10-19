@@ -11,27 +11,6 @@ using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
 namespace OmniToolbox.Items;
 
-internal enum ItemPreviewImageLookup
-{
-    Found,
-    Pending,
-    NotFound
-}
-
-internal enum ItemPreviewImageKind
-{
-    Painting,
-    Mount,
-    Minion,
-    Hairstyle,
-    FashionAccessory
-}
-
-internal readonly record struct ItemPreviewImage(
-    string TexturePath,
-    ItemPreviewImageKind Kind,
-    bool IsUnlocked);
-
 public sealed unsafe partial class ItemPreviewService
 {
     private readonly Dictionary<(uint HairstyleID, uint ItemID), uint> hairstyleIconCache = [];

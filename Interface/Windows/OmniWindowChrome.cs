@@ -3,14 +3,6 @@ using OmniToolbox.UI.Theme;
 
 namespace OmniToolbox.UI;
 
-public readonly record struct OmniWindowChromeResult(
-    bool CollapseClicked,
-    bool CloseClicked,
-    bool TitleDoubleClicked)
-{
-    public bool ToggleCollapse => CollapseClicked || TitleDoubleClicked;
-}
-
 public static class OmniWindowChrome
 {
     public static (Vector2 Position, Vector2 Size) GetFrameBounds(

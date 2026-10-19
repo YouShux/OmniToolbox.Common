@@ -14,6 +14,10 @@ public sealed class TerritorySelector
     private readonly string id;
     private readonly List<TerritoryOption> visibleTerritoryOptions = [];
     private string search = string.Empty;
+    private string? visibleQuery;
+    private readonly HashSet<uint> visibleSelection = [];
+    private (float MapWidth, float RegionWidth, float BaseHeight, float FontSize, nint Font, float Height)? estimatedLayout;
+    private (float MapWidth, float RegionWidth, float BaseHeight, float FontSize, nint Font, float Height)? actualLayout;
 
     public TerritorySelector(string id)
     {
@@ -93,11 +97,7 @@ public sealed class TerritorySelector
         var rowHeight = MathF.Max(ImGui.GetFrameHeight(), checkWidth);
         if (!detailLayout)
         {
-            foreach (var option in rows)
-            {
-                rowHeight = MathF.Max(rowHeight, ImGui.CalcTextSize(option.Name, false, MathF.Max(1f, nameWidth * 1.35f)).Y);
-                rowHeight = MathF.Max(rowHeight, ImGui.CalcTextSize(option.Region, false, MathF.Max(1f, nameWidth)).Y);
-            }
+            rowHeight = MeasureRowHeight(MathF.Max(1f, nameWidth * 1.35f), MathF.Max(1f, nameWidth), rowHeight, false);
         }
         var headerHeight = MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight());
         var tableHeight = MathF.Ceiling(headerHeight + ImGui.GetStyle().CellPadding.Y * 2f +
@@ -171,11 +171,7 @@ public sealed class TerritorySelector
             ImGui.TableSetColumnIndex(2);
             var regionWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
             rowHeight = MathF.Max(ImGui.GetFrameHeight(), checkWidth);
-            foreach (var option in rows)
-            {
-                rowHeight = MathF.Max(rowHeight, ImGui.CalcTextSize(option.Name, false, mapWidth).Y);
-                rowHeight = MathF.Max(rowHeight, ImGui.CalcTextSize(option.Region, false, regionWidth).Y);
-            }
+            rowHeight = MeasureRowHeight(mapWidth, regionWidth, rowHeight, true);
         }
 
         foreach (var option in rows)
@@ -211,6 +207,13 @@ public sealed class TerritorySelector
         HashSet<uint> selectedTerritoryIds,
         string query)
     {
+        if (visibleQuery == query && visibleSelection.SetEquals(selectedTerritoryIds))
+            return visibleTerritoryOptions;
+
+        visibleQuery = query;
+        visibleSelection.Clear();
+        visibleSelection.UnionWith(selectedTerritoryIds);
+        estimatedLayout = actualLayout = null;
         visibleTerritoryOptions.Clear();
         var exactID = uint.TryParse(query, out var parsedId) ? parsedId : 0;
         foreach (var option in TerritoryOptions)
@@ -232,6 +235,25 @@ public sealed class TerritorySelector
             return selectedComparison != 0 ? selectedComparison : left.ID.CompareTo(right.ID);
         });
         return visibleTerritoryOptions;
+    }
+
+    private unsafe float MeasureRowHeight(float mapWidth, float regionWidth, float baseHeight, bool actual)
+    {
+        ref var cached = ref (actual ? ref actualLayout : ref estimatedLayout);
+        var font = (nint)ImGui.GetFont().Handle;
+        var fontSize = ImGui.GetFontSize();
+        if (cached is { } layout && layout.MapWidth == mapWidth && layout.RegionWidth == regionWidth &&
+            layout.BaseHeight == baseHeight && layout.Font == font && layout.FontSize == fontSize)
+            return layout.Height;
+
+        var height = baseHeight;
+        foreach (var option in visibleTerritoryOptions)
+        {
+            height = MathF.Max(height, ImGui.CalcTextSize(option.Name, false, mapWidth).Y);
+            height = MathF.Max(height, ImGui.CalcTextSize(option.Region, false, regionWidth).Y);
+        }
+        cached = (mapWidth, regionWidth, baseHeight, fontSize, font, height);
+        return height;
     }
 
     private static void EnsureTerritoryOptions()

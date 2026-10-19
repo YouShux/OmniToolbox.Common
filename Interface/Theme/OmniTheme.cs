@@ -321,7 +321,7 @@ public static class OmniTheme
 
     #region 常量
 
-    public const float DefaultFontSize = 16f;
+    public const float DefaultFontSize = 15.5f;
 
     public const float MinimumFontSize = 4f;
 

@@ -4,15 +4,6 @@ using OmniToolbox.Host;
 
 namespace OmniToolbox.UI;
 
-public interface IEscapeClosableWindow
-{
-    bool IsOpen { get; }
-
-    bool IsFocused { get; }
-
-    void Close();
-}
-
 public sealed class EscapeCloseController
 {
     private bool escapePressedLastFrame;
