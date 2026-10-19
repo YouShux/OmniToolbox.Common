@@ -494,7 +494,8 @@ public static partial class OmniControls
             ref color,
             ImGuiColorEditFlags.NoInputs |
             ImGuiColorEditFlags.PickerHueBar |
-            ImGuiColorEditFlags.AlphaBar);
+            ImGuiColorEditFlags.AlphaBar |
+            ImGuiColorEditFlags.AlphaPreviewHalf);
     }
 
     public static bool InputTextWithHint(string id, string hint, ref string value, int maxLength) =>
@@ -882,6 +883,13 @@ public static partial class OmniControls
         string id,
         string preview,
         float width,
+        ImGuiComboFlags flags = ImGuiComboFlags.None) =>
+        Combo(id, preview, width, flags).Success;
+
+    public static ImRaii.ComboDisposable Combo(
+        string id,
+        string preview,
+        float width,
         ImGuiComboFlags flags = ImGuiComboFlags.None)
     {
         const ImGuiComboFlags HEIGHT_MASK = ImGuiComboFlags.HeightSmall |
@@ -913,9 +921,9 @@ public static partial class OmniControls
             .Push(ImGuiCol.ButtonActive, Vector4.Zero)
             .Push(ImGuiCol.Border, OmniTheme.UsesMaterial ? tokens.Border : Vector4.Zero)
             .Push(ImGuiCol.BorderShadow, Vector4.Zero);
-        var open = ImGui.BeginCombo(id, preview, flags);
-        EndNativeControl(frame, open);
-        return open;
+        var combo = ImRaii.Combo(id, preview, flags);
+        EndNativeControl(frame, combo.Success);
+        return combo;
     }
 
     public static Vector2 CompactButtonSize(string label, float minimumWidth = 64f, float horizontalPadding = 16f) =>
@@ -1408,6 +1416,9 @@ public static partial class OmniControls
         if (OmniTheme.UsesMaterial)
             DrawGlassSurface(drawList, position, size, OmniTheme.Tokens.Background,
                 OmniTheme.Scale(OmniTheme.Tokens.BorderRadius));
+        else
+            drawList.AddRectFilled(position, position + size, OmniTheme.Color(OmniTheme.Tokens.Background),
+                OmniTheme.Scale(OmniTheme.Tokens.BorderRadius));
         DrawPanelBackground(position, size, OmniTheme.Tokens.Surface);
         drawList.PopClipRect();
     }
@@ -1433,6 +1444,29 @@ public static partial class OmniControls
         drawList.AddRectFilled(pos, pos + size, OmniTheme.Color(fill), radius);
         DrawControlFrame(drawList, pos, size, radius, OmniTheme.BorderThickness());
         DrawControlHighlight(drawList, pos, size, radius);
+    }
+
+    internal static void DrawBorderedPanelBackground(Vector2 pos, Vector2 size, Vector4 fill)
+    {
+        if (size.X <= 1f || size.Y <= 1f)
+        {
+            return;
+        }
+
+        if (!OmniTheme.UsesMaterial)
+        {
+            DrawPanelBackground(pos, size, fill);
+            return;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var radius = OmniTheme.Scale(OmniTheme.Tokens.BorderRadius);
+        drawList.AddRectFilled(pos, pos + size, OmniTheme.Color(fill with
+        {
+            W = fill.W * 0.30f
+        }), radius, ImDrawFlags.RoundCornersAll);
+        drawList.AddRect(pos, pos + size, OmniTheme.Color(OmniTheme.Tokens.Border), radius,
+            ImDrawFlags.RoundCornersAll, OmniTheme.BorderThickness());
     }
 
     public static void DrawCardBackground(Vector2 pos, Vector2 size, bool active, float hoverProgress)

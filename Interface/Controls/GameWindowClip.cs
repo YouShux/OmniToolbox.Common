@@ -1,4 +1,5 @@
 using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using Bounds = FFXIVClientStructs.FFXIV.Common.Math.Bounds;
 
 namespace OmniToolbox.UI;
@@ -29,7 +30,8 @@ public static unsafe class GameWindowClip
         for (var index = 0; index < units->Count; index++)
         {
             var addon = units->Entries[index].Value;
-            if (addon == null || !addon->IsVisible || addon->RootNode == null ||
+            if (addon == null || (addon->UiFlags & UiFlags.Chat) != 0 ||
+                !addon->IsVisible || addon->RootNode == null ||
                 !addon->RootNode->IsVisible() || (addon->VisibilityFlags & 5) != 0 ||
                 addon->WindowNode == null || !addon->WindowNode->IsVisible())
             {
@@ -57,6 +59,33 @@ public static unsafe class GameWindowClip
             }
         }
         return Regions;
+    }
+
+    public static bool IsCoveredByWindow(AtkUnitBase* source, Vector2 minimum, Vector2 maximum)
+    {
+        var manager = RaptureAtkUnitManager.Instance();
+        if (manager == null)
+            return false;
+
+        var units = &manager->AllLoadedUnitsList;
+        for (var index = 0; index < units->Count; index++)
+        {
+            var addon = units->Entries[index].Value;
+            if (addon == null || addon == source || (addon->UiFlags & UiFlags.Chat) != 0 ||
+                !addon->IsVisible || addon->RootNode == null || !addon->RootNode->IsVisible() ||
+                (addon->VisibilityFlags & 5) != 0 || addon->WindowNode == null ||
+                !addon->WindowNode->IsVisible() ||
+                addon->DepthLayer < source->DepthLayer ||
+                addon->DepthLayer == source->DepthLayer && addon->DrawOrderIndex <= source->DrawOrderIndex)
+                continue;
+
+            Bounds bounds;
+            addon->GetWindowBounds(&bounds);
+            if (minimum.X < bounds.Pos2.X && maximum.X > bounds.Pos1.X &&
+                minimum.Y < bounds.Pos2.Y && maximum.Y > bounds.Pos1.Y)
+                return true;
+        }
+        return false;
     }
 
     private static void Add(Vector2 min, Vector2 max)

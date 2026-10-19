@@ -29,11 +29,8 @@ internal static class NativeNodeTooltip
 
     private sealed class TextTooltipState
     {
-        private readonly NodeBase node;
-
         public TextTooltipState(NodeBase node)
         {
-            this.node = node;
             node.AddEvent(AtkEventType.MouseOver, () => node.ShowAnchoredTextTooltip(Text));
             node.AddEvent(AtkEventType.MouseOut, node.HideTooltip);
             if (node is not ComponentNode)

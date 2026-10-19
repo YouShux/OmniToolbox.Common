@@ -1,6 +1,5 @@
 namespace OmniToolbox.Config;
 
-[Serializable]
 public sealed class ItemImagePreviewConfig
 {
     public bool ShowMounts { get; set; } = true;

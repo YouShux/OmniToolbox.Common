@@ -156,15 +156,10 @@ internal static class PluginIconResolver
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             return true;
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (Exception)
         {
+            return false;
         }
-        catch (Exception exception)
-        {
-            if (!cancellationToken.IsCancellationRequested)
-                DalamudServices.PluginLog.Debug(exception, "Could not cache plugin icon at {Path}.", path);
-        }
-        return false;
     }
 
     private static IDalamudTextureWrap? GetDefaultIcon() => DefaultIconProperty?.GetValue(ImageCache) is IDalamudTextureWrap texture &&

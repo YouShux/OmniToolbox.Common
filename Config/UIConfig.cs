@@ -1,6 +1,5 @@
 namespace OmniToolbox.Config;
 
-[Serializable]
 public sealed class UIConfig
 {
     public static readonly Vector2 DefaultMainWindowSize = new(1420f, 900f);
@@ -16,7 +15,15 @@ public sealed class UIConfig
 
     public string LastReadChangelogVersion { get; set; } = string.Empty;
 
+    public string LastReadChangelogSignature { get; set; } = string.Empty;
+
     public bool ShowLauncherIcon { get; set; } = true;
+
+    public bool DiscordLinkRead { get; set; }
+
+    public bool GitHubLinkRead { get; set; }
+
+    public bool VerificationChannelRead { get; set; }
 
     public float LauncherIconSize { get; set; } = DefaultLauncherIconSize;
 
@@ -28,7 +35,7 @@ public sealed class UIConfig
 
     public CommandDisplayMode CommandDisplayMode { get; set; } = CommandDisplayMode.Chinese;
 
-    public UITheme Theme { get; set; } = UITheme.LineGreen;
+    public UITheme Theme { get; set; } = UITheme.LineMidnightIris;
 
     public bool LiquidGlassEnabled = true;
 
@@ -53,33 +60,4 @@ public sealed class UIConfig
     public const float DEFAULT_GLASS_BLUR_STRENGTH = 1.00f;
 
     #endregion
-}
-
-public enum UILanguage
-{
-    SimplifiedChinese,
-    TraditionalChinese
-}
-
-public enum UITheme
-{
-    LineGreen = 0,
-    LinePeachBloom = 5,
-    LineMidnightIris = 2,
-    LineGraphite = 8,
-    OfficeGlow = 11,
-    LiquidGlass = 12
-}
-
-public enum UIMotionMode
-{
-    Full,
-    Reduced,
-    Off
-}
-
-public enum NumberDisplayMode
-{
-    Standard,
-    Chinese
 }

@@ -4,28 +4,22 @@ using OmniToolbox.UI.Theme;
 
 namespace OmniToolbox.UI.Controls;
 
-public readonly record struct ItemSelectionTableRow(uint ItemID, bool Enabled, bool CanDelete);
-
-public enum ItemSelectionTableAction
-{
-    None,
-    SetAll,
-    SetItem,
-    Delete
-}
-
-public readonly record struct ItemSelectionTableChange(
-    ItemSelectionTableAction Action,
-    uint ItemID = 0,
-    bool Enabled = false);
-
 public static class ItemSelectionTable
 {
+    private static readonly Dictionary<uint, ItemLayout> Layouts = [];
+
     public static ItemSelectionTableChange Draw(
         string id,
         IReadOnlyList<ItemSelectionTableRow> rows,
         bool showEnabledColumn = true)
     {
+        var layoutID = ImGui.GetID(id);
+        if (!Layouts.TryGetValue(layoutID, out var layout))
+        {
+            layout = new();
+            Layouts.Add(layoutID, layout);
+        }
+        layout.UpdateItems(rows);
         var iconSize = OmniTheme.TableItemIconSize();
         var deleteButtonSize = OmniControls.CompactButtonSize(OmniLoc.Get("Common.Delete"));
         var rowContentHeight = MathF.Max(iconSize, MathF.Max(OmniTheme.CheckboxSize(), deleteButtonSize.Y));
@@ -38,10 +32,7 @@ public static class ItemSelectionTable
         {
             nameWidth = MathF.Max(1f, available.X - ImGui.GetStyle().CellPadding.X * 2f - ImGui.GetStyle().ScrollbarSize);
         }
-        foreach (var row in rows)
-        {
-            rowContentHeight = MathF.Max(rowContentHeight, MeasureItemCellHeight(LuminaWrapper.GetItemName(row.ItemID), nameWidth, iconSize));
-        }
+        rowContentHeight = MathF.Max(rowContentHeight, layout.Measure(nameWidth, iconSize, false));
         var cellPadding = ImGui.GetStyle().CellPadding.Y * 2f;
         var rowHeight = rowContentHeight + cellPadding;
         var tableHeight = OmniTheme.SmallButtonSize().Y + cellPadding +
@@ -81,8 +72,7 @@ public static class ItemSelectionTable
         ImGui.TableSetColumnIndex(!detailLayout && showEnabledColumn ? 1 : 0);
         nameWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
         rowContentHeight = MathF.Max(iconSize, MathF.Max(OmniTheme.CheckboxSize(), deleteButtonSize.Y));
-        foreach (var row in rows)
-            rowContentHeight = MathF.Max(rowContentHeight, MeasureItemCellHeight(LuminaWrapper.GetItemName(row.ItemID), nameWidth, iconSize));
+        rowContentHeight = MathF.Max(rowContentHeight, layout.Measure(nameWidth, iconSize, true));
         rowHeight = rowContentHeight + cellPadding;
         if (detailLayout)
         {
@@ -270,4 +260,46 @@ public static class ItemSelectionTable
         var textHeight = ImGui.CalcTextSize(name, false, MathF.Max(1f, width - (stacked ? 0f : iconSize + spacing))).Y;
         return stacked ? iconSize + spacing + textHeight : MathF.Max(iconSize, textHeight);
     }
+    private sealed class ItemLayout
+    {
+        private readonly List<uint> itemIDs = [];
+        private readonly List<string> names = [];
+        private (float Width, float IconSize, float FontSize, nint Font, float Height)? estimated;
+        private (float Width, float IconSize, float FontSize, nint Font, float Height)? actual;
+
+        public void UpdateItems(IReadOnlyList<ItemSelectionTableRow> rows)
+        {
+            var same = rows.Count == itemIDs.Count;
+            for (var index = 0; same && index < rows.Count; index++)
+                same = rows[index].ItemID == itemIDs[index];
+            if (same)
+                return;
+
+            itemIDs.Clear();
+            names.Clear();
+            estimated = actual = null;
+            foreach (var row in rows)
+            {
+                itemIDs.Add(row.ItemID);
+                names.Add(LuminaWrapper.GetItemName(row.ItemID));
+            }
+        }
+
+        public unsafe float Measure(float width, float iconSize, bool useActual)
+        {
+            ref var cached = ref (useActual ? ref actual : ref estimated);
+            var font = (nint)ImGui.GetFont().Handle;
+            var fontSize = ImGui.GetFontSize();
+            if (cached is { } layout && layout.Width == width && layout.IconSize == iconSize &&
+                layout.FontSize == fontSize && layout.Font == font)
+                return layout.Height;
+
+            var height = iconSize;
+            foreach (var name in names)
+                height = MathF.Max(height, MeasureItemCellHeight(name, width, iconSize));
+            cached = (width, iconSize, fontSize, font, height);
+            return height;
+        }
+    }
+
 }

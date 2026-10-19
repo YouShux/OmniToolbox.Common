@@ -5,7 +5,6 @@ using Newtonsoft.Json.Linq;
 
 namespace OmniToolbox.Config;
 
-[Serializable]
 public sealed class TreeHouseConfig
 {
     private static readonly string[] DefaultEnabledModuleNames =
@@ -17,15 +16,16 @@ public sealed class TreeHouseConfig
         "VoidNPCShop",
         "VoidGlamourStation",
         "VoidFreeCompanyChest",
-        "FastWorldTravel"
+        "FastWorldTravel",
+        "BetterTeleportManagement",
+        "AutoTalkSkip",
+        "AutoCutsceneSkip",
+        "FastSearchResults"
     ];
 
-    [NonSerialized]
     private readonly Dictionary<string, object> moduleConfigs = new(StringComparer.Ordinal);
 
-    [NonSerialized]
     private readonly Dictionary<string, JToken> rawModuleConfigs = new(StringComparer.Ordinal);
-    [NonSerialized]
     private readonly HashSet<string> localModuleNames = new(StringComparer.Ordinal);
 
     public Dictionary<string, bool> ModuleStates { get; set; } = new(StringComparer.Ordinal)
@@ -60,39 +60,6 @@ public sealed class TreeHouseConfig
         foreach (var moduleName in DefaultEnabledModuleNames)
         {
             ModuleStates.TryAdd(moduleName, true);
-        }
-    }
-
-    public void MigrateModuleName(string oldName, string newName)
-    {
-        if (ModuleStates.Remove(oldName, out var enabled) && !ModuleStates.ContainsKey(newName))
-        {
-            ModuleStates[newName] = enabled;
-        }
-
-        if (Favorites.Remove(oldName))
-        {
-            Favorites.Add(newName);
-        }
-
-        foreach (var modules in FavoriteGroups.Values)
-        {
-            if (modules.Remove(oldName))
-            {
-                modules.Add(newName);
-            }
-        }
-
-        if (moduleConfigs.Remove(oldName, out var moduleConfig) && !moduleConfigs.ContainsKey(newName))
-        {
-            moduleConfigs[newName] = moduleConfig;
-        }
-
-        if (rawModuleConfigs.Remove(oldName, out var rawModuleConfig) &&
-            !moduleConfigs.ContainsKey(newName) &&
-            !rawModuleConfigs.ContainsKey(newName))
-        {
-            rawModuleConfigs[newName] = rawModuleConfig;
         }
     }
 

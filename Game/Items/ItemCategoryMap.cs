@@ -148,5 +148,3 @@ public sealed class ItemCategoryMap
     private static IReadOnlyList<ItemSubcategory> PrependAll(IEnumerable<ItemSubcategory> values) =>
         [new(OmniToolbox.UI.OmniLoc.Get("ItemSearch.Category.All"), ItemCategory.All, 0, 0), .. values];
 }
-
-public readonly record struct ItemSubcategory(string Label, ItemCategory Category, uint ItemUICategoryID, uint JobID);

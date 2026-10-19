@@ -930,9 +930,3 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
     #endregion
 }
-
-[Serializable]
-public sealed class IconBrowserConfig
-{
-    public float IconSize { get; set; } = 50f;
-}
