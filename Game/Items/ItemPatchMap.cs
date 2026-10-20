@@ -33,12 +33,6 @@ public sealed class ItemPatchMap
         }
 
         patches = loadedPatches;
-
-        if (failedLines.Count != 0)
-        {
-            DalamudServices.PluginLog.Warning(
-                $"ItemPatch 数据有 {failedLines.Count} 行加载失败，首个错误: {exceptions[0].Message}");
-        }
     }
 
     public static string Format(decimal patch) => patch.ToString("0.0#", CultureInfo.InvariantCulture);

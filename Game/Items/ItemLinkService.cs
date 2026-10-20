@@ -30,9 +30,8 @@ public static unsafe class ItemLinkService
             agent->ContextItemId = itemID;
             return agent->InsertTextCommandParam(ITEM_TEXT_COMMAND_PARAM_ID, false);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DalamudServices.PluginLog.Warning(ex, $"Item link insertion failed for {itemID}.");
             return false;
         }
     }

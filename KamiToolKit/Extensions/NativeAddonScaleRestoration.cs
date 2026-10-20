@@ -45,9 +45,8 @@ internal sealed class NativeAddonScaleRestoration : IDisposable
                          ?? throw new InvalidOperationException("KamiToolKit 原生窗口列表尚未初始化。");
             return new(configs, scale, addons);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DalamudServices.PluginLog.Error(ex, "初始化原生窗口缩放恢复失败。");
             return null;
         }
     }
@@ -64,9 +63,8 @@ internal sealed class NativeAddonScaleRestoration : IDisposable
             if (scaleField.GetValue(config) is 1f)
                 ((AtkUnitBase*)args.Addon.Address)->SetScale(1f, true);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DalamudServices.PluginLog.Error(ex, "恢复原生窗口 {AddonName} 缩放失败。", args.AddonName);
             Dispose();
         }
     }

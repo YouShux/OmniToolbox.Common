@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using OmenTools.OmenService;
 using OmniToolbox.UI.Theme;
 
 namespace OmniToolbox.UI.Controls;
@@ -19,9 +18,17 @@ public static class OmniFontSelector
                 return font.Value;
         }
 
+        foreach (var font in OmniFonts.GetInstalledFonts())
+        {
+            if (font.Key == path)
+            {
+                return font.Value;
+            }
+        }
+
         return string.IsNullOrWhiteSpace(path) || string.Equals(path, defaultPath, StringComparison.OrdinalIgnoreCase)
             ? defaultLabel
-            : FontManager.Instance().InstalledFonts.GetValueOrDefault(path, Path.GetFileNameWithoutExtension(path));
+            : Path.GetFileNameWithoutExtension(path);
     }
 
     public static bool Draw(string id, ref string path, ref string search, string defaultLabel, string defaultPath) =>
@@ -39,7 +46,7 @@ public static class OmniFontSelector
             return false;
         }
 
-        var installed = FontManager.Instance().InstalledFonts;
+        var installed = OmniFonts.GetInstalledFonts();
         if (!ReferenceEquals(InstalledSnapshot, installed))
         {
             SortedFonts = installed.Concat(OmniFonts.GameFonts)

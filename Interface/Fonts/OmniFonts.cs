@@ -17,6 +17,8 @@ public static class OmniFonts
     ];
 
     private static readonly Dictionary<float, IFontHandle> UIHandles = [];
+    private static IReadOnlyList<KeyValuePair<string, string>> installedFonts = [];
+    private static object? installedFontsSource;
     private static string CurrentPath = string.Empty;
     private static float CurrentSize;
 
@@ -31,6 +33,39 @@ public static class OmniFonts
             _ => GameFontFamily.Undefined
         };
         return family != GameFontFamily.Undefined;
+    }
+
+    public static IReadOnlyList<KeyValuePair<string, string>> GetInstalledFonts()
+    {
+        var manager = FontManager.Instance();
+        if (ReferenceEquals(installedFontsSource, manager.InstalledFontFamilies))
+        {
+            return installedFonts;
+        }
+
+        var result = new List<KeyValuePair<string, string>>();
+        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var family in manager.InstalledFontFamilies)
+        {
+            foreach (var face in family.Value)
+            {
+                if (string.IsNullOrWhiteSpace(face.FilePath) || !seenPaths.Add(face.FilePath))
+                {
+                    continue;
+                }
+
+                var familyName = string.IsNullOrWhiteSpace(face.FamilyName) ? family.Key : face.FamilyName;
+                var label = string.IsNullOrWhiteSpace(face.SubfamilyName) ||
+                            string.Equals(face.SubfamilyName, "Regular", StringComparison.OrdinalIgnoreCase)
+                    ? familyName
+                    : $"{familyName} {face.SubfamilyName}";
+                result.Add(new(face.FilePath, label));
+            }
+        }
+
+        installedFonts = result;
+        installedFontsSource = manager.InstalledFontFamilies;
+        return installedFonts;
     }
 
     public static IFontHandle GetUIFont(float scale = 1f)

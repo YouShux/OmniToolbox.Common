@@ -61,16 +61,9 @@ public sealed partial class CollectionSourceService
                     containerName,
                     string.Empty));
             }
-
-            if (failedLines.Count != 0)
-            {
-                DalamudServices.PluginLog.Warning(
-                    $"ItemSupplement had {failedLines.Count} failed row(s): {exceptions[0].Message}");
-            }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DalamudServices.PluginLog.Warning(ex, "ItemSupplement source loading failed.");
         }
     }
 

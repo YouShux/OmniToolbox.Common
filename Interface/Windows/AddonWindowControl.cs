@@ -17,9 +17,8 @@ internal static unsafe class AddonWindowControl
         {
             addon->Close(true);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DalamudServices.PluginLog.Warning(ex, "Failed to close addon {AddonName}.", addonName);
         }
     }
 }
