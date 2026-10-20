@@ -128,6 +128,7 @@ public static class OmniCommandCatalog
         new("iconbrowser", "图标浏览器", "", "打开图标浏览器", null, OmniCommandArguments.None),
         new("marketboard", "虚空市场板", "", "打开市场板购买界面", "VoidPurchase", OmniCommandArguments.None),
         new("npcshop", "虚空商店", "", "打开 NPC 商店浏览器", "VoidNPCShop", OmniCommandArguments.None),
+        new("gemshop", "虚空双色商店", "", "打开当前地图的双色商店", "VoidBicolorShop", OmniCommandArguments.None),
         new("marketbuy", "购买", "<物品ID> <hq|nq> × <数量> × <价格限制>", "按数量和最高单价从市场板购买", "VoidPurchase", OmniCommandArguments.Required),
         new("npcbuy", "商店购买", "<物品ID> <hq|nq> × <数量>", "在 NPC 商店批量购买", "VoidNPCShop", OmniCommandArguments.Required),
         new("retrieve", "取货", "<物品ID>", "取出指定物品", "AutoStore", OmniCommandArguments.Required),
