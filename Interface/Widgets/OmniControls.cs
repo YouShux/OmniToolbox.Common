@@ -20,7 +20,11 @@ public static partial class OmniControls
 
     public static bool RoundedSelectable(string label, bool selected = false,
         ImGuiSelectableFlags flags = ImGuiSelectableFlags.None, Vector2 size = default)
-        => DrawSelectable(label, selected, flags, size, true, true);
+        => RoundedSelectable(label, selected, flags, size, true);
+
+    public static bool RoundedSelectable(string label, bool selected,
+        ImGuiSelectableFlags flags, Vector2 size, bool wrapText)
+        => DrawSelectable(label, selected, flags, size, wrapText, true);
 
     public static bool RoundedMenuItem(string label, bool enabled = true)
         => RoundedMenuItem(label, default, enabled);

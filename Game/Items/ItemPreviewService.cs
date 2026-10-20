@@ -68,9 +68,8 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             AgentTryon.TryOn(0, itemID, 0, 0);
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DalamudServices.PluginLog.Warning(ex, $"Item preview failed for {itemID}.");
             return false;
         }
     }
@@ -204,9 +203,8 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
                     RestoreCharacterActionState(character, originalEmoteState.Value);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                DalamudServices.PluginLog.Warning(ex, "Restoring direct item preview failed.");
             }
         }
 
@@ -216,9 +214,8 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             {
                 RestoreBarding(originalBardingState.Value);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                DalamudServices.PluginLog.Warning(ex, "Restoring chocobo barding preview failed.");
             }
         }
 
@@ -374,11 +371,8 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
                 _ => false
             };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DalamudServices.PluginLog.Warning(
-                ex,
-                $"Item {target.Type} preview failed for {target.ID}.");
             return false;
         }
     }

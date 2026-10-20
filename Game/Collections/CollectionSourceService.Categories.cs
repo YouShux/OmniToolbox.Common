@@ -65,7 +65,6 @@ public sealed partial class CollectionSourceService
 
             if (sourceState == ItemSourceQueryState.Failed)
             {
-                DalamudServices.PluginLog.Warning("OmenTools item-source snapshot failed; exchange source categories were skipped.");
                 return;
             }
 
@@ -117,12 +116,9 @@ public sealed partial class CollectionSourceService
         }
         catch (OperationCanceledException)
         {
-            DalamudServices.PluginLog.Warning(
-                $"Collection exchange category indexing exceeded {TimeSpan.FromMinutes(2).TotalSeconds:0} seconds and was stopped.");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DalamudServices.PluginLog.Warning(ex, "Collection exchange category indexing failed.");
         }
     }
 

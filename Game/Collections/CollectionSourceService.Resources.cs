@@ -200,12 +200,6 @@ public sealed partial class CollectionSourceService
                 firstException ??= ex;
             }
         }
-
-        if (failedRows != 0)
-        {
-            DalamudServices.PluginLog.Warning(
-                $"Collection source {fileName} had {failedRows} failed row(s): {firstException!.Message}");
-        }
     }
 
     private static void AddCurrentMogStationSources(IDictionary<uint, HashSet<CollectionSource>> target)
@@ -221,16 +215,9 @@ public sealed partial class CollectionSourceService
             {
                 AddMogStationSource(target, row.ItemId);
             }
-
-            if (failedLines.Count != 0)
-            {
-                DalamudServices.PluginLog.Warning(
-                    $"StoreItem 数据有 {failedLines.Count} 行加载失败，首个错误: {exceptions[0].Message}");
-            }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            DalamudServices.PluginLog.Warning(ex, "StoreItem source loading failed");
         }
 
         if (DalamudServices.DataManager.GetSubrowExcelSheet<FittingShopCategoryItem>() is { } categoryItems)

@@ -119,11 +119,10 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
                     break;
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             ClearImage();
             lookupPending = false;
-            DalamudServices.PluginLog.Warning(ex, "Updating the ItemDetail image preview failed.");
         }
     }
 

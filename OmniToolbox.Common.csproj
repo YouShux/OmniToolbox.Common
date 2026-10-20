@@ -32,6 +32,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="OmniToolbox" />
+    <InternalsVisibleTo Include="OmniToolbox.Tree" />
+    <InternalsVisibleTo Include="OmniToolbox.TreePublic" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Data\DATA_SOURCES.md"
                       Link="Data\DATA_SOURCES.md"
                       LogicalName="OmniToolbox.Data.DATA_SOURCES.md" />
