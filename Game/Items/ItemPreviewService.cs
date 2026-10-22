@@ -906,13 +906,13 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         EquipSlotCategory equipSlotCategory,
         out DrawDataContainer.WeaponSlot slot)
     {
-        if (equipSlotCategory.MainHand != 0)
+        if (equipSlotCategory.MainHand > 0)
         {
             slot = DrawDataContainer.WeaponSlot.MainHand;
             return true;
         }
 
-        if (equipSlotCategory.OffHand != 0)
+        if (equipSlotCategory.OffHand > 0)
         {
             slot = DrawDataContainer.WeaponSlot.OffHand;
             return true;
@@ -927,55 +927,55 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         int inventorySlot,
         out DrawDataContainer.EquipmentSlot slot)
     {
-        if (equipSlotCategory.Head != 0)
+        if (equipSlotCategory.Head > 0)
         {
             slot = DrawDataContainer.EquipmentSlot.Head;
             return true;
         }
 
-        if (equipSlotCategory.Body != 0)
+        if (equipSlotCategory.Body > 0)
         {
             slot = DrawDataContainer.EquipmentSlot.Body;
             return true;
         }
 
-        if (equipSlotCategory.Gloves != 0)
+        if (equipSlotCategory.Gloves > 0)
         {
             slot = DrawDataContainer.EquipmentSlot.Hands;
             return true;
         }
 
-        if (equipSlotCategory.Legs != 0)
+        if (equipSlotCategory.Legs > 0)
         {
             slot = DrawDataContainer.EquipmentSlot.Legs;
             return true;
         }
 
-        if (equipSlotCategory.Feet != 0)
+        if (equipSlotCategory.Feet > 0)
         {
             slot = DrawDataContainer.EquipmentSlot.Feet;
             return true;
         }
 
-        if (equipSlotCategory.Ears != 0)
+        if (equipSlotCategory.Ears > 0)
         {
             slot = DrawDataContainer.EquipmentSlot.Ears;
             return true;
         }
 
-        if (equipSlotCategory.Neck != 0)
+        if (equipSlotCategory.Neck > 0)
         {
             slot = DrawDataContainer.EquipmentSlot.Neck;
             return true;
         }
 
-        if (equipSlotCategory.Wrists != 0)
+        if (equipSlotCategory.Wrists > 0)
         {
             slot = DrawDataContainer.EquipmentSlot.Wrists;
             return true;
         }
 
-        if (equipSlotCategory.FingerL != 0 || equipSlotCategory.FingerR != 0)
+        if (equipSlotCategory.FingerL > 0 || equipSlotCategory.FingerR > 0)
         {
             slot = inventorySlot == 12
                 ? DrawDataContainer.EquipmentSlot.LFinger
