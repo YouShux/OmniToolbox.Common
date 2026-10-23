@@ -71,22 +71,7 @@ public static class OmniTheme
         HighlightStrength = 0.06f
     };
 
-    private static readonly ThemeTokens OfficeGlowTokens = LineGraphiteTokens with
-    {
-        Primary = new Vector4(48f / 255f, 52f / 255f, 58f / 255f, 1f),
-        Secondary = new Vector4(76f / 255f, 82f / 255f, 94f / 255f, 1f),
-        Accent = new Vector4(64f / 255f, 73f / 255f, 92f / 255f, 1f),
-        Background = new Vector4(35f / 255f, 38f / 255f, 42f / 255f, 1f),
-        Surface = new Vector4(58f / 255f, 63f / 255f, 70f / 255f, 1f),
-        Text = new Vector4(241f / 255f, 245f / 255f, 249f / 255f, 1f),
-        Border = new Vector4(1f, 1f, 1f, 0.15f),
-        Shadow = new Vector4(0f, 0f, 0f, 0.24f),
-        ShadowOffset = 2f,
-        BorderRadius = 10f,
-        ButtonRadius = 8f,
-        BorderThickness = 1f,
-        HighlightStrength = 0.08f
-    };
+    private static UITheme GlobalTheme = UITheme.LineGreen;
 
     public static string DefaultFontPath { get; } = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.Fonts),
@@ -99,7 +84,36 @@ public static class OmniTheme
         REFERENCE_FONT_SIZE *
         DalamudScaleValue;
 
-    public static UITheme CurrentTheme { get; set; } = UITheme.LineGreen;
+    public static UITheme CurrentTheme
+    {
+        get => scopedTheme ?? GlobalTheme;
+        set => GlobalTheme = NormalizeTheme(value);
+    }
+
+    public static ReadOnlySpan<UITheme> AvailableThemes =>
+    [
+        UITheme.LineGreen,
+        UITheme.LinePeachBloom,
+        UITheme.LineMidnightIris,
+        UITheme.LineGraphite,
+        UITheme.LiquidGlass
+    ];
+
+    public static UITheme NormalizeTheme(UITheme theme) => theme switch
+    {
+        UITheme.LineGreen or UITheme.LinePeachBloom or UITheme.LineMidnightIris or
+            UITheme.LineGraphite or UITheme.LiquidGlass => theme,
+        _ => UITheme.LineMidnightIris
+    };
+
+    public static string GetThemeLabel(UITheme theme) => OmniLoc.Get(theme switch
+    {
+        UITheme.LineGreen => "Settings.Ui.Theme.LineGreen",
+        UITheme.LinePeachBloom => "Settings.Ui.Theme.LinePeachBloom",
+        UITheme.LineGraphite => "Settings.Ui.Theme.LineGraphite",
+        UITheme.LiquidGlass => "Settings.Ui.Theme.LiquidGlass",
+        _ => "Settings.Ui.Theme.LineMidnightIris"
+    });
 
     internal static ThemeTokens? LiquidGlassTokens { get; set; }
 
@@ -109,6 +123,7 @@ public static class OmniTheme
 
     internal static GlassSurfacePainter? GlassPainter { get; set; }
 
+    [ThreadStatic] private static UITheme? scopedTheme;
     [ThreadStatic] private static ThemeTokens? scopedTokens;
     [ThreadStatic] private static Vector4? scopedControlAccent;
     [ThreadStatic] private static float? scopedScale;
@@ -121,20 +136,16 @@ public static class OmniTheme
         UITheme.LineGraphite => LineGraphiteTokens,
         UITheme.LineMidnightIris => LineMidnightIrisTokens,
         UITheme.LiquidGlass => LiquidGlassTokens ?? LineGraphiteTokens,
-        UITheme.OfficeGlow => OfficeGlowTokens,
         _ => LineGreenTokens
     };
 
     public static bool IsGlass => CurrentTheme == UITheme.LiquidGlass;
 
-    public static bool UsesMaterial => IsGlass || CurrentTheme == UITheme.OfficeGlow;
+    public static bool UsesMaterial => IsGlass;
 
     internal static bool HasCustomBackground => scopedTokens is { } tokens && tokens.Background != BaseTokens.Background;
 
-    internal static bool HasCustomBorder => scopedTokens is { } tokens && tokens.Border != BaseTokens.Border;
-
     public static bool UsesDarkPalette => CurrentTheme is
-        UITheme.OfficeGlow or
         UITheme.LiquidGlass or
         UITheme.LineMidnightIris or
         UITheme.LineGraphite;
@@ -164,15 +175,10 @@ public static class OmniTheme
         UITheme.LinePeachBloom => new Vector4(0.784f, 0.451f, 0.494f, 1f),
         UITheme.LineGraphite => new Vector4(0.608f, 0.643f, 0.686f, 1f),
         UITheme.LiquidGlass => Tokens.Accent with { W = 1f },
-        UITheme.OfficeGlow => new Vector4(125f / 255f, 211f / 255f, 252f / 255f, 1f),
         _ => Tokens.Success
     });
 
-    internal static void ResetMaterialState()
-    {
-        GlassMotion.Clear();
-        MaterialPainter.Clear();
-    }
+    internal static void ResetMaterialState() => GlassMotion.Clear();
 
     internal static Vector4 TooltipBackground => scopedTokens?.Background ?? Tokens.Primary;
 
@@ -283,6 +289,30 @@ public static class OmniTheme
         {
             W = color.W * ImGui.GetStyle().Alpha
         });
+
+    public readonly struct ThemeScope : IDisposable
+    {
+        private readonly UITheme? previousTheme;
+        private readonly ThemeTokens? previousTokens;
+        private readonly Vector4? previousAccent;
+
+        public ThemeScope(UITheme theme)
+        {
+            previousTheme = scopedTheme;
+            previousTokens = scopedTokens;
+            previousAccent = scopedControlAccent;
+            scopedTheme = NormalizeTheme(theme);
+            scopedTokens = null;
+            scopedControlAccent = null;
+        }
+
+        public void Dispose()
+        {
+            scopedTheme = previousTheme;
+            scopedTokens = previousTokens;
+            scopedControlAccent = previousAccent;
+        }
+    }
 
     // 仅覆盖当前绘制调用链，退出后恢复，避免工具栏配色影响其他窗口。
     public readonly struct ColorScope : IDisposable
