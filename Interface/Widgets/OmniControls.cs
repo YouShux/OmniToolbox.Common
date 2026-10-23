@@ -909,10 +909,14 @@ public static partial class OmniControls
         var tokens = OmniTheme.Tokens;
         id = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, true);
+        var popupPadding = Vector2.Max(OmniTheme.Scale(tokens.WindowPadding),
+            new Vector2(OmniTheme.BorderThickness()) + ImGui.GetStyle().ItemSpacing * 0.5f);
         using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
+            .Push(ImGuiStyleVar.PopupRounding, frame.Radius)
+            .Push(ImGuiStyleVar.PopupBorderSize, OmniTheme.BorderThickness())
             .Push(ImGuiStyleVar.WindowPadding,
-                new Vector2(ImGui.GetStyle().WindowPadding.X, MathF.Ceiling(ImGui.GetStyle().WindowPadding.Y)))
+                new Vector2(MathF.Ceiling(popupPadding.X), MathF.Ceiling(popupPadding.Y)))
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
@@ -923,10 +927,27 @@ public static partial class OmniControls
             .Push(ImGuiCol.Button, Vector4.Zero)
             .Push(ImGuiCol.ButtonHovered, Vector4.Zero)
             .Push(ImGuiCol.ButtonActive, Vector4.Zero)
-            .Push(ImGuiCol.Border, OmniTheme.UsesMaterial ? tokens.Border : Vector4.Zero)
+            .Push(ImGuiCol.PopupBg, OmniTheme.IsGlass ? Vector4.Zero : tokens.Background with
+            {
+                W = 1f
+            })
+            .Push(ImGuiCol.Border, tokens.Border)
             .Push(ImGuiCol.BorderShadow, Vector4.Zero);
         var combo = ImRaii.Combo(id, preview, flags);
         EndNativeControl(frame, combo.Success);
+        if (combo.Success && OmniTheme.IsGlass)
+        {
+            var drawList = ImGui.GetWindowDrawList();
+            var position = ImGui.GetWindowPos();
+            var size = ImGui.GetWindowSize();
+            var scrollbarSize = ImGui.GetStyle().ScrollbarSize;
+            var clipEnd = position + size - new Vector2(
+                ImGui.GetScrollMaxY() > 0f ? scrollbarSize : 0f,
+                ImGui.GetScrollMaxX() > 0f ? scrollbarSize : 0f);
+            drawList.PushClipRect(position, clipEnd, false);
+            DrawGlassSurface(drawList, position, size, tokens.Background, frame.Radius);
+            drawList.PopClipRect();
+        }
         return combo;
     }
 

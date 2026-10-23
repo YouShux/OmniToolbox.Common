@@ -1,7 +1,11 @@
+using OmniToolbox.UI.Theme;
+
 namespace OmniToolbox.Config;
 
 public sealed class UIConfig
 {
+    private UITheme theme = UITheme.LineMidnightIris;
+
     public static readonly Vector2 DefaultMainWindowSize = new(1420f, 900f);
     public static readonly Vector2 DefaultItemInformationWindowSize = new(860f, 500f);
 
@@ -35,7 +39,11 @@ public sealed class UIConfig
 
     public CommandDisplayMode CommandDisplayMode { get; set; } = CommandDisplayMode.Chinese;
 
-    public UITheme Theme { get; set; } = UITheme.LineMidnightIris;
+    public UITheme Theme
+    {
+        get => theme;
+        set => theme = OmniTheme.NormalizeTheme(value);
+    }
 
     public bool LiquidGlassEnabled = true;
 
