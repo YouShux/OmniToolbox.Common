@@ -28,7 +28,8 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
     private CharacterModelState? originalMountCharacterState;
     private ushort? originalCompanionID;
     private ushort? originalOrnamentID;
-    private byte? originalHairstyleID;
+    private CustomizeData? originalHairAppearance;
+    private bool hasHairColorPreview;
     private uint? previewHairstyleID;
     private byte? previewHairstyleFeatureID;
     private CharacterActionState? originalEmoteState;
@@ -193,9 +194,12 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
                     character->OrnamentData.SetupOrnament((short)originalOrnamentID.Value, 0);
                 }
 
-                if (originalHairstyleID.HasValue)
+                if (originalHairAppearance.HasValue)
                 {
-                    ApplyHairstyle(character, originalHairstyleID.Value);
+                    if (hasHairColorPreview)
+                        ApplyHairAppearance(character, originalHairAppearance.Value);
+                    else
+                        ApplyHairstyle(character, originalHairAppearance.Value.Hairstyle);
                 }
 
                 if (originalEmoteState.HasValue)
@@ -226,7 +230,8 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         originalMountCharacterState = null;
         originalCompanionID = null;
         originalOrnamentID = null;
-        originalHairstyleID = null;
+        originalHairAppearance = null;
+        hasHairColorPreview = false;
         previewHairstyleID = null;
         previewHairstyleFeatureID = null;
         originalEmoteState = null;
@@ -530,7 +535,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             return false;
         }
 
-        originalHairstyleID ??= character->DrawData.CustomizeData.Hairstyle;
+        originalHairAppearance ??= character->DrawData.CustomizeData;
         previewHairstyleID = hairstyleID;
         previewHairstyleFeatureID = (byte)hairstyle.FeatureID;
         ApplyHairstyle(character, previewHairstyleFeatureID.Value);
@@ -547,7 +552,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
 
     public bool RestoreHairstylePreview()
     {
-        if (!originalHairstyleID.HasValue)
+        if (!originalHairAppearance.HasValue)
         {
             return true;
         }
@@ -557,11 +562,97 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             return false;
         }
 
-        ApplyHairstyle(character, originalHairstyleID.Value);
+        ApplyHairstyle(character, originalHairAppearance.Value.Hairstyle);
         previewHairstyleID = null;
         previewHairstyleFeatureID = null;
         return true;
     }
+
+    public bool PreviewHairAppearance(uint hairstyleID, byte? hairColor, byte? highlightColor, bool? highlightsEnabled)
+    {
+        if (!TryGetLocalCharacterForPreview(out var character) || !TryGetOriginalHairAppearance(out var customize))
+            return false;
+
+        if (hairstyleID != 0)
+        {
+            if (ResolveHairstyle(hairstyleID, character) is not { } hairstyle)
+                return false;
+            customize.Hairstyle = (byte)hairstyle.FeatureID;
+        }
+
+        originalHairAppearance ??= character->DrawData.CustomizeData;
+        if (!hasHairColorPreview && (hairColor.HasValue || highlightColor.HasValue || highlightsEnabled.HasValue))
+        {
+            var original = originalHairAppearance.Value;
+            original.HairColor = customize.HairColor;
+            original.HighlightsColor = customize.HighlightsColor;
+            original.Highlights = customize.Highlights;
+            originalHairAppearance = original;
+            hasHairColorPreview = true;
+        }
+
+        customize.HairColor = hairColor ?? customize.HairColor;
+        customize.HighlightsColor = highlightColor ?? customize.HighlightsColor;
+        customize.Highlights = highlightsEnabled ?? customize.Highlights;
+        previewHairstyleID = hairstyleID == 0 ? null : hairstyleID;
+        previewHairstyleFeatureID = hairstyleID == 0 ? null : customize.Hairstyle;
+        return ApplyHairAppearance(character, customize);
+    }
+
+    public bool IsHairAppearancePreviewApplied(uint hairstyleID, byte? hairColor, byte? highlightColor, bool? highlightsEnabled)
+    {
+        var character = CanUseDirectPreview() ? GetLocalCharacter() : null;
+        if (character == null || !TryGetOriginalHairAppearance(out var expected))
+            return false;
+
+        if (hairstyleID != 0)
+        {
+            if (previewHairstyleID != hairstyleID || !previewHairstyleFeatureID.HasValue)
+                return false;
+            expected.Hairstyle = previewHairstyleFeatureID.Value;
+        }
+
+        expected.HairColor = hairColor ?? expected.HairColor;
+        expected.HighlightsColor = highlightColor ?? expected.HighlightsColor;
+        expected.Highlights = highlightsEnabled ?? expected.Highlights;
+        var draw = ((GameObject*)character)->GetCharacterBase();
+        return draw != null && draw->GetModelType() == CharacterBase.ModelType.Human &&
+               HairAppearanceMatches(character->DrawData.CustomizeData, expected) &&
+               HairAppearanceMatches(((Human*)draw)->Customize, expected);
+    }
+
+    public bool TryGetOriginalHairAppearance(out CustomizeData customize)
+    {
+        customize = default;
+        var character = CanUseDirectPreview() ? GetLocalCharacter() : null;
+        if (character == null ||
+            HasDirectPreview() && (lastPlayerAddress != (nint)character || lastTerritoryID != DService.Instance().ClientState.TerritoryType))
+            return false;
+
+        var draw = ((GameObject*)character)->GetCharacterBase();
+        if (draw == null || draw->GetModelType() != CharacterBase.ModelType.Human)
+            return false;
+
+        customize = character->DrawData.CustomizeData;
+        if (originalHairAppearance is { } original)
+        {
+            if (customize.Tribe != original.Tribe || customize.Sex != original.Sex)
+                return false;
+            customize.Hairstyle = original.Hairstyle;
+            if (hasHairColorPreview)
+            {
+                customize.HairColor = original.HairColor;
+                customize.HighlightsColor = original.HighlightsColor;
+                customize.Highlights = original.Highlights;
+            }
+        }
+
+        return true;
+    }
+
+    internal static bool HairAppearanceMatches(CustomizeData actual, CustomizeData expected) =>
+        actual.Hairstyle == expected.Hairstyle && actual.HairColor == expected.HairColor &&
+        actual.HighlightsColor == expected.HighlightsColor && actual.Highlights == expected.Highlights;
 
     private bool PreviewBarding(uint bardingID)
     {
@@ -684,18 +775,32 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
 
     private static void ApplyHairstyle(Character* character, byte hairstyleID)
     {
-        character->DrawData.CustomizeData.Hairstyle = hairstyleID;
+        var customize = character->DrawData.CustomizeData;
+        customize.Hairstyle = hairstyleID;
+        ApplyHairAppearance(character, customize);
+    }
+
+    private static bool ApplyHairAppearance(Character* character, CustomizeData appearance)
+    {
         var characterBase = ((GameObject*)character)->GetCharacterBase();
         if (characterBase == null || characterBase->GetModelType() != CharacterBase.ModelType.Human)
         {
-            return;
+            return false;
         }
 
+        var customize = character->DrawData.CustomizeData;
+        customize.Hairstyle = appearance.Hairstyle;
+        customize.HairColor = appearance.HairColor;
+        customize.HighlightsColor = appearance.HighlightsColor;
+        customize.Highlights = appearance.Highlights;
         var drawData = new Human.DrawData
         {
-            CustomizeData = character->DrawData.CustomizeData
+            CustomizeData = customize
         };
-        ((Human*)characterBase)->UpdateDrawData(&drawData, true);
+        if (!((Human*)characterBase)->UpdateDrawData(&drawData, true))
+            return false;
+        character->DrawData.CustomizeData = customize;
+        return true;
     }
 
     private bool TryGetLocalCharacterForPreview(out Character* character)
@@ -739,7 +844,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         originalMountCharacterState.HasValue ||
         originalCompanionID.HasValue ||
         originalOrnamentID.HasValue ||
-        originalHairstyleID.HasValue ||
+        originalHairAppearance.HasValue ||
         originalEmoteState.HasValue ||
         originalBardingState.HasValue;
 
