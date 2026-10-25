@@ -4,10 +4,6 @@ namespace OmniToolbox.Common.Module.Models;
 
 public sealed class ModuleInfo
 {
-    public required string Title { get; init; }
-
-    public required string Description { get; init; }
-
     public required ModuleCategory Category { get; init; }
 
     public bool RequiresPrivateProvider { get; init; }

@@ -22,13 +22,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="LuminaSupplemental.Excel" Version="5.1.4" />
-    <PackageReference Include="TinyPinyin" Version="1.1.0" />
     <PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.5" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\lib\KamiToolKit\KamiToolKit.csproj" />
     <ProjectReference Include="..\lib\OmenTools\OmenTools.csproj" />
+    <ProjectReference Include="..\lib\TreeTools\TreeTools.csproj" />
+    <ProjectReference Include="..\lib\TreeToolKit\TreeToolKit.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -50,9 +51,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="OmniToolbox" />
-    <InternalsVisibleTo Include="OmniToolbox.TreePublic" />
-    <InternalsVisibleTo Include="OmniToolbox.Tree" />
+    <EmbeddedResource Include="..\OmniToolbox.Localizations\ChineseSimplified.xlf;..\OmniToolbox.Localizations\TraditionalChinese.xlf"
+                      Link="Localization\%(Filename)%(Extension)"
+                      LogicalName="OmniToolbox.Localization.Official.%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

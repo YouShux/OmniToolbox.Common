@@ -9,8 +9,10 @@ using System.Threading.Tasks;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin;
+using Microsoft.VisualBasic.FileIO;
 using OmenTools;
 using OmniToolbox.Host;
+using TreeTools.Lifecycle;
 
 namespace OmniToolbox.UI;
 
@@ -32,8 +34,16 @@ internal static class PluginIconResolver
     private static readonly Dictionary<string, CachedIcon> CachedIcons = new(StringComparer.Ordinal);
     private static readonly string CacheDirectory = Path.Combine(
         DalamudServices.PluginInterface.GetPluginConfigDirectory(), "TreeHouse", "MultiToolbar", "Cache", "PluginIcons");
-    private static CancellationTokenSource CacheCancellation = new();
+    private static readonly FeatureLifetime CacheLifetime = new();
     private static Guid? PNGContainerGUID;
+    private static bool CacheMigrated;
+
+    static PluginIconResolver()
+    {
+        CacheLifetime.Add(CachedIcons.Clear);
+        CacheLifetime.Add(LocalTextures.Clear);
+        CacheLifetime.Add(LocalIconPaths.Clear);
+    }
 
     internal static bool IsUsableTexture([NotNullWhen(true)] IDalamudTextureWrap? texture) =>
         texture is not null &&
@@ -42,11 +52,15 @@ internal static class PluginIconResolver
 
     internal static IDalamudTextureWrap? GetIcon(IExposedPlugin? plugin, float displaySize)
     {
+        if (CacheLifetime.IsStopping)
+            return null;
+
         if (plugin is null)
         {
             return GetDefaultIcon();
         }
 
+        MigrateCache();
         if (GetLocalIconPath(plugin) is { } iconPath)
         {
             try
@@ -73,8 +87,9 @@ internal static class PluginIconResolver
         var cacheKey = $"{plugin.InternalName}\0{plugin.Version}\0{plugin.Manifest.IconUrl}";
         if (!CachedIcons.TryGetValue(cacheKey, out var cachedIcon))
         {
-            var fileName = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(cacheKey))) + ".png";
-            cachedIcon = new(Path.Combine(CacheDirectory, fileName));
+            var prefix = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(plugin.InternalName))) + "-";
+            var fileName = prefix + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(cacheKey))) + ".png";
+            cachedIcon = new(Path.Combine(CacheDirectory, fileName), prefix);
             CachedIcons.Add(cacheKey, cachedIcon);
         }
 
@@ -98,7 +113,14 @@ internal static class PluginIconResolver
             }
             if (cachedIcon.Texture is { } cachedTexture &&
                 cachedTexture.TryGetWrap(out var diskIcon, out _) && IsUsableTexture(diskIcon))
+            {
+                if (!cachedIcon.OldCacheRecycled)
+                {
+                    RecycleOldCache(cachedIcon.Path, cachedIcon.Prefix);
+                    cachedIcon.OldCacheRecycled = true;
+                }
                 return diskIcon;
+            }
         }
         catch
         {
@@ -118,7 +140,8 @@ internal static class PluginIconResolver
                     if (cachedIcon.SaveTask is null && Environment.TickCount64 >= cachedIcon.RetryAfter)
                     {
                         cachedIcon.RetryAfter = Environment.TickCount64 + 60_000;
-                        cachedIcon.SaveTask = SaveIconAsync(texture, cachedIcon.Path, CacheCancellation.Token);
+                        cachedIcon.SaveTask = SaveIconAsync(texture, cachedIcon.Path, CacheLifetime.CancellationToken);
+                        CacheLifetime.Track(cachedIcon.SaveTask);
                     }
                     return texture;
                 }
@@ -131,15 +154,7 @@ internal static class PluginIconResolver
         return null;
     }
 
-    internal static void Dispose()
-    {
-        CacheCancellation.Cancel();
-        CacheCancellation.Dispose();
-        CacheCancellation = new();
-        CachedIcons.Clear();
-        LocalTextures.Clear();
-        LocalIconPaths.Clear();
-    }
+    internal static ValueTask DisposeAsync() => CacheLifetime.DisposeAsync();
 
     private static async Task<bool> SaveIconAsync(IDalamudTextureWrap texture, string path, CancellationToken cancellationToken)
     {
@@ -156,9 +171,65 @@ internal static class PluginIconResolver
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             return true;
         }
-        catch (Exception)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return false;
+        }
+        catch (Exception exception)
+        {
+            DalamudServices.PluginLog.Warning(exception, $"Unable to save plugin icon cache: {path}");
+            return false;
+        }
+    }
+
+    private static void MigrateCache()
+    {
+        if (CacheMigrated)
+            return;
+        CacheMigrated = true;
+        try
+        {
+            if (!Directory.Exists(CacheDirectory))
+                return;
+            foreach (var plugin in DalamudServices.PluginInterface.InstalledPlugins
+                         .GroupBy(plugin => plugin.InternalName, StringComparer.OrdinalIgnoreCase)
+                         .Select(group => group.OrderByDescending(plugin => plugin.IsLoaded)
+                             .ThenByDescending(plugin => plugin.Version).First()))
+            {
+                var key = $"{plugin.InternalName}\0{plugin.Version}\0{plugin.Manifest.IconUrl}";
+                var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
+                var oldPath = Path.Combine(CacheDirectory, hash + ".png");
+                if (!File.Exists(oldPath))
+                    continue;
+                var prefix = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(plugin.InternalName))) + "-";
+                var newPath = Path.Combine(CacheDirectory, prefix + hash + ".png");
+                if (!File.Exists(newPath))
+                    File.Move(oldPath, newPath);
+            }
+            RecycleOldCache(null, string.Empty);
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private static void RecycleOldCache(string? currentPath, string prefix)
+    {
+        try
+        {
+            foreach (var path in Directory.EnumerateFiles(CacheDirectory, prefix + "*.png"))
+            {
+                if (path.Equals(currentPath, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var name = Path.GetFileNameWithoutExtension(path);
+                var hash = name[prefix.Length..];
+                if (hash.Length != 64 || !hash.All(char.IsAsciiHexDigit))
+                    continue;
+                FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+            }
+        }
+        catch (Exception)
+        {
         }
     }
 
@@ -279,10 +350,12 @@ internal static class PluginIconResolver
         return null;
     }
 
-    private sealed class CachedIcon(string path)
+    private sealed class CachedIcon(string path, string prefix)
     {
         public string Path { get; } = path;
+        public string Prefix { get; } = prefix;
         public bool FileChecked;
+        public bool OldCacheRecycled;
         public ISharedImmediateTexture? Texture;
         public Task<bool>? SaveTask;
         public long RetryAfter;

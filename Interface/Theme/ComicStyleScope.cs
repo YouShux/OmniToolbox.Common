@@ -124,9 +124,9 @@ public sealed class ComicStyleScope : IDisposable
         {
             W = 0.70f
         });
-        PushColor(ImGuiCol.TextSelectedBg, tokens.Accent with
+        PushColor(ImGuiCol.TextSelectedBg, controlAccent with
         {
-            W = 0.30f
+            W = 0.50f
         });
         PushColor(ImGuiCol.DragDropTarget, tokens.Accent);
         PushColor(ImGuiCol.NavHighlight, OmniTheme.UsesMaterial ? controlAccent : tokens.Accent);

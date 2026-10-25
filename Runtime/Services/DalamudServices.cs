@@ -50,7 +50,7 @@ public sealed class DalamudServices
     {
         isUnloading = false;
         pluginInterface.Create<DalamudServices>();
-        PluginInterface = PluginInterfaceAdapter.Create(pluginInterface);
+        PluginInterface = pluginInterface;
     }
 
     internal static object? GetInternalService(string fullName)

@@ -1,3 +1,4 @@
+using OmniToolbox.Common.Module.Abstractions;
 using OmniToolbox.Commands;
 using OmniToolbox.UI;
 
@@ -7,5 +8,5 @@ public readonly record struct ModuleCommand(string DescriptionKey, string Clipbo
 {
     public string DisplayCommand => OmniCommandCatalog.FormatDisplayText(ClipboardText);
 
-    public string DisplayText => $"{DisplayCommand} → {OmniLoc.Get(DescriptionKey)}";
+    public string GetDisplayText(OmniModuleBase module) => $"{DisplayCommand} → {OmniLoc.Get(module, DescriptionKey)}";
 }

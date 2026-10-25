@@ -2,7 +2,7 @@ using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Event;
 using OmenTools.Interop.Game.Models;
-using OmniToolbox.Lifecycle;
+using TreeTools.Lifecycle;
 using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 
 namespace OmniToolbox.TreeHouse;
