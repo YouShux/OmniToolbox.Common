@@ -6,7 +6,7 @@ using OmenTools.Extensions;
 using OmenTools.Interop.Game.Helpers;
 using OmniToolbox.Config;
 using OmniToolbox.Host;
-using OmniToolbox.Lifecycle;
+using TreeTools.Lifecycle;
 using OmniToolbox.UI.Controls;
 using OmniToolbox.UI.Theme;
 

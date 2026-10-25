@@ -1,3 +1,4 @@
+using TreeTools.Text;
 using System.Collections.Frozen;
 using System.Globalization;
 using System.Linq;
@@ -22,7 +23,7 @@ public static class OmniCommandCatalog
         {
             KeyValuePair.Create(definition.Name, definition),
             KeyValuePair.Create(definition.ChineseName, definition),
-            KeyValuePair.Create(OmniLoc.ConvertToTraditional(definition.ChineseName), definition)
+            KeyValuePair.Create(ChineseTextConverter.ToTraditional(definition.ChineseName), definition)
         }).DistinctBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
             .ToFrozenDictionary(entry => entry.Key, entry => entry.Value, StringComparer.OrdinalIgnoreCase);
     }
@@ -54,6 +55,14 @@ public static class OmniCommandCatalog
     {
         var definition = Find(canonicalName) ?? throw new ArgumentException("Unknown Omni command.", nameof(canonicalName));
         return arguments.Length == 0 ? $"/omni {definition.Name}" : $"/omni {definition.Name} {arguments}";
+    }
+
+    /// <summary>使用稳定模块名生成可供显示、复制和解析的模块指令。</summary>
+    public static string FormatModule(string moduleName, string arguments = "")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(moduleName);
+        if (moduleName.Any(char.IsWhiteSpace)) throw new ArgumentException("Module command names cannot contain whitespace.", nameof(moduleName));
+        return arguments.Length == 0 ? $"/omni {moduleName}" : $"/omni {moduleName} {arguments}";
     }
 
     public static string FormatDisplayText(string text, UILanguage? language = null)
@@ -134,6 +143,7 @@ public static class OmniCommandCatalog
         new("retrieve", "取货", "<物品ID>", "取出指定物品", "AutoStore", OmniCommandArguments.Required),
         new("store", "存货", "<物品ID> <存货地>", "将指定物品存入指定位置", "AutoStore", OmniCommandArguments.Required),
         new("itemmanagement", "物品管理", "", "执行一次物品丢弃和售卖", "ItemManagement", OmniCommandArguments.None),
+        new("materiatransmute", "一键合成魔晶石", "", "传送到 NPC 所在地图后，虚空交互合成魔晶石", "VoidMateriaTransmutation", OmniCommandArguments.None),
         new("itemlist", "物品列表", "", "打开自动存取的物品列表", "AutoStore", OmniCommandArguments.None),
         new("fcchest", "虚空部队箱", "", "打开部队储物柜", "VoidFreeCompanyChest", OmniCommandArguments.None),
         new("fcaction", "部队特效", "<编号>", "购买指定编号的部队特效", "FreeCompanyAction", OmniCommandArguments.Required),

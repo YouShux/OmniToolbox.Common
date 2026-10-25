@@ -1,3 +1,5 @@
+using TreeToolKit;
+using TreeTools.Text;
 using System.Diagnostics;
 using System.Globalization;
 using Dalamud.Game.Text;
@@ -262,7 +264,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
             return;
         }
 
-        using var font = OmniFonts.GetUIFont().Push();
+        using var font = Fonts.GetUIFont().Push();
         using var style = new ComicStyleScope();
         var iconSize = OmniTheme.Scale(config.IconSize);
         var viewportSize = ImGui.GetMainViewport().WorkSize;

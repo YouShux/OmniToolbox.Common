@@ -1,3 +1,4 @@
+using TreeToolKit;
 using System.Globalization;
 using Dalamud.Interface;
 using Dalamud.Interface.ImGuiSeStringRenderer;
@@ -1622,7 +1623,7 @@ public static partial class OmniControls
 
     public static IDisposable PushTooltipStyle()
     {
-        var font = OmniFonts.GetUIFont().Push();
+        var font = Fonts.GetUIFont().Push();
         var scale = new OmniTheme.ScaleScope(ImGui.GetFont().FontSize * ImGui.GetIO().FontGlobalScale / OmniTheme.REFERENCE_FONT_SIZE);
         var tokens = OmniTheme.Tokens;
         var background = OmniTheme.IsGlass ? Vector4.Zero : OmniTheme.TooltipBackground with

@@ -2,7 +2,7 @@ using Dalamud.Hooking;
 using Dalamud.Utility;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using OmenTools.Interop.Game.Models;
-using OmniToolbox.Lifecycle;
+using TreeTools.Lifecycle;
 
 namespace OmniToolbox.Tooltips;
 

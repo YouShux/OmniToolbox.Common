@@ -65,6 +65,7 @@ public sealed class TreeHouseConfig
 
     public T GetOrCreate<T>(string moduleName) where T : class, new()
     {
+        CollectibleConfigJSON.Validate(typeof(T));
         if (moduleConfigs.TryGetValue(moduleName, out var existing))
         {
             return existing as T
@@ -73,9 +74,10 @@ public sealed class TreeHouseConfig
         }
 
         var config = rawModuleConfigs.TryGetValue(moduleName, out var raw)
-            ? raw.ToObject<T>()
+            ? (T?)CollectibleConfigJSON.Deserialize(raw, typeof(T))
                 ?? throw new InvalidOperationException($"TreeHouse module {moduleName} config contains no object.")
             : new T();
+        ValidateModuleConfig(config);
         rawModuleConfigs.Remove(moduleName);
         moduleConfigs[moduleName] = config;
         return config;
@@ -84,13 +86,14 @@ public sealed class TreeHouseConfig
     public object GetOrCreateModuleConfig(string moduleName, object defaultConfig)
     {
         ArgumentNullException.ThrowIfNull(defaultConfig);
+        ValidateModuleConfig(defaultConfig);
         if (moduleConfigs.TryGetValue(moduleName, out var existing))
         {
             return existing;
         }
 
         var config = rawModuleConfigs.TryGetValue(moduleName, out var raw)
-            ? raw.ToObject(defaultConfig.GetType()) ?? defaultConfig
+            ? CollectibleConfigJSON.Deserialize(raw, defaultConfig.GetType()) ?? defaultConfig
             : defaultConfig;
         rawModuleConfigs.Remove(moduleName);
         moduleConfigs[moduleName] = config;
@@ -106,7 +109,7 @@ public sealed class TreeHouseConfig
 
         try
         {
-            rawModuleConfigs[moduleName] = JToken.FromObject(config);
+            rawModuleConfigs[moduleName] = CollectibleConfigJSON.Serialize(config);
         }
         catch
         {
@@ -114,6 +117,31 @@ public sealed class TreeHouseConfig
             throw;
         }
     }
+
+    internal ModuleConfigSnapshot CaptureModuleConfig(string moduleName) => new(
+        moduleConfigs.GetValueOrDefault(moduleName),
+        rawModuleConfigs.GetValueOrDefault(moduleName)?.DeepClone(),
+        localModuleNames.Contains(moduleName),
+        ModuleStates.TryGetValue(moduleName, out var enabled) ? enabled : null);
+
+    internal static void ValidateModuleConfig(object config) => CollectibleConfigJSON.Validate(config);
+
+    internal JToken SerializeModuleConfig(string moduleName, JsonSerializerSettings? settings = null) =>
+        CollectibleConfigJSON.Serialize(moduleConfigs[moduleName], settings);
+
+    internal void RestoreModuleConfig(string moduleName, ModuleConfigSnapshot snapshot)
+    {
+        moduleConfigs.Remove(moduleName);
+        rawModuleConfigs.Remove(moduleName);
+        if (snapshot.Materialized is not null) moduleConfigs[moduleName] = snapshot.Materialized;
+        if (snapshot.Raw is not null) rawModuleConfigs[moduleName] = snapshot.Raw.DeepClone();
+        if (snapshot.IsLocal) localModuleNames.Add(moduleName);
+        else localModuleNames.Remove(moduleName);
+        if (snapshot.Enabled is { } enabled) ModuleStates[moduleName] = enabled;
+        else ModuleStates.Remove(moduleName);
+    }
+
+    internal sealed record ModuleConfigSnapshot(object? Materialized, JToken? Raw, bool IsLocal, bool? Enabled);
 
     public bool ResetModuleSettings(string moduleName)
     {

@@ -1,3 +1,4 @@
+using TreeTools.Text;
 using Lumina.Excel.Sheets;
 using OmenTools;
 using OmenTools.Interop.Game.Lumina;
@@ -289,7 +290,7 @@ public sealed class TerritorySelector
                 territory.RowId,
                 name,
                 region,
-                OmniSearchText.Build(
+                SearchText.Build(
                     territory.RowId.ToString(),
                     name,
                     territory.Name.ToString(),

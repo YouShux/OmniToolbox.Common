@@ -1,3 +1,4 @@
+using TreeToolKit;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -12,13 +13,13 @@ public static class OmniFontSelector
 
     public static string GetPreviewText(string path, string defaultLabel, string defaultPath)
     {
-        foreach (var font in OmniFonts.GameFonts)
+        foreach (var font in Fonts.GameFonts)
         {
             if (font.Key == path)
                 return font.Value;
         }
 
-        foreach (var font in OmniFonts.GetInstalledFonts())
+        foreach (var font in Fonts.GetInstalledFonts())
         {
             if (font.Key == path)
             {
@@ -46,10 +47,10 @@ public static class OmniFontSelector
             return false;
         }
 
-        var installed = OmniFonts.GetInstalledFonts();
+        var installed = Fonts.GetInstalledFonts();
         if (!ReferenceEquals(InstalledSnapshot, installed))
         {
-            SortedFonts = installed.Concat(OmniFonts.GameFonts)
+            SortedFonts = installed.Concat(Fonts.GameFonts)
                 .OrderBy(font => font.Value.Any(c => c is >= '\u3400' and <= '\u9fff') ? 0 : 1)
                 .ThenBy(font => font.Value, StringComparer.Create(CultureInfo.GetCultureInfo("zh-CN"), true))
                 .ThenBy(font => font.Key, StringComparer.Ordinal)

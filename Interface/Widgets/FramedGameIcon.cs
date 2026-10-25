@@ -15,8 +15,8 @@ internal static class FramedGameIcon
     private static ISharedImmediateTexture? CollectionStatusTexture;
     private static ISharedImmediateTexture? FrameTexture;
 
-    public static void DrawItem(LuminaItem item, Vector2 size) =>
-        DrawAtCursor(item.Icon, size, !ItemCategoryMap.IsCurrency(item));
+    public static void DrawItem(LuminaItem item, Vector2 size, byte stain0 = 0, byte stain1 = 0) =>
+        DrawAtCursor(item.Icon, size, !ItemCategoryMap.IsCurrency(item), item.RowId, stain0, stain1);
 
     public static void DrawAction(LuminaAction action, Vector2 size) =>
         DrawAtCursor(action.Icon, size, !action.IsPvP);
@@ -30,7 +30,11 @@ internal static class FramedGameIcon
         Vector4? tint = null,
         bool active = false,
         bool drawFrame = true,
-        bool preserveAspectRatio = false) =>
+        bool preserveAspectRatio = false,
+        uint itemID = 0,
+        byte stain0 = 0,
+        byte stain1 = 0,
+        IReadOnlyList<(byte Stain0, byte Stain1)>? recordedStains = null) =>
         Draw(
             ImGui.GetWindowDrawList(),
             iconID,
@@ -41,7 +45,11 @@ internal static class FramedGameIcon
             tint,
             active,
             drawFrame,
-            preserveAspectRatio);
+            preserveAspectRatio,
+            itemID,
+            stain0,
+            stain1,
+            recordedStains);
 
     public static void Draw(
         ImDrawListPtr drawList,
@@ -53,8 +61,14 @@ internal static class FramedGameIcon
         Vector4? tint = null,
         bool active = false,
         bool drawFrame = true,
-        bool preserveAspectRatio = false)
+        bool preserveAspectRatio = false,
+        uint itemID = 0,
+        byte stain0 = 0,
+        byte stain1 = 0,
+        IReadOnlyList<(byte Stain0, byte Stain1)>? recordedStains = null)
     {
+        if (recordedStains is { Count: > 0 })
+            (stain0, stain1) = recordedStains[0];
         var isBuiltInIcon = IconBrowser.GetBuiltInIconPath(iconID) is not null;
         if (isBuiltInIcon)
         {
@@ -111,6 +125,16 @@ internal static class FramedGameIcon
         if (drawFrame)
         {
             DrawFrame(drawList, position, size, active);
+        }
+        ItemIconDyeIndicators.Draw(drawList, itemID, position, size, drawFrame,
+            tint ?? (dimmed ? DimmedTint : Vector4.One), stain0, stain1);
+        if (recordedStains is { Count: > 1 })
+        {
+            var fontSize = MathF.Min(ImGui.GetFontSize(), size.Y * 0.35f);
+            var labelPosition = position + new Vector2(size.X * 0.06f, size.Y - fontSize);
+            var label = $"+{recordedStains.Count - 1}";
+            drawList.AddText(ImGui.GetFont(), fontSize, labelPosition + Vector2.One, OmniTheme.Color(Vector4.UnitW), label);
+            drawList.AddText(ImGui.GetFont(), fontSize, labelPosition, OmniTheme.Color(Vector4.One), label);
         }
     }
 
@@ -209,11 +233,12 @@ internal static class FramedGameIcon
         return CollectionStatusTexture.GetWrapOrDefault();
     }
 
-    private static void DrawAtCursor(uint iconID, Vector2 size, bool drawFrame)
+    private static void DrawAtCursor(
+        uint iconID, Vector2 size, bool drawFrame, uint itemID = 0, byte stain0 = 0, byte stain1 = 0)
     {
         var position = ImGui.GetCursorScreenPos();
         ImGui.Dummy(size);
-        Draw(iconID, position, size, drawFrame: drawFrame);
+        Draw(iconID, position, size, drawFrame: drawFrame, itemID: itemID, stain0: stain0, stain1: stain1);
     }
 
     private static bool TryGetActiveFrame(out IDalamudTextureWrap frame)
