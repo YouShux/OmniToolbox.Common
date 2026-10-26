@@ -1,7 +1,7 @@
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using OmniToolbox.Common.Module.Abstractions;
+using OmniToolbox.UI;
 
 namespace OmniToolbox.Common.Module.Runtime;
 
@@ -10,12 +10,12 @@ internal static class ModuleContract
     internal const int API_VERSION = 1;
 
     internal static string UpgradeReason(string name, string detail) =>
-        $"模块「{name}」使用旧版或无效写法，已拒绝加载。请作者升级并迁移至 OmniModuleBase、新生命周期入口和必填 Localization，重新编译并更新清单。原因：{detail}";
+        string.Format(OmniLoc.Get("Module.Contract.UpgradeReason"), name, detail);
 
     internal static void ValidateVersion(string name, int version)
     {
         if (version > API_VERSION)
-            throw new InvalidDataException($"模块「{name}」需要接口版本 {version}，请升级 Omni。");
+            throw new InvalidDataException(string.Format(OmniLoc.Get("Module.Contract.NewerApi"), name, version));
         if (version != API_VERSION)
             throw new InvalidDataException(UpgradeReason(name, "缺少或使用旧的模块接口 ModuleApiVersion 声明"));
     }

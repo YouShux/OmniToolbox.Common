@@ -1,7 +1,5 @@
-using TreeTools.Text;
 using System.Collections.Frozen;
 using System.Globalization;
-using System.Linq;
 using System.Text.RegularExpressions;
 using OmniToolbox.Config;
 using OmniToolbox.UI;
@@ -19,12 +17,11 @@ public static class OmniCommandCatalog
 
     private static FrozenDictionary<string, OmniCommandDefinition> CreateAliases()
     {
-        return Definitions.SelectMany(definition => new[]
-        {
-            KeyValuePair.Create(definition.Name, definition),
-            KeyValuePair.Create(definition.ChineseName, definition),
-            KeyValuePair.Create(ChineseTextConverter.ToTraditional(definition.ChineseName), definition)
-        }).DistinctBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
+        return Definitions.SelectMany(definition =>
+            UILanguages.All.Where(OmniLoc.IsComplete)
+                .Select(language => KeyValuePair.Create(OmniLoc.Get(definition.NameKey, language), definition))
+                .Prepend(KeyValuePair.Create(definition.Name, definition)))
+            .DistinctBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
             .ToFrozenDictionary(entry => entry.Key, entry => entry.Value, StringComparer.OrdinalIgnoreCase);
     }
 

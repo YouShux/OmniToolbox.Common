@@ -1,11 +1,6 @@
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
-using LuminaSupplemental.Excel.Model;
-using LuminaSupplemental.Excel.Services;
 using OmniToolbox.Data;
-using OmniToolbox.Host;
 
 namespace OmniToolbox.Items;
 
@@ -15,12 +10,19 @@ public sealed class ItemPatchMap
 
     public ItemPatchMap()
     {
-        var rows = CsvLoader.LoadResource<ItemPatch>(
-            CsvLoader.ItemPatchResourceName,
-            true,
-            out var failedLines,
-            out var exceptions);
-        var loadedPatches = ItemPatch.ToItemLookup(rows).ToDictionary();
+        var ranges = new List<(uint StartID, uint EndID, decimal Patch)>();
+        EmbeddedData.ReadCSV("ItemPatch.csv", csv => ranges.Add((
+            csv.GetField<uint>("StartItemId"),
+            csv.GetField<uint>("EndItemId"),
+            csv.GetField<decimal>("PatchNo"))));
+        var loadedPatches = new Dictionary<uint, decimal>();
+        foreach (var (startID, endID, patch) in ranges)
+        {
+            for (var itemID = startID; itemID <= endID; itemID++)
+            {
+                loadedPatches.Add(itemID, patch);
+            }
+        }
         using var stream = EmbeddedData.Open("WikiItemSources.json");
         using var document = JsonDocument.Parse(stream);
         foreach (var row in document.RootElement.GetProperty("patches").EnumerateArray())

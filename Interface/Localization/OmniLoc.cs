@@ -1,9 +1,7 @@
-using TreeTools.Text;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using OmniToolbox.Collections;
@@ -18,14 +16,16 @@ public static class OmniLoc
     private static readonly object Sync = new();
     private static readonly ConcurrentDictionary<string, ModuleRegistration> Modules = new(StringComparer.Ordinal);
     private static FrozenDictionary<string, TextSource> Texts = new Dictionary<string, TextSource>().ToFrozenDictionary(StringComparer.Ordinal);
+    private static TextSource[] OfficialSources;
     private static long ResourceRevision;
     private static int Language;
 
     static OmniLoc()
     {
         var texts = new Dictionary<string, TextSource>(StringComparer.Ordinal);
-        foreach (var source in ReadResources(typeof(OmniLoc).Assembly))
-            foreach (var key in source.Simplified.Keys)
+        OfficialSources = ReadResources(typeof(OmniLoc).Assembly).ToArray();
+        foreach (var source in OfficialSources)
+            foreach (var key in source.Catalogs[UILanguage.SimplifiedChinese].Keys)
                 texts.Add(key, source);
         Texts = texts.ToFrozenDictionary(StringComparer.Ordinal);
     }
@@ -48,12 +48,20 @@ public static class OmniLoc
     /// <summary>
     /// 切换共用界面语言，不重新创建或启停模块。
     /// </summary>
-    public static void SetLanguage(UILanguage value)
+    internal static void ApplyLanguage(UILanguage value)
     {
         if (!Enum.IsDefined(value))
             throw new ArgumentOutOfRangeException(nameof(value), value, null);
+        if (!IsComplete(value))
+            throw new InvalidOperationException(Get("Localization.LanguageIncomplete"));
         if (Interlocked.Exchange(ref Language, (int)value) != (int)value)
             NotifyChanged();
+    }
+
+    public static bool IsComplete(UILanguage value)
+    {
+        UILanguages.GetCode(value);
+        return OfficialSources.All(source => source.IsComplete(value));
     }
 
     public static string Get(string key) => Get(key, CurrentLanguage);
@@ -126,9 +134,9 @@ public static class OmniLoc
             ?? throw new InvalidDataException($"Module localization is required: {owner.ModuleName}");
         if (owner.Info.Commands is { } commands)
             foreach (var command in commands)
-                if (!texts.SimplifiedChinese.ContainsKey(command.DescriptionKey))
+                if (!texts.Catalogs[UILanguage.SimplifiedChinese].ContainsKey(command.DescriptionKey))
                     throw new InvalidDataException($"Module command localization is missing: {owner.ModuleName}/{command.DescriptionKey}");
-        var registration = new ModuleRegistration(owner.ModuleName, new TextSource(texts.SimplifiedChinese));
+        var registration = new ModuleRegistration(owner.ModuleName, new TextSource(texts.Catalogs));
         owner.LocalizationRegistration = registration;
         return registration;
     }
@@ -144,8 +152,22 @@ public static class OmniLoc
         return registration;
     }
 
-    internal static string GetOfficialSource(string key) => Volatile.Read(ref Texts).TryGetValue(key, out var source)
-        ? source.Simplified[key] : throw new KeyNotFoundException($"Official localization key is not registered: {key}");
+    internal static TextSource GetOfficialTexts(IReadOnlyDictionary<string, string> resourceKeys)
+    {
+        ArgumentNullException.ThrowIfNull(resourceKeys);
+        var catalogs = UILanguages.All.ToDictionary(static language => language,
+            static _ => new Dictionary<string, string>(StringComparer.Ordinal));
+        var official = Volatile.Read(ref Texts);
+        foreach (var (key, resourceID) in resourceKeys)
+        {
+            if (!official.TryGetValue(resourceID, out var source))
+                throw new KeyNotFoundException($"Official localization key is not registered: {resourceID}");
+            foreach (var language in UILanguages.All)
+                if (source.Catalogs[language].TryGetValue(resourceID, out var text))
+                    catalogs[language].Add(key, text);
+        }
+        return new(catalogs.ToDictionary(static pair => pair.Key, static pair => (IReadOnlyDictionary<string, string>)pair.Value));
+    }
 
     private static IReadOnlyList<TextSource> ReadResources(Assembly assembly) =>
         ReadResources(assembly.GetManifestResourceNames(), name => assembly.GetManifestResourceStream(name)
@@ -153,35 +175,35 @@ public static class OmniLoc
 
     internal static IReadOnlyList<TextSource> ReadResources(IReadOnlyCollection<string> resourceNames, Func<string, Stream> openResource)
     {
-        var names = resourceNames.Where(static name => name.StartsWith(RESOURCE_PREFIX, StringComparison.Ordinal)).ToHashSet(StringComparer.Ordinal);
-        List<TextSource> result = [];
-        foreach (var name in names.Order(StringComparer.Ordinal))
+        var groups = new Dictionary<string, Dictionary<UILanguage, string>>(StringComparer.Ordinal);
+        foreach (var name in resourceNames.Where(static name => name.StartsWith(RESOURCE_PREFIX, StringComparison.Ordinal)))
         {
-            if (name.EndsWith(TRADITIONAL_SUFFIX, StringComparison.Ordinal))
-            {
-                if (!names.Contains(name[..^TRADITIONAL_SUFFIX.Length] + SIMPLIFIED_SUFFIX))
-                    throw new InvalidDataException($"Traditional localization resource has no source: {name}");
-                continue;
-            }
-            if (!name.EndsWith(SIMPLIFIED_SUFFIX, StringComparison.Ordinal))
+            var language = UILanguages.All.Where(language => name.EndsWith("." + UILanguages.GetResourceName(language), StringComparison.Ordinal)).ToArray();
+            if (language.Length != 1)
                 throw new InvalidDataException($"Unexpected localization resource: {name}");
-            var traditionalName = name[..^SIMPLIFIED_SUFFIX.Length] + TRADITIONAL_SUFFIX;
-            if (!names.Contains(traditionalName))
-                throw new InvalidDataException($"Traditional localization resource is required: {traditionalName}");
-            using var simplified = openResource(name);
-            using var traditional = openResource(traditionalName);
-            result.Add(ReadSource(simplified, traditional));
+            var prefix = name[..^(UILanguages.GetResourceName(language[0]).Length + 1)];
+            if (!groups.TryGetValue(prefix, out var files))
+                groups.Add(prefix, files = new());
+            files.Add(language[0], name);
+        }
+        if (groups.Count == 0)
+            throw new InvalidDataException("Official localization resources are required.");
+        List<TextSource> result = [];
+        foreach (var files in groups.OrderBy(static pair => pair.Key, StringComparer.Ordinal).Select(static pair => pair.Value))
+        {
+            if (!files.ContainsKey(UILanguage.SimplifiedChinese) || !files.ContainsKey(UILanguage.TraditionalChinese))
+                throw new InvalidDataException("Simplified and Traditional localization resources are required.");
+            var catalogs = new Dictionary<UILanguage, IReadOnlyDictionary<string, string>>();
+            foreach (var (language, name) in files)
+            {
+                using var stream = openResource(name);
+                catalogs.Add(language, XliffResourceParser.Parse(stream, language));
+            }
+            result.Add(new(catalogs));
         }
         return result;
     }
 
-    internal static TextSource ReadSource(Stream simplifiedStream, Stream traditionalStream)
-    {
-        var simplified = XliffResourceParser.Parse(simplifiedStream);
-        var traditional = XliffResourceParser.Parse(traditionalStream, true);
-        XliffResourceParser.ValidatePair(simplified, traditional);
-        return new(simplified, traditional);
-    }
     private static void NotifyChanged()
     {
         Interlocked.Increment(ref ResourceRevision);
@@ -234,7 +256,7 @@ public static class OmniLoc
                 previous = Modules.GetValueOrDefault(moduleName);
                 Modules[moduleName] = this;
                 activated = true;
-                changed = Source.Simplified.Count > 0 || previous?.Source.Simplified.Count is > 0;
+                changed = true;
             }
             if (changed)
                 NotifyChanged();
@@ -267,7 +289,7 @@ public static class OmniLoc
                 disposed = true;
                 if (Modules.TryGetValue(moduleName, out var current) && ReferenceEquals(current, this))
                 {
-                    changed = Source.Simplified.Count > 0 || previous?.Source.Simplified.Count is > 0;
+                    changed = true;
                     if (previous is { disposed: false })
                         Modules[moduleName] = previous;
                     else
@@ -282,46 +304,51 @@ public static class OmniLoc
 
     internal sealed class TextSource
     {
-        private readonly FrozenDictionary<string, string>? traditional;
-        private readonly ConcurrentDictionary<string, string> converted = new(StringComparer.Ordinal);
-
-        internal TextSource(IReadOnlyDictionary<string, string> simplified)
+        internal TextSource(IReadOnlyDictionary<UILanguage, IReadOnlyDictionary<string, string>> catalogs)
         {
-            Simplified = XliffResourceParser.CopyTexts(simplified);
+            if (catalogs.Keys.Any(language => !Enum.IsDefined(language)) ||
+                !catalogs.ContainsKey(UILanguage.SimplifiedChinese) || !catalogs.ContainsKey(UILanguage.TraditionalChinese))
+                throw new InvalidDataException("Localization requires Simplified and Traditional source catalogs.");
+            var copied = new Dictionary<UILanguage, IReadOnlyDictionary<string, string>>();
+            foreach (var language in UILanguages.All)
+            {
+                var required = language is UILanguage.SimplifiedChinese or UILanguage.TraditionalChinese;
+                var texts = catalogs.TryGetValue(language, out var entries) ? entries : FrozenDictionary<string, string>.Empty;
+                copied.Add(language, XliffResourceParser.CopyTexts(texts, !required));
+            }
+            var source = copied[UILanguage.SimplifiedChinese];
+            foreach (var language in UILanguages.All.Where(static language => language != UILanguage.SimplifiedChinese))
+                XliffResourceParser.ValidateTranslation(source, copied[language], language == UILanguage.TraditionalChinese);
+            Catalogs = copied.ToFrozenDictionary();
+            CompleteLanguages = copied.Where(pair => pair.Value.Count == source.Count && pair.Value.Values.All(static text => !string.IsNullOrWhiteSpace(text)))
+                .Select(static pair => pair.Key).ToFrozenSet();
         }
 
-        internal TextSource(IReadOnlyDictionary<string, string> simplified, IReadOnlyDictionary<string, string> traditional)
-            : this(simplified)
-        {
-            this.traditional = XliffResourceParser.CopyTexts(traditional);
-            XliffResourceParser.ValidatePair(Simplified, this.traditional);
-        }
+        internal IReadOnlyDictionary<UILanguage, IReadOnlyDictionary<string, string>> Catalogs { get; }
+        private FrozenSet<UILanguage> CompleteLanguages { get; }
 
-        internal FrozenDictionary<string, string> Simplified { get; }
+        internal bool IsComplete(UILanguage value)
+        {
+            UILanguages.GetCode(value);
+            return CompleteLanguages.Contains(value);
+        }
 
         internal bool TryGet(string key, UILanguage value, out string text)
         {
-            if (!Simplified.TryGetValue(key, out var source))
+            UILanguages.GetCode(value);
+            if (Catalogs[value].TryGetValue(key, out var translated) && !string.IsNullOrWhiteSpace(translated))
             {
-                text = string.Empty;
-                return false;
+                text = translated;
+                return true;
             }
-            text = value switch
-            {
-                UILanguage.SimplifiedChinese => source,
-                UILanguage.TraditionalChinese => traditional is not null ? traditional[key]
-                    : converted.GetOrAdd(key, static (_, original) => ChineseTextConverter.ToTraditional(original), source),
-                _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
-            };
-            return true;
+            text = string.Empty;
+            return false;
         }
     }
 
     #region 常量
 
     private const string RESOURCE_PREFIX = "OmniToolbox.Localization.";
-    private const string SIMPLIFIED_SUFFIX = ".ChineseSimplified.xlf";
-    private const string TRADITIONAL_SUFFIX = ".TraditionalChinese.xlf";
 
     #endregion
 }

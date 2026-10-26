@@ -1,12 +1,10 @@
 using System.Collections.Frozen;
-using System.Linq;
 using System.Text.RegularExpressions;
 using Dalamud.Game.Text.Evaluator;
 using Lumina.Excel.Sheets;
-using LuminaSupplemental.Excel.Model;
-using LuminaSupplemental.Excel.Services;
 using OmenTools;
 using OmenTools.Interop.Game.Lumina;
+using OmniToolbox.Data;
 using OmniToolbox.Host;
 
 namespace OmniToolbox.Collections;
@@ -33,31 +31,31 @@ public sealed partial class CollectionSourceService
     {
         try
         {
-            var rows = CsvLoader.LoadResource<ItemSupplement>(
-                CsvLoader.ItemSupplementResourceName,
-                true,
-                out var failedLines,
-                out var exceptions);
-            var containerNames = new Dictionary<uint, string>();
-            foreach (var row in rows)
+            const uint DESYNTH_SOURCE = 1;
+            var rows = new List<(uint ItemID, uint SourceItemID)>();
+            EmbeddedData.ReadCSV("ItemSupplement.csv", csv =>
             {
-                if (row.ItemId == 0 ||
-                    row.SourceItemId == 0 ||
-                    row.ItemSupplementSource == ItemSupplementSource.Desynth)
+                var itemID = csv.GetField<uint>("ItemId");
+                var sourceItemID = csv.GetField<uint>("SourceItemId");
+                if (itemID != 0 && sourceItemID != 0 &&
+                    csv.GetField<uint>("ItemSupplementSource") != DESYNTH_SOURCE)
                 {
-                    continue;
+                    rows.Add((itemID, sourceItemID));
                 }
-
-                if (!containerNames.TryGetValue(row.SourceItemId, out var containerName))
+            });
+            var containerNames = new Dictionary<uint, string>();
+            foreach (var (itemID, sourceItemID) in rows)
+            {
+                if (!containerNames.TryGetValue(sourceItemID, out var containerName))
                 {
-                    containerName = itemsByID.TryGetValue(row.SourceItemId, out var container)
+                    containerName = itemsByID.TryGetValue(sourceItemID, out var container)
                         ? container.Name.ExtractText()
-                        : FormattableString.Invariant($"#{row.SourceItemId}");
-                    containerNames.Add(row.SourceItemId, containerName);
+                        : FormattableString.Invariant($"#{sourceItemID}");
+                    containerNames.Add(sourceItemID, containerName);
                 }
-                AddSourceIfMissing(itemRows, row.ItemId, new(
+                AddSourceIfMissing(itemRows, itemID, new(
                     CollectionSourceCategory.Container,
-                    row.SourceItemId,
+                    sourceItemID,
                     containerName,
                     string.Empty));
             }

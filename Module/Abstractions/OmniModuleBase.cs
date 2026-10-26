@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using OmenTools;
 using OmniToolbox.Common.Module.Models;
 using OmniToolbox.Common.Module.Runtime;
+using OmniToolbox.Config;
 using TreeTools.Lifecycle;
 using OmniToolbox.UI;
 
@@ -42,9 +43,22 @@ public abstract class OmniModuleBase : IAsyncDisposable
     public virtual string ModuleName => GetType().Name;
 
     /// <summary>
-    /// 获取必填的模块简体词条；繁体词条由 Omni 自动生成。
+    /// 获取模块的完整简繁词条与可选语言译文。
     /// </summary>
     public abstract ModuleLocalization Localization { get; }
+
+    /// <summary>判断模块是否具有指定语言的完整词库。</summary>
+    public bool SupportsLanguage(UILanguage language)
+    {
+        var complete = LocalizationRegistration is { } registration
+            ? registration.Source.IsComplete(language) : Localization.IsComplete(language);
+        if (!complete)
+            return false;
+        foreach (var child in ownedChildren)
+            if (!child.SupportsLanguage(language))
+                return false;
+        return true;
+    }
 
     public string Title => OmniLoc.Get(this, "Title");
 
@@ -162,7 +176,12 @@ public abstract class OmniModuleBase : IAsyncDisposable
         childRegistrations.Add(registration);
     }
 
-    protected Task SetChildEnabledAsync(OmniModuleBase child, bool enabled) => child.SetEnabledAsync(enabled, Dispatch);
+    protected Task SetChildEnabledAsync(OmniModuleBase child, bool enabled)
+    {
+        if (enabled && !child.SupportsLanguage(OmniLoc.CurrentLanguage))
+            throw new InvalidOperationException(OmniLoc.Get("Localization.ModuleUnavailable"));
+        return child.SetEnabledAsync(enabled, Dispatch);
+    }
 
     protected void RequestEnabled(bool enabled, bool affectConfig = false)
     {

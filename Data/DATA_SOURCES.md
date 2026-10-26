@@ -1,5 +1,13 @@
 # 数据来源
 
+## LuminaSupplemental 补充数据
+
+`ItemPatch.csv`、`ItemSupplement.csv`、`StoreItem.csv`、`BGMOrchestrion.csv`、`DungeonBoss.csv`、`DungeonChest.csv`、`DungeonBossDrop.csv`、`DungeonBossChest.csv`、`DungeonChestItem.csv` 原样取自 Critical-Impact 的 [LuminaSupplemental](https://github.com/Critical-Impact/LuminaSupplemental) 项目随 `LuminaSupplemental.Excel 5.1.4` NuGet 包嵌入的资源，固定提交为 `e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a`。仅携带 Omni 实际使用的九份数据，不加载或分发该库及其专用 CSV 解析依赖。
+
+快照保留上游字节、表头、全部行、列与行序；运行时仅解析实际消费字段。物品版本先展开补充表的闭区间，再由现有 Wiki 数据覆盖；副本 Boss 和宝箱的重复索引保留首条，背景音乐名称按原顺序覆盖。物品补充表保留分解关系，但容器来源继续排除 `ItemSupplementSource = 1` 的分解数据。
+
+刷新使用 `pwsh -File tools/update-supplemental-data.ps1`。脚本从本地 NuGet 缓存读取固定版本，使用 PE 元数据提取资源，不执行源程序集；可通过 `-PackageDirectory` 指定下载并解压的同版本包。脚本同时核对包版本与仓库提交并复制完整许可。更新版本时须同时审查脚本中的版本、提交、CSV 字段、上游逐行解析规则及现有资源摘要回归基线，不能只替换数据文件。
+
 ## 最终幻想XIV中文维基物品数据
 
 OmniToolbox 的 `WikiItemSources.json` 来源于“最终幻想XIV中文维基”贡献者共同维护的物品数据：
