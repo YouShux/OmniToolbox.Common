@@ -1,14 +1,16 @@
 using System.Collections.Frozen;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Lumina.Excel.Sheets;
 using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.Data;
 using OmniToolbox.Items;
+using TreeTools.Threading;
 
 namespace OmniToolbox.Collections;
 
-public sealed partial class CollectionSourceService : IDisposable
+public sealed partial class CollectionSourceService : IAsyncDisposable
 {
     private static readonly IReadOnlyList<CollectionSource> EmptySources = Array.Empty<CollectionSource>();
     private static readonly FrozenSet<CollectionSourceCategory> EmptyCategories =
@@ -27,16 +29,28 @@ public sealed partial class CollectionSourceService : IDisposable
     private readonly FrozenDictionary<uint, IReadOnlyList<uint>> exchangeTargetsByCostItemID;
     private FrozenSet<uint> openingStageRestrictedItemIds;
     private readonly uint[] itemIds;
-    private readonly CancellationTokenSource categoryBuildCancellation = new();
+    private readonly CancellationTokenSource categoryBuildCancellation;
     private readonly Task exchangeCategoryTask;
     private FrozenDictionary<uint, FrozenSet<CollectionSourceCategory>> itemCategories;
     private FrozenSet<uint> purchasableItemIds = EmptyItemIDs;
     private long revision;
-    private bool disposed;
+    private readonly object disposalLock = new();
+    private Task? disposal;
 
     public CollectionSourceService()
+        : this(null, null, null, null, default)
     {
-        var itemsByID = LuminaGetter.Get<Item>()
+    }
+
+    private CollectionSourceService(
+        Dictionary<uint, Item>? preparedItems,
+        JsonDocument? wikiDocument,
+        JsonDocument? fishingDocument,
+        PreparedSourceText? preparedText,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var itemsByID = preparedItems ?? LuminaGetter.Get<Item>()
             .Where(item => item.RowId != 0)
             .ToDictionary(item => item.RowId);
         itemSetItemIDs = LuminaGetter.Get<MirageStoreSetItem>()
@@ -44,17 +58,18 @@ public sealed partial class CollectionSourceService : IDisposable
             .ToFrozenDictionary(
                 set => set.RowId,
                 set => ItemSetCatalog.GetItemSlots(set.RowId).Where(itemID => itemID != 0).ToArray());
-        var wikiSources = ReadWikiItemSources();
+        var wikiSources = ReadWikiItemSources(wikiDocument, preparedText?.QuestNames, cancellationToken);
         unobtainableItemIds = wikiSources.UnobtainableItemIds;
         blindBoxDropPools = wikiSources.BlindBoxDropPools.ToFrozenDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<uint>)Array.AsReadOnly(pair.Value.Order().ToArray()));
         var itemRows = wikiSources.ItemSources;
-        AddFishingSources(itemRows);
+        AddFishingSources(itemRows, fishingDocument, preparedText, cancellationToken);
 
         var relicAchievements = new Dictionary<uint, uint>();
         EmbeddedData.ReadCSV("RelicItemIdToAchievement.csv", csv =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var itemID = csv.GetField<uint>("ItemId");
             var achievementID = csv.GetField<uint>("AchievementId");
             if (itemID != 0 && achievementID != 0)
@@ -63,15 +78,24 @@ public sealed partial class CollectionSourceService : IDisposable
             }
         });
 
+        cancellationToken.ThrowIfCancellationRequested();
         AddCurrentMogStationSources(itemRows);
-        AddContainerSources(itemRows, itemsByID);
+        AddContainerSources(itemRows, itemsByID, preparedText?.ItemNames);
+        cancellationToken.ThrowIfCancellationRequested();
         AddCraftingSources(itemRows);
-        AddTripleTriadSources(itemRows, itemsByID);
-        AddItemSetSources(itemRows, itemsByID);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (preparedText is null)
+            AddTripleTriadSources(itemRows, itemsByID);
+        else
+            foreach (var (itemID, sources) in preparedText.TripleTriadSources)
+                foreach (var source in sources)
+                    ReplaceSource(itemRows, itemID, source);
+        AddItemSetSources(itemRows, itemsByID, preparedText?.ItemNames);
 
         var contentFinderConditions = new Dictionary<uint, ContentFinderCondition>();
         foreach (var condition in LuminaGetter.Get<ContentFinderCondition>())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (condition.Content.RowId != 0)
             {
                 contentFinderConditions.TryAdd(condition.Content.RowId, condition);
@@ -89,12 +113,13 @@ public sealed partial class CollectionSourceService : IDisposable
         categorySeeds = categories.ToFrozenDictionary(
             pair => pair.Key,
             pair => pair.Value.Order().ToArray());
-        itemCategories = ResolveCategories(categories, wikiShopDependencies);
+        itemCategories = ResolveCategories(categories, wikiShopDependencies, cancellationToken);
         itemIds = itemsByID.Keys.Order().ToArray();
 
         var blueSpellDetails = new Dictionary<uint, List<BlueSpellSource>>();
         EmbeddedData.ReadCSV("BlueSpells.csv", csv =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var actionID = csv.GetField<uint>("ActionId");
             if (actionID == 0)
             {
@@ -126,10 +151,47 @@ public sealed partial class CollectionSourceService : IDisposable
             pair => pair.Key,
             pair => (IReadOnlyList<BlueSpellSource>)pair.Value.ToArray());
         relicAchievementIds = relicAchievements.ToFrozenDictionary();
+        cancellationToken.ThrowIfCancellationRequested();
+        categoryBuildCancellation = new();
         exchangeCategoryTask = Task.Run(() => BuildExchangeCategoriesAsync(categoryBuildCancellation.Token));
     }
 
     public long Revision => Interlocked.Read(ref revision);
+
+    /// <summary>在后台解析来源资源和构建索引，并在框架线程分帧取得游戏文本。</summary>
+    public static async Task<CollectionSourceService> CreateAsync(CancellationToken cancellationToken = default)
+    {
+        using var wikiDocument = await Task.Run(() => ReadDocument("WikiItemSources.json"), cancellationToken).ConfigureAwait(false);
+        using var fishingDocument = await Task.Run(() => ReadDocument("FishingSources.json"), cancellationToken).ConfigureAwait(false);
+        var itemsByID = await Task.Run(() => LuminaGetter.Get<Item>()
+            .Where(item => item.RowId != 0).ToDictionary(item => item.RowId), cancellationToken).ConfigureAwait(false);
+        var text = new PreparedSourceText();
+        var textIDs = await Task.Run(() => GetSourceTextIDs(wikiDocument, fishingDocument, itemsByID, cancellationToken),
+            cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(textIDs.ItemIDs, itemID =>
+        {
+            if (itemsByID.TryGetValue(itemID, out var item))
+                text.ItemNames[itemID] = item.Name.ExtractText();
+        }, cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(textIDs.QuestIDs, questID =>
+        {
+            if (LuminaGetter.TryGetRow<Quest>(questID, out var quest))
+                text.QuestNames[questID] = quest.Name.ExtractText();
+        }, cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(textIDs.PlaceNameIDs,
+            placeNameID => text.PlaceNames[placeNameID] = LuminaWrapper.GetPlaceName(placeNameID),
+            cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(textIDs.WeatherIDs,
+            weatherID => text.WeatherNames[weatherID] = LuminaWrapper.GetWeatherName(weatherID),
+            cancellationToken).ConfigureAwait(false);
+        var cards = await Task.Run(() => itemsByID.Values
+            .Where(item => item.ItemAction.IsValid && item.ItemAction.Value.Action.RowId == 3_357)
+            .ToArray(), cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(cards,
+            item => AddTripleTriadSource(text.TripleTriadSources, item), cancellationToken).ConfigureAwait(false);
+        return await Task.Run(() => new CollectionSourceService(
+            itemsByID, wikiDocument, fishingDocument, text, cancellationToken), cancellationToken).ConfigureAwait(false);
+    }
 
     public bool IsExchangeIndexBuilding => !exchangeCategoryTask.IsCompleted;
 
@@ -170,25 +232,110 @@ public sealed partial class CollectionSourceService : IDisposable
     public bool TryGetRelicAchievementID(uint itemID, out uint achievementID) =>
         relicAchievementIds.TryGetValue(itemID, out achievementID);
 
-    public void Dispose()
+    /// <summary>取消来源分类构建，异步等待实际退出；重复调用等待同一个释放任务。</summary>
+    public ValueTask DisposeAsync()
     {
-        if (disposed)
-        {
-            return;
-        }
+        lock (disposalLock)
+            return new(disposal ??= DisposeCoreAsync());
+    }
 
-        disposed = true;
-        categoryBuildCancellation.Cancel();
+    private async Task DisposeCoreAsync()
+    {
         try
         {
-            exchangeCategoryTask.GetAwaiter().GetResult();
-        }
-        catch (OperationCanceledException)
-        {
+            await categoryBuildCancellation.CancelAsync().ConfigureAwait(false);
         }
         finally
         {
-            categoryBuildCancellation.Dispose();
+            try
+            {
+                await exchangeCategoryTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (categoryBuildCancellation.IsCancellationRequested)
+            {
+            }
+            finally
+            {
+                categoryBuildCancellation.Dispose();
+            }
         }
+    }
+
+    private static JsonDocument ReadDocument(string resourceName)
+    {
+        using var stream = EmbeddedData.Open(resourceName);
+        return JsonDocument.Parse(stream);
+    }
+
+    private static (uint[] ItemIDs, uint[] QuestIDs, uint[] PlaceNameIDs, uint[] WeatherIDs) GetSourceTextIDs(
+        JsonDocument wikiDocument,
+        JsonDocument fishingDocument,
+        IReadOnlyDictionary<uint, Item> itemsByID,
+        CancellationToken cancellationToken)
+    {
+        var itemIDs = new HashSet<uint>();
+        try
+        {
+            EmbeddedData.ReadCSV("ItemSupplement.csv", csv =>
+            {
+                var itemID = csv.GetField<uint>("ItemId");
+                var sourceItemID = csv.GetField<uint>("SourceItemId");
+                if (itemID != 0 && sourceItemID != 0 && csv.GetField<uint>("ItemSupplementSource") != 1)
+                    itemIDs.Add(sourceItemID);
+            });
+        }
+        catch (Exception)
+        {
+        }
+
+        foreach (var set in LuminaGetter.Get<MirageStoreSetItem>())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (itemsByID.ContainsKey(set.RowId))
+                foreach (var itemID in ItemSetCatalog.GetItemSlots(set.RowId))
+                    if (itemID != 0)
+                        itemIDs.Add(itemID);
+        }
+
+        var questIDs = new HashSet<uint>();
+        foreach (var source in wikiDocument.RootElement.GetProperty("sources").EnumerateArray())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var questID = source.GetProperty("i").GetUInt32();
+            if (source.GetProperty("c").GetInt32() == (int)CollectionSourceCategory.Quest && questID != 0)
+                questIDs.Add(questID);
+            if (source.TryGetProperty("q", out var requiredQuests))
+                foreach (var quest in requiredQuests.EnumerateArray())
+                    questIDs.Add(quest.GetUInt32());
+        }
+
+        var placeNameIDs = fishingDocument.RootElement.GetProperty("spots").EnumerateArray()
+            .Select(spot => spot.GetProperty("p").GetUInt32()).Distinct().ToArray();
+        var weatherIDs = new HashSet<uint>();
+        foreach (var item in fishingDocument.RootElement.GetProperty("items").EnumerateArray())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (item.TryGetProperty("w", out var weather))
+                foreach (var row in weather.EnumerateArray())
+                    weatherIDs.Add(row.GetUInt32());
+            if (item.TryGetProperty("v", out var previousWeather))
+                foreach (var row in previousWeather.EnumerateArray())
+                    weatherIDs.Add(row.GetUInt32());
+        }
+
+        return (itemIDs.ToArray(), questIDs.ToArray(), placeNameIDs, weatherIDs.ToArray());
+    }
+
+    private sealed class PreparedSourceText
+    {
+        public Dictionary<uint, string> ItemNames { get; } = [];
+
+        public Dictionary<uint, string> QuestNames { get; } = [];
+
+        public Dictionary<uint, string> PlaceNames { get; } = [];
+
+        public Dictionary<uint, string> WeatherNames { get; } = [];
+
+        public Dictionary<uint, HashSet<CollectionSource>> TripleTriadSources { get; } = [];
     }
 }

@@ -68,7 +68,7 @@ public sealed partial class CollectionSourceService
             }
 
             var categories = CreateCategoryMap();
-            PropagateCategories(categories, wikiShopDependencies);
+            PropagateCategories(categories, wikiShopDependencies, buildCancellationToken);
             var dependencies = new Dictionary<uint, HashSet<uint>>();
             var purchasableItems = new HashSet<uint>();
             for (var index = 0; index < itemIds.Length; index++)
@@ -102,7 +102,7 @@ public sealed partial class CollectionSourceService
             }
 
             Volatile.Write(ref purchasableItemIds, purchasableItems.ToFrozenSet());
-            Volatile.Write(ref itemCategories, ResolveCategories(categories, dependencies));
+            Volatile.Write(ref itemCategories, ResolveCategories(categories, dependencies, buildCancellationToken));
             Volatile.Write(
                 ref openingStageRestrictedItemIds,
                 ExpandOpeningStageRestrictedItems(
@@ -139,11 +139,13 @@ public sealed partial class CollectionSourceService
 
     private FrozenDictionary<uint, FrozenSet<CollectionSourceCategory>> ResolveCategories(
         Dictionary<uint, HashSet<CollectionSourceCategory>> categories,
-        IReadOnlyDictionary<uint, HashSet<uint>> dependencies)
+        IReadOnlyDictionary<uint, HashSet<uint>> dependencies,
+        CancellationToken cancellationToken = default)
     {
-        PropagateCategories(categories, dependencies);
+        PropagateCategories(categories, dependencies, cancellationToken);
         foreach (var (setItemID, memberItemIDs) in itemSetItemIDs)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             foreach (var memberItemID in memberItemIDs)
             {
                 if (categories.TryGetValue(memberItemID, out var memberCategories))
@@ -163,13 +165,15 @@ public sealed partial class CollectionSourceService
 
     private static void PropagateCategories(
         Dictionary<uint, HashSet<CollectionSourceCategory>> categories,
-        IReadOnlyDictionary<uint, HashSet<uint>> dependencies)
+        IReadOnlyDictionary<uint, HashSet<uint>> dependencies,
+        CancellationToken cancellationToken = default)
     {
         for (var depth = 0; depth < 10; depth++)
         {
             var changed = false;
             foreach (var (itemId, sourceItemIds) in dependencies)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!categories.TryGetValue(itemId, out var itemCategorySet))
                 {
                     itemCategorySet = [];
