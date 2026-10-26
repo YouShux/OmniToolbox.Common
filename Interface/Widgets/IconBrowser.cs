@@ -267,7 +267,8 @@ public sealed class IconBrowser : IEscapeClosableWindow
         using var font = Fonts.GetUIFont().Push();
         using var style = new ComicStyleScope();
         var iconSize = OmniTheme.Scale(config.IconSize);
-        var viewportSize = ImGui.GetMainViewport().WorkSize;
+        using var placement = new OmniWindowPlacement.WindowScope("###OmniIconBrowser");
+        var viewportSize = OmniWindowPlacement.GetWorkArea("###OmniIconBrowser").Size;
         var imguiStyle = ImGui.GetStyle();
         var toolbarMinWidth =
             OmniTheme.Scale(SEARCH_CONTROL_WIDTH + 160f + 180f) +

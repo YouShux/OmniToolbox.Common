@@ -23,6 +23,8 @@ public sealed class UIConfig
 
     public bool ShowLauncherIcon { get; set; } = true;
 
+    public bool MultiMonitorEnabled { get; set; }
+
     public bool DiscordLinkRead { get; set; }
 
     public bool GitHubLinkRead { get; set; }

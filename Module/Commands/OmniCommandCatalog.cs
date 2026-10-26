@@ -146,7 +146,7 @@ public static class OmniCommandCatalog
         new("fcaction", "部队特效", "<编号>", "购买指定编号的部队特效", "FreeCompanyAction", OmniCommandArguments.Required),
         new("tp", "传送", "<地点名称>", "传送至指定地点", null, OmniCommandArguments.Required),
         new("bts", "区域传送", "<地图/区域ID/以太水晶>", "按区域或名称选择水晶并传送", "BetterTeleportManagement", OmniCommandArguments.Required),
-        new("teleportpanel", "传送面板", "", "打开传送面板", "MultiToolbar", OmniCommandArguments.None),
+        new("teleportpanel", "传送面板", "", "打开传送面板", "BetterTeleportManagement", OmniCommandArguments.None),
         new("aetheryte", "更好的传送管理", "", "交互以太水晶传送管理", "BetterTeleportManagement", OmniCommandArguments.None),
         new("worldtravel", "快捷跨界传送", "[世界名]", "打开跨界传送窗口或前往指定世界", "FastWorldTravel", OmniCommandArguments.Optional),
         new("inn", "旅馆", "", "进入附近旅馆", "InnEntry", OmniCommandArguments.None),
