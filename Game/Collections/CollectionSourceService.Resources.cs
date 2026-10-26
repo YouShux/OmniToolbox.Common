@@ -1,14 +1,8 @@
 using System.Collections.Frozen;
-using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using CsvHelper;
-using CsvHelper.Configuration;
 using Lumina.Excel.Sheets;
-using LuminaSupplemental.Excel.Model;
-using LuminaSupplemental.Excel.Services;
 using OmenTools;
 using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.Data;
@@ -169,51 +163,15 @@ public sealed partial class CollectionSourceService
             blindBoxDropPools);
     }
 
-    private static void ReadCSV(string fileName, Action<CsvReader> readRow)
-    {
-        var failedRows = 0;
-        Exception? firstException = null;
-        using var reader = new StreamReader(EmbeddedData.Open(fileName));
-        using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
-        {
-            AllowComments = true,
-            Comment = '#',
-            HasHeaderRecord = true,
-            IgnoreBlankLines = true,
-            TrimOptions = TrimOptions.Trim
-        });
-        if (!csv.Read())
-        {
-            return;
-        }
-
-        csv.ReadHeader();
-        while (csv.Read())
-        {
-            try
-            {
-                readRow(csv);
-            }
-            catch (Exception ex)
-            {
-                failedRows++;
-                firstException ??= ex;
-            }
-        }
-    }
-
     private static void AddCurrentMogStationSources(IDictionary<uint, HashSet<CollectionSource>> target)
     {
         try
         {
-            var rows = CsvLoader.LoadResource<StoreItem>(
-                CsvLoader.StoreItemResourceName,
-                true,
-                out var failedLines,
-                out var exceptions);
-            foreach (var row in rows)
+            var itemIDs = new List<uint>();
+            EmbeddedData.ReadCSV("StoreItem.csv", csv => itemIDs.Add(csv.GetField<uint>("ItemId")));
+            foreach (var itemID in itemIDs)
             {
-                AddMogStationSource(target, row.ItemId);
+                AddMogStationSource(target, itemID);
             }
         }
         catch (Exception)

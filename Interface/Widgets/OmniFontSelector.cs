@@ -1,7 +1,6 @@
 using TreeToolKit;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using OmniToolbox.UI.Theme;
 
 namespace OmniToolbox.UI.Controls;

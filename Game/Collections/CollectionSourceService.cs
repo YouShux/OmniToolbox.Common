@@ -1,9 +1,9 @@
 using System.Collections.Frozen;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Lumina.Excel.Sheets;
 using OmenTools.Interop.Game.Lumina;
+using OmniToolbox.Data;
 using OmniToolbox.Items;
 
 namespace OmniToolbox.Collections;
@@ -53,7 +53,7 @@ public sealed partial class CollectionSourceService : IDisposable
         AddFishingSources(itemRows);
 
         var relicAchievements = new Dictionary<uint, uint>();
-        ReadCSV("RelicItemIdToAchievement.csv", csv =>
+        EmbeddedData.ReadCSV("RelicItemIdToAchievement.csv", csv =>
         {
             var itemID = csv.GetField<uint>("ItemId");
             var achievementID = csv.GetField<uint>("AchievementId");
@@ -93,7 +93,7 @@ public sealed partial class CollectionSourceService : IDisposable
         itemIds = itemsByID.Keys.Order().ToArray();
 
         var blueSpellDetails = new Dictionary<uint, List<BlueSpellSource>>();
-        ReadCSV("BlueSpells.csv", csv =>
+        EmbeddedData.ReadCSV("BlueSpells.csv", csv =>
         {
             var actionID = csv.GetField<uint>("ActionId");
             if (actionID == 0)
