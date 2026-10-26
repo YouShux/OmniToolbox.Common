@@ -1,3 +1,4 @@
+using TreeToolKit;
 using OmniToolbox.UI.Controls;
 using OmniToolbox.UI.Theme;
 
@@ -5,6 +6,23 @@ namespace OmniToolbox.UI;
 
 public static class OmniWindowChrome
 {
+    public static bool IsTextInputActive => ImGui.GetIO().WantTextInput;
+
+    public static void UpdateEscapeClose(
+        EscapeCloseController controller,
+        IEscapeClosableWindow first,
+        IEscapeClosableWindow? second = null,
+        IEscapeClosableWindow? third = null)
+    {
+        if (IsTextInputActive)
+        {
+            controller.TryConsumeEscape(false);
+            return;
+        }
+
+        controller.Update(first, second, third);
+    }
+
     public static (Vector2 Position, Vector2 Size) GetFrameBounds(
         Vector2 windowPosition, Vector2 windowSize, bool isCollapsed)
     {
@@ -25,38 +43,10 @@ public static class OmniWindowChrome
              MathF.Max(1f, frameSize.X - OmniTheme.WindowInset() * 2f),
              MathF.Max(1f, frameSize.Y - OmniTheme.TitleBarHeight() - OmniTheme.WindowInset() * 2f)));
 
-    public static unsafe void SetNextWindowPosition(string windowName)
-    {
-        var window = ImGuiP.FindWindowByName(windowName);
-        if (window.IsNull)
-            return;
+    public static void SetNextWindowPosition(string windowName) => OmniWindowPlacement.SetNextWindowPosition(windowName);
 
-        var size = window.Size;
-        var nextWindow = new ImGuiContextPtr(ImGui.GetCurrentContext()).NextWindowData;
-        if ((nextWindow.Flags & ImGuiNextWindowDataFlags.HasSize) != 0 &&
-            (nextWindow.SizeCond == ImGuiCond.Always ||
-             (window.SetWindowSizeAllowFlags & nextWindow.SizeCond) != 0))
-        {
-            if (nextWindow.SizeVal.X > 0f)
-                size.X = nextWindow.SizeVal.X;
-            if (nextWindow.SizeVal.Y > 0f)
-                size.Y = nextWindow.SizeVal.Y;
-        }
-
-        // 在 Begin 生成裁剪区域之前约束位置，使内容与窗口边界保持一致。
-        ImGui.SetNextWindowPos(OmniTheme.ClampWindowPosition(window.Pos, size));
-    }
-
-    public static unsafe void SetNextWindowPosition(string windowName, Vector2 position)
-    {
-        var window = ImGuiP.FindWindowByName(windowName);
-        var size = Vector2.Zero;
-        if (!window.IsNull)
-            size = (window.Flags & ImGuiWindowFlags.AlwaysAutoResize) != 0
-                ? ImGuiP.CalcWindowNextAutoFitSize(window)
-                : window.Size;
-        ImGui.SetNextWindowPos(OmniTheme.ClampWindowPosition(position, size));
-    }
+    public static void SetNextWindowPosition(string windowName, Vector2 position) =>
+        OmniWindowPlacement.SetNextWindowPosition(windowName, position);
 
     public static unsafe void DragBackground()
     {

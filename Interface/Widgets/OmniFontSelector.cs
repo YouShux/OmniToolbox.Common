@@ -38,7 +38,7 @@ public static class OmniFontSelector
     {
         var isDefault = string.IsNullOrWhiteSpace(path) || string.Equals(path, defaultPath, StringComparison.OrdinalIgnoreCase);
         var label = GetPreviewText(path, defaultLabel, defaultPath);
-        var maximum = OmniTheme.ClampWindowSize(ImGui.GetMainViewport().WorkSize - ImGui.GetStyle().WindowPadding * 2f);
+        var maximum = OmniTheme.ClampWindowSize(OmniWindowPlacement.GetWorkArea().Size - ImGui.GetStyle().WindowPadding * 2f);
         var height = MathF.Min(OmniTheme.Scale(360f), maximum.Y);
         ImGui.SetNextWindowSizeConstraints(new Vector2(0f, height), new Vector2(maximum.X, height));
         if (!OmniControls.BeginCombo(id, label, width))

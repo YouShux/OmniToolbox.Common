@@ -1060,7 +1060,7 @@ public static partial class OmniControls
             return;
         }
 
-        var availableSize = ImGui.GetMainViewport().WorkSize - OmniTheme.Scale(new Vector2(48f));
+        var availableSize = OmniWindowPlacement.GetWorkArea().Size - OmniTheme.Scale(new Vector2(48f));
         var scale = MathF.Min(
             1f,
             MathF.Min(
@@ -1598,7 +1598,7 @@ public static partial class OmniControls
                 Color = textColor is { } color ? OmniTheme.Color(color) : null,
                 WrapWidth = MathF.Min(
                     OmniTheme.Scale(520f),
-                    MathF.Max(1f, ImGui.GetMainViewport().WorkSize.X - OmniTheme.Scale(16f) -
+                    MathF.Max(1f, OmniWindowPlacement.GetWorkArea().Size.X - OmniTheme.Scale(16f) -
                         ImGui.GetStyle().WindowPadding.X * 2f))
             });
     }
@@ -1696,11 +1696,13 @@ public static partial class OmniControls
         HelpTooltipSourcePosition = sourcePosition;
         HelpTooltipFrame = frame;
         var tooltipStyle = PushTooltipStyle();
-        var maximumSize = OmniTheme.ClampWindowSize(ImGui.GetMainViewport().WorkSize - OmniTheme.Scale(new Vector2(16f)));
+        var maximumSize = OmniTheme.ClampWindowSize(OmniWindowPlacement.GetWorkArea().Size - OmniTheme.Scale(new Vector2(16f)));
         width = MathF.Min(width, maximumSize.X);
         SetNextAutoResizeWindowSizeConstraints(new Vector2(width, 0f),
             new Vector2(width > 0f ? width : maximumSize.X, maximumSize.Y));
         // 独立窗口隔离提示内容与绘制列表，保留原生 Tooltip 定位与同帧替换行为。
+        if (!OmniWindowPlacement.IsMultiMonitorActive)
+            ImGui.SetNextWindowViewport(ImGui.GetMainViewport().ID);
         var isVisible = ImGui.Begin($"##OmniToolboxHelpTooltip{HelpTooltipIndex}",
             ImGuiWindowFlags.Tooltip | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoTitleBar |
             ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoSavedSettings |

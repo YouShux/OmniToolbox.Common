@@ -265,7 +265,7 @@ public static partial class OmniControls
         // 自动尺寸弹窗的隐藏测量帧尚无内容宽度，必须先提交控件的固有尺寸。
         if ((window.Flags & ImGuiWindowFlags.AlwaysAutoResize) != 0 &&
             window.HiddenFramesCannotSkipItems > 0 && ImGuiP.GetCurrentTable().IsNull)
-            return MathF.Max(1f, ImGui.GetMainViewport().WorkSize.X - ImGui.GetCursorPosX() - window.WindowPadding.X);
+            return MathF.Max(1f, OmniWindowPlacement.GetWorkArea().Size.X - ImGui.GetCursorPosX() - window.WindowPadding.X);
         var available = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
         // 自动窗口的整数尺寸与非整数内边距相减时，避免控件每帧缩窄不足一像素。
         return (window.Flags & ImGuiWindowFlags.AlwaysAutoResize) != 0 && ImGuiP.GetCurrentTable().IsNull

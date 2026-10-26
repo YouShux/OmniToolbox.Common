@@ -196,18 +196,16 @@ public static class OmniTheme
     public static Vector2 Unscale(Vector2 value) => value / ScaleValue;
 
     public static Vector2 ClampWindowSize(Vector2 size) =>
-        Vector2.Clamp(size, Vector2.One, Vector2.Max(Vector2.One, ImGui.GetMainViewport().WorkSize));
+        Vector2.Clamp(size, Vector2.One, Vector2.Max(Vector2.One, OmniWindowPlacement.GetWorkArea().Size));
 
     public static Vector2 ClampWindowPosition(Vector2 position, Vector2 size)
     {
-        var viewport = ImGui.GetMainViewport();
-        return Vector2.Clamp(position, viewport.WorkPos,
-            Vector2.Max(viewport.WorkPos, viewport.WorkPos + viewport.WorkSize - ClampWindowSize(size)));
+        return OmniWindowPlacement.ClampPosition(position, size, true);
     }
 
     public static Vector2 PreserveWindowSize(Vector2 actual, Vector2 expected)
     {
-        var viewport = ImGui.GetMainViewport().WorkSize;
+        var viewport = OmniWindowPlacement.GetWorkArea().Size;
         return new(actual.X >= viewport.X - 1f && expected.X > viewport.X ? expected.X : actual.X,
             actual.Y >= viewport.Y - 1f && expected.Y > viewport.Y ? expected.Y : actual.Y);
     }
