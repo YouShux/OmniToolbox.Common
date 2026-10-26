@@ -27,5 +27,6 @@ public enum CollectionSourceCategory
     TreasureHunts = 20,
     RestorationZone = 21,
     FieldOperations = 22,
-    IslandSanctuary = 23
+    IslandSanctuary = 23,
+    NoSource = 24
 }

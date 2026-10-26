@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Lumina.Excel.Sheets;
 using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.Data;
+using OmniToolbox.Host;
 using OmniToolbox.Items;
 using TreeTools.Threading;
 
@@ -80,9 +81,40 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
 
         cancellationToken.ThrowIfCancellationRequested();
         AddCurrentMogStationSources(itemRows);
+        AddPromotionalUnlockSources(itemRows);
         AddContainerSources(itemRows, itemsByID, preparedText?.ItemNames);
         cancellationToken.ThrowIfCancellationRequested();
         AddCraftingSources(itemRows);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (preparedText is null)
+        {
+            AddPVPSeasonPortraitSources(itemRows);
+            foreach (var series in LuminaGetter.Get<PvPSeries>())
+                AddPVPSeriesSources(itemRows, series);
+            foreach (var toolClass in LuminaGetter.Get<WKSCosmoToolClass>())
+                AddCosmicToolSources(itemRows, toolClass);
+            AddCosmicToolReplicaSources(itemRows);
+            foreach (var stage in LuminaGetter.Get<RelicItem>())
+                AddRelicSources(itemRows, stage);
+            foreach (var questID in UnfinishedRelicQuestIDs)
+                AddUnfinishedRelicSources(itemRows, questID);
+            foreach (var questID in DisguiseEquipmentQuestIDs)
+                AddDisguiseEquipmentSources(itemRows, questID);
+            foreach (var itemID in RetiredArdentEquipmentIDs)
+                AddRetiredArdentEquipmentSource(itemRows, itemID);
+            foreach (var itemID in EternalBondWristletIDs)
+                AddEternalBondWristletSource(itemRows, itemID);
+            foreach (var itemID in LegacyGatheringToolIDs)
+                AddLegacyGatheringToolSource(itemRows, itemID);
+            foreach (var row in ReadHistoricalEquipmentSourceRows(cancellationToken))
+                AddHistoricalEquipmentSource(itemRows, row.ItemID, row.ConditionID);
+        }
+        else
+        {
+            foreach (var (itemID, sources) in preparedText.SupplementalSources)
+                foreach (var source in sources)
+                    AddSourceIfMissing(itemRows, itemID, source);
+        }
         cancellationToken.ThrowIfCancellationRequested();
         if (preparedText is null)
             AddTripleTriadSources(itemRows, itemsByID);
@@ -189,6 +221,38 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
             .ToArray(), cancellationToken).ConfigureAwait(false);
         await FrameworkWorkScheduler.RunAsync(cards,
             item => AddTripleTriadSource(text.TripleTriadSources, item), cancellationToken).ConfigureAwait(false);
+        var toolClasses = await Task.Run(() => LuminaGetter.Get<WKSCosmoToolClass>().ToArray(),
+            cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(toolClasses,
+            toolClass => AddCosmicToolSources(text.SupplementalSources, toolClass), cancellationToken).ConfigureAwait(false);
+        await DalamudServices.Framework.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            AddCosmicToolReplicaSources(text.SupplementalSources);
+            AddPVPSeasonPortraitSources(text.SupplementalSources);
+        }, cancellationToken).ConfigureAwait(false);
+        var pvpSeries = await Task.Run(() => LuminaGetter.Get<PvPSeries>().ToArray(),
+            cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(pvpSeries,
+            series => AddPVPSeriesSources(text.SupplementalSources, series), cancellationToken).ConfigureAwait(false);
+        var relicStages = await Task.Run(() => LuminaGetter.Get<RelicItem>().ToArray(),
+            cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(relicStages,
+            stage => AddRelicSources(text.SupplementalSources, stage), cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(UnfinishedRelicQuestIDs,
+            questID => AddUnfinishedRelicSources(text.SupplementalSources, questID), cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(DisguiseEquipmentQuestIDs,
+            questID => AddDisguiseEquipmentSources(text.SupplementalSources, questID), cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(RetiredArdentEquipmentIDs,
+            itemID => AddRetiredArdentEquipmentSource(text.SupplementalSources, itemID), cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(EternalBondWristletIDs,
+            itemID => AddEternalBondWristletSource(text.SupplementalSources, itemID), cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(LegacyGatheringToolIDs,
+            itemID => AddLegacyGatheringToolSource(text.SupplementalSources, itemID), cancellationToken).ConfigureAwait(false);
+        var historicalEquipment = await Task.Run(() => ReadHistoricalEquipmentSourceRows(cancellationToken),
+            cancellationToken).ConfigureAwait(false);
+        await FrameworkWorkScheduler.RunAsync(historicalEquipment,
+            row => AddHistoricalEquipmentSource(text.SupplementalSources, row.ItemID, row.ConditionID), cancellationToken).ConfigureAwait(false);
         return await Task.Run(() => new CollectionSourceService(
             itemsByID, wikiDocument, fishingDocument, text, cancellationToken), cancellationToken).ConfigureAwait(false);
     }
@@ -223,7 +287,7 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
         Volatile.Read(ref openingStageRestrictedItemIds).Contains(itemID);
 
     public ItemAvailability GetItemAvailability(uint itemID) =>
-        unobtainableItemIds.Contains(itemID)
+        unobtainableItemIds.Contains(itemID) || RetiredArdentEquipmentIDs.Contains(itemID)
             ? ItemAvailability.Unobtainable
             : Volatile.Read(ref purchasableItemIds).Contains(itemID)
                 ? ItemAvailability.Purchasable
@@ -337,5 +401,7 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
         public Dictionary<uint, string> WeatherNames { get; } = [];
 
         public Dictionary<uint, HashSet<CollectionSource>> TripleTriadSources { get; } = [];
+
+        public Dictionary<uint, HashSet<CollectionSource>> SupplementalSources { get; } = [];
     }
 }
