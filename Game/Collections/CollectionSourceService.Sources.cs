@@ -27,7 +27,8 @@ public sealed partial class CollectionSourceService
 
     private static void AddContainerSources(
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, Item> itemsByID)
+        IReadOnlyDictionary<uint, Item> itemsByID,
+        IReadOnlyDictionary<uint, string>? preparedNames = null)
     {
         try
         {
@@ -48,9 +49,12 @@ public sealed partial class CollectionSourceService
             {
                 if (!containerNames.TryGetValue(sourceItemID, out var containerName))
                 {
-                    containerName = itemsByID.TryGetValue(sourceItemID, out var container)
-                        ? container.Name.ExtractText()
-                        : FormattableString.Invariant($"#{sourceItemID}");
+                    if (preparedNames is not null)
+                        containerName = preparedNames.GetValueOrDefault(sourceItemID, FormattableString.Invariant($"#{sourceItemID}"));
+                    else
+                        containerName = itemsByID.TryGetValue(sourceItemID, out var container)
+                            ? container.Name.ExtractText()
+                            : FormattableString.Invariant($"#{sourceItemID}");
                     containerNames.Add(sourceItemID, containerName);
                 }
                 AddSourceIfMissing(itemRows, itemID, new(
@@ -98,7 +102,8 @@ public sealed partial class CollectionSourceService
 
     private void AddItemSetSources(
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, Item> itemsByID)
+        IReadOnlyDictionary<uint, Item> itemsByID,
+        IReadOnlyDictionary<uint, string>? preparedNames = null)
     {
         foreach (var (setItemID, memberItemIDs) in itemSetItemIDs)
         {
@@ -110,7 +115,7 @@ public sealed partial class CollectionSourceService
                     continue;
                 }
 
-                var name = item.Name.ExtractText();
+                var name = preparedNames is null ? item.Name.ExtractText() : preparedNames[memberItemID];
                 foreach (var source in sources)
                 {
                     AddSource(itemRows, setItemID, source with
@@ -128,51 +133,56 @@ public sealed partial class CollectionSourceService
         IReadOnlyDictionary<uint, Item> itemsByID)
     {
         foreach (var item in itemsByID.Values)
+            AddTripleTriadSource(itemRows, item);
+    }
+
+    private static void AddTripleTriadSource(
+        IDictionary<uint, HashSet<CollectionSource>> itemRows,
+        Item item)
+    {
+        if (!item.ItemAction.IsValid || item.ItemAction.Value.Action.RowId != 3_357)
         {
-            if (!item.ItemAction.IsValid || item.ItemAction.Value.Action.RowId != 3_357)
-            {
-                continue;
-            }
-
-            var cardID = (uint)item.ItemAction.Value.Data[0];
-            if (cardID == 0 ||
-                !LuminaGetter.TryGetRow<TripleTriadCardResident>(cardID, out var resident) ||
-                !LuminaGetter.TryGetRow<TripleTriadCardObtain>(resident.AcquisitionType.RowId, out var obtain))
-            {
-                continue;
-            }
-
-            var npcName = string.Empty;
-            if (resident.AcquisitionType.RowId is 6 or 10 &&
-                LuminaGetter.TryGetRow<ENpcResident>(resident.Acquisition.RowId, out var npc))
-            {
-                npcName = npc.Singular.ExtractText();
-            }
-
-            var description = obtain.Text.RowId == 0
-                ? npcName
-                : FormatTripleTriadSource(
-                    DService.Instance().SeStringEvaluator.EvaluateFromAddon(
-                        obtain.Text.RowId,
-                        new[]
-                        {
-                            new SeStringParameter(resident.Acquisition.RowId),
-                            new SeStringParameter(resident.Location.RowId)
-                        }).ToString(),
-                    npcName);
-            if (description.Length == 0)
-            {
-                continue;
-            }
-
-            var isDuty = resident.AcquisitionType.RowId is not (6 or 10) &&
-                LuminaGetter.TryGetRow<ContentFinderCondition>(resident.Acquisition.RowId, out _);
-            ReplaceSource(itemRows, item.RowId, new(
-                isDuty ? CollectionSourceCategory.Duty : CollectionSourceCategory.Other,
-                resident.Acquisition.RowId != 0 ? resident.Acquisition.RowId : cardID,
-                description,
-                string.Empty));
+            return;
         }
+
+        var cardID = (uint)item.ItemAction.Value.Data[0];
+        if (cardID == 0 ||
+            !LuminaGetter.TryGetRow<TripleTriadCardResident>(cardID, out var resident) ||
+            !LuminaGetter.TryGetRow<TripleTriadCardObtain>(resident.AcquisitionType.RowId, out var obtain))
+        {
+            return;
+        }
+
+        var npcName = string.Empty;
+        if (resident.AcquisitionType.RowId is 6 or 10 &&
+            LuminaGetter.TryGetRow<ENpcResident>(resident.Acquisition.RowId, out var npc))
+        {
+            npcName = npc.Singular.ExtractText();
+        }
+
+        var description = obtain.Text.RowId == 0
+            ? npcName
+            : FormatTripleTriadSource(
+                DService.Instance().SeStringEvaluator.EvaluateFromAddon(
+                    obtain.Text.RowId,
+                    new[]
+                    {
+                        new SeStringParameter(resident.Acquisition.RowId),
+                        new SeStringParameter(resident.Location.RowId)
+                    }).ToString(),
+                npcName);
+        if (description.Length == 0)
+        {
+            return;
+        }
+
+        var isDuty = resident.AcquisitionType.RowId is not (6 or 10) &&
+            LuminaGetter.TryGetRow<ContentFinderCondition>(resident.Acquisition.RowId, out _);
+        ReplaceSource(itemRows, item.RowId, new(
+            isDuty ? CollectionSourceCategory.Duty : CollectionSourceCategory.Other,
+            resident.Acquisition.RowId != 0 ? resident.Acquisition.RowId : cardID,
+            description,
+            string.Empty));
     }
 
     private static string FormatTripleTriadSource(string text, string npcName)

@@ -1,19 +1,20 @@
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using OmenTools.Interop.Game.Lumina;
-using OmniToolbox.Data;
 using OmniToolbox.UI;
 
 namespace OmniToolbox.Collections;
 
 public sealed partial class CollectionSourceService
 {
-    private static void AddFishingSources(IDictionary<uint, HashSet<CollectionSource>> target)
+    private static void AddFishingSources(IDictionary<uint, HashSet<CollectionSource>> target,
+        JsonDocument? preparedDocument = null, PreparedSourceText? preparedText = null,
+        CancellationToken cancellationToken = default)
     {
-        using var stream = EmbeddedData.Open("FishingSources.json");
-        using var document = JsonDocument.Parse(stream);
-        var root = document.RootElement;
+        using var document = preparedDocument is null ? ReadDocument("FishingSources.json") : null;
+        var root = (preparedDocument ?? document ?? throw new InvalidOperationException()).RootElement;
         if (root.GetProperty("schemaVersion").GetInt32() != 1)
         {
             throw new InvalidDataException("Unsupported FishingSources schema version.");
@@ -26,13 +27,14 @@ public sealed partial class CollectionSourceService
                 spot => spot.GetProperty("p").GetUInt32());
         foreach (var item in root.GetProperty("items").EnumerateArray())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var itemID = item.GetProperty("i").GetUInt32();
             var detailSuffix = string.Format(
                 CultureInfo.CurrentCulture,
                 OmniLoc.Get("Collection.Source.FishingDetail"),
                 item.TryGetProperty("f", out _) ? OmniLoc.Get("Common.Required") : OmniLoc.Get("Common.NotRequired"),
                 GetFishingTime(item),
-                GetFishingWeather(item));
+                GetFishingWeather(item, preparedText?.WeatherNames));
             foreach (var spotIdElement in item.GetProperty("s").EnumerateArray())
             {
                 var spotID = spotIdElement.GetUInt32();
@@ -42,7 +44,9 @@ public sealed partial class CollectionSourceService
                     string.Format(
                         CultureInfo.CurrentCulture,
                         OmniLoc.Get("Collection.Source.Fishing"),
-                        LuminaWrapper.GetPlaceName(placeNameIds[spotID]),
+                        preparedText is null
+                            ? LuminaWrapper.GetPlaceName(placeNameIds[spotID])
+                            : preparedText.PlaceNames.GetValueOrDefault(placeNameIds[spotID], string.Empty),
                         detailSuffix),
                     string.Empty));
             }
@@ -62,10 +66,10 @@ public sealed partial class CollectionSourceService
                 FormatFishingHour(endHour));
     }
 
-    private static string GetFishingWeather(JsonElement item)
+    private static string GetFishingWeather(JsonElement item, IReadOnlyDictionary<uint, string>? preparedNames)
     {
-        var weather = GetWeatherNames(item, "w");
-        var previousWeather = GetWeatherNames(item, "v");
+        var weather = GetWeatherNames(item, "w", preparedNames);
+        var previousWeather = GetWeatherNames(item, "v", preparedNames);
         if (previousWeather.Length != 0)
         {
             return string.Format(
@@ -78,11 +82,14 @@ public sealed partial class CollectionSourceService
         return weather.Length == 0 ? OmniLoc.Get("Common.None") : weather;
     }
 
-    private static string GetWeatherNames(JsonElement item, string propertyName) =>
+    private static string GetWeatherNames(JsonElement item, string propertyName,
+        IReadOnlyDictionary<uint, string>? preparedNames) =>
         item.TryGetProperty(propertyName, out var weatherIds)
             ? string.Join(
                 OmniLoc.Get("Common.ListSeparator"),
-                weatherIds.EnumerateArray().Select(weather => LuminaWrapper.GetWeatherName(weather.GetUInt32())))
+                weatherIds.EnumerateArray().Select(weather => preparedNames is null
+                    ? LuminaWrapper.GetWeatherName(weather.GetUInt32())
+                    : preparedNames.GetValueOrDefault(weather.GetUInt32(), string.Empty)))
             : string.Empty;
 
     private static string FormatFishingHour(float hour)

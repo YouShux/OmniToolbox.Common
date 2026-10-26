@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.IO;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Lumina.Excel.Sheets;
 using OmenTools;
 using OmenTools.Interop.Game.Lumina;
@@ -24,11 +25,13 @@ public sealed partial class CollectionSourceService
     private static (
         FrozenSet<uint> UnobtainableItemIds,
         Dictionary<uint, HashSet<CollectionSource>> ItemSources,
-        Dictionary<uint, HashSet<uint>> BlindBoxDropPools) ReadWikiItemSources()
+        Dictionary<uint, HashSet<uint>> BlindBoxDropPools) ReadWikiItemSources(
+            JsonDocument? preparedDocument = null,
+            IReadOnlyDictionary<uint, string>? preparedQuestNames = null,
+            CancellationToken cancellationToken = default)
     {
-        using var stream = EmbeddedData.Open("WikiItemSources.json");
-        using var document = JsonDocument.Parse(stream);
-        var root = document.RootElement;
+        using var document = preparedDocument is null ? ReadDocument("WikiItemSources.json") : null;
+        var root = (preparedDocument ?? document ?? throw new InvalidOperationException()).RootElement;
         if (root.GetProperty("schemaVersion").GetInt32() != 2)
         {
             throw new InvalidDataException("Unsupported WikiItemSources schema version.");
@@ -37,6 +40,7 @@ public sealed partial class CollectionSourceService
         var territoryIdsByMapID = new Dictionary<uint, uint>();
         foreach (var territory in LuminaGetter.Get<TerritoryType>())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (territory.Map.RowId != 0)
             {
                 territoryIdsByMapID.TryAdd(territory.Map.RowId, territory.RowId);
@@ -50,6 +54,7 @@ public sealed partial class CollectionSourceService
         var sourceIndex = 0;
         foreach (var source in sourceRows.EnumerateArray())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var category = source.GetProperty("c").GetInt32();
             if (!Enum.IsDefined(typeof(CollectionSourceCategory), category))
             {
@@ -70,9 +75,9 @@ public sealed partial class CollectionSourceService
             var description = source.GetProperty("n").GetString() ?? string.Empty;
             if ((CollectionSourceCategory)category == CollectionSourceCategory.Quest &&
                 sourceID != 0 &&
-                LuminaGetter.TryGetRow<Quest>(sourceID, out var quest))
+                TryGetQuestName(sourceID, preparedQuestNames, out var questName))
             {
-                description = quest.Name.ExtractText();
+                description = questName;
             }
 
             var detail = source.GetProperty("d").GetString() ?? string.Empty;
@@ -81,12 +86,11 @@ public sealed partial class CollectionSourceService
                 var questNames = new List<string>();
                 foreach (var questID in questIDs.EnumerateArray())
                 {
-                    if (LuminaGetter.TryGetRow<Quest>(questID.GetUInt32(), out var requiredQuest))
+                    if (TryGetQuestName(questID.GetUInt32(), preparedQuestNames, out var requiredQuestName))
                     {
-                        var questName = requiredQuest.Name.ExtractText();
-                        if (questName.Length != 0)
+                        if (requiredQuestName.Length != 0)
                         {
-                            questNames.Add(questName);
+                            questNames.Add(requiredQuestName);
                         }
                     }
                 }
@@ -127,6 +131,7 @@ public sealed partial class CollectionSourceService
             static _ => new HashSet<uint>());
         foreach (var item in root.GetProperty("items").EnumerateArray())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var itemID = item.GetProperty("i").GetUInt32();
             foreach (var source in item.GetProperty("s").EnumerateArray())
             {
@@ -161,6 +166,25 @@ public sealed partial class CollectionSourceService
                 .ToFrozenSet(),
             itemSources,
             blindBoxDropPools);
+    }
+
+    private static bool TryGetQuestName(uint questID, IReadOnlyDictionary<uint, string>? preparedNames,
+        out string name)
+    {
+        if (preparedNames is not null)
+        {
+            var found = preparedNames.TryGetValue(questID, out var preparedName);
+            name = preparedName ?? string.Empty;
+            return found;
+        }
+        if (LuminaGetter.TryGetRow<Quest>(questID, out var quest))
+        {
+            name = quest.Name.ExtractText();
+            return true;
+        }
+
+        name = string.Empty;
+        return false;
     }
 
     private static void AddCurrentMogStationSources(IDictionary<uint, HashSet<CollectionSource>> target)
