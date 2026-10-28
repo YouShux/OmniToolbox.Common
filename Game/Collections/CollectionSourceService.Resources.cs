@@ -151,6 +151,22 @@ public sealed partial class CollectionSourceService
             }
         }
 
+        foreach (var (blindBoxItemID, rewardItemIDs) in BlindBoxCatalog.SupplementalDropPools)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var dropPool = blindBoxDropPools[blindBoxItemID];
+            var containerSource = new CollectionSource(
+                CollectionSourceCategory.Container,
+                blindBoxItemID,
+                LuminaWrapper.GetItemName(blindBoxItemID),
+                string.Empty);
+            foreach (var rewardItemID in rewardItemIDs)
+            {
+                AddSourceIfMissing(itemSources, rewardItemID, containerSource);
+                dropPool.Add(rewardItemID);
+            }
+        }
+
         foreach (var (blindBoxItemId, dropPool) in blindBoxDropPools)
         {
             if (dropPool.Count == 0)
