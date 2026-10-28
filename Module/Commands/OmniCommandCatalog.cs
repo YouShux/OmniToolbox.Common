@@ -163,6 +163,7 @@ public static class OmniCommandCatalog
         new("sortitems", "自动整理", "", "整理物品", "AutoSortItems", OmniCommandArguments.None),
         new("specialscenario", "自动特殊场景探索", "[区域ID/名称]", "打开场景探索窗口或开始指定区域", "SpecialScenarioExplorer", OmniCommandArguments.Optional),
         new("leaveduty", "即刻退本", "", "离开当前副本", "InstantLeaveDuty", OmniCommandArguments.None),
+        new("invulnerable", "无敌模式", "", "切换进入或退出无敌模式", "InvulnerableMode", OmniCommandArguments.None),
         new("relicreplicamap", "肝武", "", "导出肝武复制品对应表", null, OmniCommandArguments.None),
         new("chatcn", "国服频道", "[消息]", "切换到国服频道或发送消息", "ChatFrameOptimization", OmniCommandArguments.Optional),
         new("mooglemail", "虚空莫古邮件", "", "打开莫古邮件", "VoidMoogleMail", OmniCommandArguments.None),
