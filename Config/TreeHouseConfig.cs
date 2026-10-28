@@ -54,6 +54,18 @@ public sealed class TreeHouseConfig
 
     public void SetEnabled(string moduleName, bool enabled) => ModuleStates[moduleName] = enabled;
 
+    internal bool RemoveModule(string moduleName)
+    {
+        var changed = ModuleStates.Remove(moduleName);
+        changed |= Favorites.Remove(moduleName);
+        changed |= moduleConfigs.Remove(moduleName);
+        changed |= rawModuleConfigs.Remove(moduleName);
+        changed |= localModuleNames.Remove(moduleName);
+        foreach (var group in FavoriteGroups.Values)
+            changed |= group.Remove(moduleName);
+        return changed;
+    }
+
     public void EnsureDefaultModuleStates()
     {
         foreach (var moduleName in DefaultEnabledModuleNames)
