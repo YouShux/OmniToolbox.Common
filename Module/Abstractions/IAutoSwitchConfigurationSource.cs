@@ -10,5 +10,10 @@ public interface IAutoSwitchConfigurationSource
 
     IReadOnlyList<ToolbarCommandOption> GetToolbarCommands();
 
-    Task<bool> SetPluginCollectionEnabledAsync(Guid profileID, bool enabled, CancellationToken cancellationToken);
+    Task<bool> SetPluginCollectionEnabledAsync
+    (
+        Guid              profileID,
+        bool              enabled,
+        CancellationToken cancellationToken
+    );
 }

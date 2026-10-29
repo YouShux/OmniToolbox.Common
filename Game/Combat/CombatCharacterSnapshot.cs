@@ -6,9 +6,9 @@ namespace OmniToolbox.Game;
 
 internal static class CombatCharacterSnapshot
 {
-    private static readonly List<IPlayerCharacter> PlayerSnapshot = new(100);
-    private static readonly List<IBattleChara> BattleCharaSnapshot = new(100);
-    private static readonly Dictionary<uint, IGameObject> ObjectsByEntityID = new(100);
+    private static readonly List<IPlayerCharacter>         PlayerSnapshot        = new(100);
+    private static readonly List<IBattleChara>             BattleCharaSnapshot   = new(100);
+    private static readonly Dictionary<uint, IGameObject>  ObjectsByEntityID     = new(100);
     private static readonly Dictionary<ulong, IGameObject> ObjectsByGameObjectID = new(100);
 
     public static IReadOnlyList<IPlayerCharacter> Players => PlayerSnapshot;
@@ -62,7 +62,11 @@ internal static class CombatCharacterSnapshot
                 : null;
     }
 
-    public static IGameObject? Find(ulong gameObjectID, uint entityID) =>
+    public static IGameObject? Find
+    (
+        ulong gameObjectID,
+        uint  entityID
+    ) =>
         gameObjectID != 0 && ObjectsByGameObjectID.TryGetValue(gameObjectID, out var gameObject)
             ? gameObject
             : Find(entityID);

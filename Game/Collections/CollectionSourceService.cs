@@ -13,42 +13,44 @@ namespace OmniToolbox.Collections;
 
 public sealed partial class CollectionSourceService : IAsyncDisposable
 {
-    private static readonly IReadOnlyList<CollectionSource> EmptySources = Array.Empty<CollectionSource>();
+    private static readonly IReadOnlyList<CollectionSource>     EmptySources    = Array.Empty<CollectionSource>();
     private static readonly FrozenSet<CollectionSourceCategory> EmptyCategories =
         Array.Empty<CollectionSourceCategory>().ToFrozenSet();
-    private static readonly FrozenSet<uint> EmptyItemIDs = Array.Empty<uint>().ToFrozenSet();
+    private static readonly FrozenSet<uint>                     EmptyItemIDs    = Array.Empty<uint>().ToFrozenSet();
 
-    private readonly FrozenSet<uint> unobtainableItemIds;
+    private readonly FrozenSet<uint>                                         unobtainableItemIds;
     private readonly FrozenDictionary<uint, IReadOnlyList<CollectionSource>> itemSources;
-    private readonly FrozenDictionary<uint, uint[]> itemSetItemIDs;
-    private readonly FrozenDictionary<uint, IReadOnlyList<uint>> blindBoxDropPools;
+    private readonly FrozenDictionary<uint, uint[]>                          itemSetItemIDs;
+    private readonly FrozenDictionary<uint, IReadOnlyList<uint>>             blindBoxDropPools;
     private readonly FrozenDictionary<uint, IReadOnlyList<CollectionSource>> blueMageSources;
-    private readonly FrozenDictionary<uint, IReadOnlyList<BlueSpellSource>> blueSpellRows;
-    private readonly FrozenDictionary<uint, uint> relicAchievementIds;
-    private readonly FrozenDictionary<uint, CollectionSourceCategory[]> categorySeeds;
-    private readonly Dictionary<uint, HashSet<uint>> wikiShopDependencies;
-    private readonly FrozenDictionary<uint, IReadOnlyList<uint>> exchangeTargetsByCostItemID;
-    private FrozenSet<uint> openingStageRestrictedItemIds;
-    private readonly uint[] itemIds;
-    private readonly CancellationTokenSource categoryBuildCancellation;
-    private readonly Task exchangeCategoryTask;
-    private FrozenDictionary<uint, FrozenSet<CollectionSourceCategory>> itemCategories;
-    private FrozenSet<uint> purchasableItemIds = EmptyItemIDs;
-    private long revision;
-    private readonly object disposalLock = new();
-    private Task? disposal;
+    private readonly FrozenDictionary<uint, IReadOnlyList<BlueSpellSource>>  blueSpellRows;
+    private readonly FrozenDictionary<uint, uint>                            relicAchievementIds;
+    private readonly FrozenDictionary<uint, CollectionSourceCategory[]>      categorySeeds;
+    private readonly Dictionary<uint, HashSet<uint>>                         wikiShopDependencies;
+    private readonly FrozenDictionary<uint, IReadOnlyList<uint>>             exchangeTargetsByCostItemID;
+    private FrozenSet<uint>                                                  openingStageRestrictedItemIds;
+    private readonly uint[]                                                  itemIds;
+    private readonly CancellationTokenSource                                 categoryBuildCancellation;
+    private readonly Task                                                    exchangeCategoryTask;
+    private FrozenDictionary<uint, FrozenSet<CollectionSourceCategory>>      itemCategories;
+    private FrozenSet<uint>                                                  purchasableItemIds            = EmptyItemIDs;
+    private long                                                             revision;
+    private readonly object                                                  disposalLock                  = new();
+    private Task?                                                            disposal;
 
     public CollectionSourceService()
         : this(null, null, null, null, default)
     {
     }
 
-    private CollectionSourceService(
+    private CollectionSourceService
+    (
         Dictionary<uint, Item>? preparedItems,
-        JsonDocument? wikiDocument,
-        JsonDocument? fishingDocument,
-        PreparedSourceText? preparedText,
-        CancellationToken cancellationToken)
+        JsonDocument?           wikiDocument,
+        JsonDocument?           fishingDocument,
+        PreparedSourceText?     preparedText,
+        CancellationToken       cancellationToken
+    )
     {
         cancellationToken.ThrowIfCancellationRequested();
         var itemsByID = preparedItems ?? LuminaGetter.Get<Item>()
@@ -61,7 +63,7 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
                 set => ItemSetCatalog.GetItemSlots(set.RowId).Where(itemID => itemID != 0).ToArray());
         var wikiSources = ReadWikiItemSources(wikiDocument, preparedText?.QuestNames, cancellationToken);
         unobtainableItemIds = wikiSources.UnobtainableItemIds;
-        blindBoxDropPools = wikiSources.BlindBoxDropPools.ToFrozenDictionary(
+        blindBoxDropPools   = wikiSources.BlindBoxDropPools.ToFrozenDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<uint>)Array.AsReadOnly(pair.Value.Order().ToArray()));
         var itemRows = wikiSources.ItemSources;
@@ -136,17 +138,17 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
         var categories = BuildCategorySeeds(itemRows, contentFinderConditions);
         AddCurrencyCategories(categories, itemsByID.Values);
         AddWikiGilCategories(categories, itemRows, itemsByID);
-        wikiShopDependencies = BuildWikiShopDependencies(itemRows);
-        exchangeTargetsByCostItemID = BuildExchangeTargetsByCostItemID(wikiShopDependencies);
+        wikiShopDependencies          = BuildWikiShopDependencies(itemRows);
+        exchangeTargetsByCostItemID   = BuildExchangeTargetsByCostItemID(wikiShopDependencies);
         openingStageRestrictedItemIds = BuildOpeningStageRestrictedItems(
             itemRows,
             wikiShopDependencies,
             contentFinderConditions);
-        categorySeeds = categories.ToFrozenDictionary(
+        categorySeeds                 = categories.ToFrozenDictionary(
             pair => pair.Key,
             pair => pair.Value.Order().ToArray());
-        itemCategories = ResolveCategories(categories, wikiShopDependencies, cancellationToken);
-        itemIds = itemsByID.Keys.Order().ToArray();
+        itemCategories                = ResolveCategories(categories, wikiShopDependencies, cancellationToken);
+        itemIds                       = itemsByID.Keys.Order().ToArray();
 
         var blueSpellDetails = new Dictionary<uint, List<BlueSpellSource>>();
         EmbeddedData.ReadCSV("BlueSpells.csv", csv =>
@@ -177,15 +179,15 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
             });
         });
 
-        itemSources = Freeze(itemRows);
-        blueMageSources = BuildBlueMageSources(blueSpellDetails);
-        blueSpellRows = blueSpellDetails.ToFrozenDictionary(
+        itemSources         = Freeze(itemRows);
+        blueMageSources     = BuildBlueMageSources(blueSpellDetails);
+        blueSpellRows       = blueSpellDetails.ToFrozenDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<BlueSpellSource>)pair.Value.ToArray());
         relicAchievementIds = relicAchievements.ToFrozenDictionary();
         cancellationToken.ThrowIfCancellationRequested();
         categoryBuildCancellation = new();
-        exchangeCategoryTask = Task.Run(() => BuildExchangeCategoriesAsync(categoryBuildCancellation.Token));
+        exchangeCategoryTask      = Task.Run(() => BuildExchangeCategoriesAsync(categoryBuildCancellation.Token));
     }
 
     public long Revision => Interlocked.Read(ref revision);
@@ -293,7 +295,11 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
                 ? ItemAvailability.Purchasable
                 : ItemAvailability.Obtainable;
 
-    public bool TryGetRelicAchievementID(uint itemID, out uint achievementID) =>
+    public bool TryGetRelicAchievementID
+    (
+        uint     itemID,
+        out uint achievementID
+    ) =>
         relicAchievementIds.TryGetValue(itemID, out achievementID);
 
     /// <summary>取消来源分类构建，异步等待实际退出；重复调用等待同一个释放任务。</summary>
@@ -331,11 +337,13 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
         return JsonDocument.Parse(stream);
     }
 
-    private static (uint[] ItemIDs, uint[] QuestIDs, uint[] PlaceNameIDs, uint[] WeatherIDs) GetSourceTextIDs(
-        JsonDocument wikiDocument,
-        JsonDocument fishingDocument,
+    private static (uint[] ItemIDs, uint[] QuestIDs, uint[] PlaceNameIDs, uint[] WeatherIDs) GetSourceTextIDs
+    (
+        JsonDocument                    wikiDocument,
+        JsonDocument                    fishingDocument,
         IReadOnlyDictionary<uint, Item> itemsByID,
-        CancellationToken cancellationToken)
+        CancellationToken               cancellationToken
+    )
     {
         var itemIDs = new HashSet<uint>();
         try

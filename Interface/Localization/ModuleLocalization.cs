@@ -1,6 +1,6 @@
-using TreeTools.Text;
 using System.IO;
 using OmniToolbox.Config;
+using TreeTools.Text;
 
 namespace OmniToolbox.UI;
 
@@ -24,8 +24,11 @@ public sealed class ModuleLocalization
     /// <summary>
     /// 从简体源文及可选译文创建词库。繁体由宿主生成，不接受简繁覆盖。
     /// </summary>
-    public static ModuleLocalization Create(IReadOnlyDictionary<string, string> source,
-        IReadOnlyDictionary<UILanguage, IReadOnlyDictionary<string, string>>? translations = null)
+    public static ModuleLocalization Create
+    (
+        IReadOnlyDictionary<string, string>                                   source,
+        IReadOnlyDictionary<UILanguage, IReadOnlyDictionary<string, string>>? translations = null
+    )
     {
         var simplified = XliffResourceParser.CopyTexts(source);
         var catalogs = new Dictionary<UILanguage, IReadOnlyDictionary<string, string>>
@@ -52,8 +55,17 @@ public sealed class ModuleLocalization
 
     public bool IsComplete(UILanguage language) => source.IsComplete(language);
 
-    public bool TryGet(string key, UILanguage language, out string text) => source.TryGet(key, language, out text);
+    public bool TryGet
+    (
+        string     key,
+        UILanguage language,
+        out string text
+    ) => source.TryGet(key, language, out text);
 
-    public string Get(string key, UILanguage language) => TryGet(key, language, out var text)
+    public string Get
+    (
+        string     key,
+        UILanguage language
+    ) => TryGet(key, language, out var text)
         ? text : throw new KeyNotFoundException($"Module localization text is missing: {language}/{key}");
 }

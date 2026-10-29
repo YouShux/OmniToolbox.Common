@@ -6,7 +6,7 @@ public sealed class UIConfig
 {
     private UITheme theme = UITheme.LineMidnightIris;
 
-    public static readonly Vector2 DefaultMainWindowSize = new(1420f, 900f);
+    public static readonly Vector2 DefaultMainWindowSize            = new(1420f, 900f);
     public static readonly Vector2 DefaultItemInformationWindowSize = new(860f, 500f);
 
     public Vector2 MainWindowSize { get; set; } = DefaultMainWindowSize;

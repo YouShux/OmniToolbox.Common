@@ -35,18 +35,27 @@ public static unsafe class OmniWindowPlacement
             if (distance >= nearestDistance)
                 continue;
             nearestDistance = distance;
-            result = (monitor.WorkPos, monitor.WorkSize);
+            result          = (monitor.WorkPos, monitor.WorkSize);
         }
         return result;
     }
 
-    public static Vector2 ClampPosition(Vector2 position, Vector2 size, bool allowHalfOutside)
+    public static Vector2 ClampPosition
+    (
+        Vector2 position,
+        Vector2 size,
+        bool    allowHalfOutside
+    )
     {
         var work = GetWorkAreaAt(position + size * 0.5f);
         return OmniWindowGeometry.ClampPosition(position, size, work.Position, work.Size, allowHalfOutside);
     }
 
-    public static void SetNextWindowPosition(string windowName, Vector2? position = null)
+    public static void SetNextWindowPosition
+    (
+        string   windowName,
+        Vector2? position = null
+    )
     {
         if (!IsMultiMonitorActive)
             ImGui.SetNextWindowViewport(ImGui.GetMainViewport().ID);
@@ -77,7 +86,7 @@ public static unsafe class OmniWindowPlacement
 
         public WindowScope(string windowName)
         {
-            previous = ScopedWindowName;
+            previous         = ScopedWindowName;
             ScopedWindowName = windowName;
         }
 

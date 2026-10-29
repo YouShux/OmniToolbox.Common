@@ -25,10 +25,12 @@ public sealed partial class CollectionSourceService
         "Versus:"
     ];
 
-    private static void AddContainerSources(
+    private static void AddContainerSources
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, Item> itemsByID,
-        IReadOnlyDictionary<uint, string>? preparedNames = null)
+        IReadOnlyDictionary<uint, Item>              itemsByID,
+        IReadOnlyDictionary<uint, string>?           preparedNames = null
+    )
     {
         try
         {
@@ -100,10 +102,12 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private void AddItemSetSources(
+    private void AddItemSetSources
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, Item> itemsByID,
-        IReadOnlyDictionary<uint, string>? preparedNames = null)
+        IReadOnlyDictionary<uint, Item>              itemsByID,
+        IReadOnlyDictionary<uint, string>?           preparedNames = null
+    )
     {
         foreach (var (setItemID, memberItemIDs) in itemSetItemIDs)
         {
@@ -128,17 +132,21 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private static void AddTripleTriadSources(
+    private static void AddTripleTriadSources
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, Item> itemsByID)
+        IReadOnlyDictionary<uint, Item>              itemsByID
+    )
     {
         foreach (var item in itemsByID.Values)
             AddTripleTriadSource(itemRows, item);
     }
 
-    private static void AddTripleTriadSource(
+    private static void AddTripleTriadSource
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        Item item)
+        Item                                         item
+    )
     {
         if (!item.ItemAction.IsValid || item.ItemAction.Value.Action.RowId != 3_357)
         {
@@ -185,7 +193,11 @@ public sealed partial class CollectionSourceService
             string.Empty));
     }
 
-    private static string FormatTripleTriadSource(string text, string npcName)
+    private static string FormatTripleTriadSource
+    (
+        string text,
+        string npcName
+    )
     {
         var parts = new List<string>();
         var npc = npcName;
@@ -229,20 +241,24 @@ public sealed partial class CollectionSourceService
         return string.Join(' ', parts);
     }
 
-    private static bool HasSource(
+    private static bool HasSource
+    (
         IDictionary<uint, HashSet<CollectionSource>> target,
-        uint itemID,
-        CollectionSourceCategory category,
-        uint? sourceID = null) =>
+        uint                                         itemID,
+        CollectionSourceCategory                     category,
+        uint?                                        sourceID = null
+    ) =>
         target.TryGetValue(itemID, out var sources) &&
         sources.Any(source =>
             source.Category == category &&
             (!sourceID.HasValue || source.SourceID == sourceID.Value));
 
-    private static void AddSourceIfMissing(
+    private static void AddSourceIfMissing
+    (
         IDictionary<uint, HashSet<CollectionSource>> target,
-        uint itemID,
-        CollectionSource source)
+        uint                                         itemID,
+        CollectionSource                             source
+    )
     {
         if (!HasSource(target, itemID, source.Category, source.SourceID))
         {
@@ -250,10 +266,12 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private static void ReplaceSource(
+    private static void ReplaceSource
+    (
         IDictionary<uint, HashSet<CollectionSource>> target,
-        uint itemID,
-        CollectionSource source)
+        uint                                         itemID,
+        CollectionSource                             source
+    )
     {
         if (!target.TryGetValue(itemID, out var sources))
         {
@@ -277,10 +295,12 @@ public sealed partial class CollectionSourceService
         sources.Add(source);
     }
 
-    private static void AddSource(
+    private static void AddSource
+    (
         IDictionary<uint, HashSet<CollectionSource>> target,
-        uint id,
-        CollectionSource source)
+        uint                                         id,
+        CollectionSource                             source
+    )
     {
         if (!target.TryGetValue(id, out var sources))
         {
@@ -291,8 +311,10 @@ public sealed partial class CollectionSourceService
         sources.Add(source);
     }
 
-    private static FrozenDictionary<uint, IReadOnlyList<CollectionSource>> Freeze(
-        IDictionary<uint, HashSet<CollectionSource>> source) =>
+    private static FrozenDictionary<uint, IReadOnlyList<CollectionSource>> Freeze
+    (
+        IDictionary<uint, HashSet<CollectionSource>> source
+    ) =>
         source.ToFrozenDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<CollectionSource>)pair.Value

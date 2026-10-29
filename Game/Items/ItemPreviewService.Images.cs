@@ -13,8 +13,8 @@ namespace OmniToolbox.Items;
 
 public sealed unsafe partial class ItemPreviewService
 {
-    private readonly Dictionary<(uint HairstyleID, uint ItemID), uint> hairstyleIconCache = [];
-    private (byte Tribe, byte Sex)? hairstyleIconCachePlayer;
+    private readonly Dictionary<(uint HairstyleID, uint ItemID), uint> hairstyleIconCache       = [];
+    private (byte Tribe, byte Sex)?                                    hairstyleIconCachePlayer;
 
     public uint ResolveCollectionIcon(CollectionEntry item)
     {
@@ -42,18 +42,20 @@ public sealed unsafe partial class ItemPreviewService
             return iconID;
         }
 
-        iconID = ResolveHairstyleForIcon(item.ID, character)?.Icon ?? item.IconID;
+        iconID                  = ResolveHairstyleForIcon(item.ID, character)?.Icon ?? item.IconID;
         hairstyleIconCache[key] = iconID;
         return iconID;
     }
 
-    internal ItemPreviewImageLookup ResolveImagePreview(
-        uint itemID,
+    internal ItemPreviewImageLookup ResolveImagePreview
+    (
+        uint                   itemID,
         ItemImagePreviewConfig config,
-        out ItemPreviewImage preview)
+        out ItemPreviewImage   preview
+    )
     {
         preview = default;
-        itemID = ItemUtil.GetBaseId(itemID).ItemId;
+        itemID  = ItemUtil.GetBaseId(itemID).ItemId;
         if (itemID == 0)
         {
             return ItemPreviewImageLookup.NotFound;
@@ -91,10 +93,12 @@ public sealed unsafe partial class ItemPreviewService
         return ItemPreviewImageLookup.NotFound;
     }
 
-    private bool TryResolveDirectImage(
-        uint itemID,
+    private bool TryResolveDirectImage
+    (
+        uint                   itemID,
         ItemImagePreviewConfig config,
-        out ItemPreviewImage preview)
+        out ItemPreviewImage   preview
+    )
     {
         preview = default;
         if (config.ShowPaintings &&
@@ -166,9 +170,11 @@ public sealed unsafe partial class ItemPreviewService
         }
     }
 
-    private static CharaMakeCustomize? ResolveHairstyleForIcon(
-        uint hairstyleID,
-        Character* character)
+    private static CharaMakeCustomize? ResolveHairstyleForIcon
+    (
+        uint       hairstyleID,
+        Character* character
+    )
     {
         if (ResolveHairstyle(hairstyleID, character) is not { } hairstyle)
         {
@@ -178,6 +184,33 @@ public sealed unsafe partial class ItemPreviewService
         return hairstyle.Icon is 0 or 131_094 ? null : hairstyle;
     }
 
-    private static string BuildImageTexturePath(uint iconID, bool highResolution) =>
+    private static string BuildImageTexturePath
+    (
+        uint iconID,
+        bool highResolution
+    ) =>
         $"ui/icon/{iconID / 1000 * 1000:000000}/{iconID:000000}{(highResolution ? "_hr1" : string.Empty)}.tex";
+
+    internal readonly record struct ItemPreviewImage
+    (
+        string               TexturePath,
+        ItemPreviewImageKind Kind,
+        bool                 IsUnlocked
+    );
+
+    internal enum ItemPreviewImageKind
+    {
+        Painting,
+        Mount,
+        Minion,
+        Hairstyle,
+        FashionAccessory
+    }
+
+    internal enum ItemPreviewImageLookup
+    {
+        Found,
+        Pending,
+        NotFound
+    }
 }

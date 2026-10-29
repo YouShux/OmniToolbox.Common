@@ -2,9 +2,9 @@ namespace OmniToolbox.UI.Theme;
 
 public sealed class ComicStyleScope : IDisposable
 {
-    private readonly int colorCount;
+    private readonly int                  colorCount;
     private readonly OmniTheme.ScaleScope scale;
-    private bool disposed;
+    private bool                          disposed;
 
     public ComicStyleScope()
     {
@@ -150,20 +150,32 @@ public sealed class ComicStyleScope : IDisposable
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, OmniTheme.Scale(tokens.BorderThickness));
 
-        void PushColor(ImGuiCol target, Vector4 color)
+        void PushColor
+        (
+            ImGuiCol target,
+            Vector4  color
+        )
         {
             ImGui.PushStyleColor(target, color);
             pushedColors++;
         }
     }
 
-    private static Vector4 Lighten(Vector4 color, float amount) => new(
+    private static Vector4 Lighten
+    (
+        Vector4 color,
+        float   amount
+    ) => new(
         Math.Clamp(color.X + amount, 0f, 1f),
         Math.Clamp(color.Y + amount, 0f, 1f),
         Math.Clamp(color.Z + amount, 0f, 1f),
         color.W);
 
-    private static Vector4 Darken(Vector4 color, float amount) => new(
+    private static Vector4 Darken
+    (
+        Vector4 color,
+        float   amount
+    ) => new(
         Math.Clamp(color.X - amount, 0f, 1f),
         Math.Clamp(color.Y - amount, 0f, 1f),
         Math.Clamp(color.Z - amount, 0f, 1f),

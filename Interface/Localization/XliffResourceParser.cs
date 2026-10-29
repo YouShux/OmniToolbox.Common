@@ -11,7 +11,11 @@ internal static class XliffResourceParser
 {
     private static readonly Regex PlaceholderPattern = new(@"\{\d+(?:[^{}]*)\}", RegexOptions.CultureInvariant);
 
-    internal static FrozenDictionary<string, string> Parse(Stream stream, UILanguage language = UILanguage.SimplifiedChinese)
+    internal static FrozenDictionary<string, string> Parse
+    (
+        Stream     stream,
+        UILanguage language = UILanguage.SimplifiedChinese
+    )
     {
         var code = UILanguages.GetCode(language);
         var required = language is UILanguage.SimplifiedChinese or UILanguage.TraditionalChinese;
@@ -54,7 +58,11 @@ internal static class XliffResourceParser
         return CopyTexts(result, !required);
     }
 
-    internal static FrozenDictionary<string, string> CopyTexts(IReadOnlyDictionary<string, string> texts, bool allowEmpty = false)
+    internal static FrozenDictionary<string, string> CopyTexts
+    (
+        IReadOnlyDictionary<string, string> texts,
+        bool                                allowEmpty = false
+    )
     {
         ArgumentNullException.ThrowIfNull(texts);
         if (!allowEmpty && texts.Count == 0)
@@ -79,8 +87,12 @@ internal static class XliffResourceParser
         return copy.ToFrozenDictionary(StringComparer.Ordinal);
     }
 
-    internal static void ValidateTranslation(IReadOnlyDictionary<string, string> source,
-        IReadOnlyDictionary<string, string> translation, bool requireComplete)
+    internal static void ValidateTranslation
+    (
+        IReadOnlyDictionary<string, string> source,
+        IReadOnlyDictionary<string, string> translation,
+        bool                                requireComplete
+    )
     {
         if (translation.Keys.Any(key => !source.ContainsKey(key)))
             throw new InvalidDataException("Localization translation contains an unknown source key.");

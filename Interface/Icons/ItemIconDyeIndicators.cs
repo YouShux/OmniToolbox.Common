@@ -15,7 +15,13 @@ internal static class ItemIconDyeIndicators
 {
     private static ISharedImmediateTexture? IndicatorTexture;
 
-    public static unsafe void Apply(IconNode icon, uint itemID, byte stain0 = 0, byte stain1 = 0)
+    public static unsafe void Apply
+    (
+        IconNode icon,
+        uint     itemID,
+        byte     stain0 = 0,
+        byte     stain1 = 0
+    )
     {
         var dyeCount = GetDyeCount(itemID);
         var component = icon.Component;
@@ -31,15 +37,17 @@ internal static class ItemIconDyeIndicators
         }
     }
 
-    public static void Draw(
+    public static void Draw
+    (
         ImDrawListPtr drawList,
-        uint itemID,
-        Vector2 position,
-        Vector2 size,
-        bool drawFrame,
-        Vector4 tint,
-        byte stain0 = 0,
-        byte stain1 = 0)
+        uint          itemID,
+        Vector2       position,
+        Vector2       size,
+        bool          drawFrame,
+        Vector4       tint,
+        byte          stain0 = 0,
+        byte          stain1 = 0
+    )
     {
         var dyeCount = GetDyeCount(itemID);
         if (dyeCount == 0)

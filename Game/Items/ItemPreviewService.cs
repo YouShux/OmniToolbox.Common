@@ -20,28 +20,28 @@ namespace OmniToolbox.Items;
 
 public sealed unsafe partial class ItemPreviewService : IDisposable
 {
-    private readonly Dictionary<uint, PreviewTarget> itemPreviewTargets;
-    private readonly Dictionary<DrawDataContainer.EquipmentSlot, EquipmentModelId> originalEquipment = [];
-    private readonly Dictionary<DrawDataContainer.WeaponSlot, WeaponModelId> originalWeapons = [];
-    private ushort? originalGlassesID;
-    private ushort? originalMountID;
-    private CharacterModelState? originalMountCharacterState;
-    private ushort? originalCompanionID;
-    private ushort? originalOrnamentID;
-    private CustomizeData? originalHairAppearance;
-    private bool hasHairColorPreview;
-    private uint? previewHairstyleID;
-    private byte? previewHairstyleFeatureID;
-    private CharacterActionState? originalEmoteState;
-    private BardingPreviewState? originalBardingState;
-    private uint lastTerritoryID;
-    private nint lastPlayerAddress;
+    private readonly Dictionary<uint, PreviewTarget>                               itemPreviewTargets;
+    private readonly Dictionary<DrawDataContainer.EquipmentSlot, EquipmentModelId> originalEquipment           = [];
+    private readonly Dictionary<DrawDataContainer.WeaponSlot, WeaponModelId>       originalWeapons             = [];
+    private ushort?                                                                originalGlassesID;
+    private ushort?                                                                originalMountID;
+    private CharacterModelState?                                                   originalMountCharacterState;
+    private ushort?                                                                originalCompanionID;
+    private ushort?                                                                originalOrnamentID;
+    private CustomizeData?                                                         originalHairAppearance;
+    private bool                                                                   hasHairColorPreview;
+    private uint?                                                                  previewHairstyleID;
+    private byte?                                                                  previewHairstyleFeatureID;
+    private CharacterActionState?                                                  originalEmoteState;
+    private BardingPreviewState?                                                   originalBardingState;
+    private uint                                                                   lastTerritoryID;
+    private nint                                                                   lastPlayerAddress;
 
     public ItemPreviewService()
     {
         itemPreviewTargets = BuildPreviewIndex();
-        lastTerritoryID = DService.Instance().ClientState.TerritoryType;
-        lastPlayerAddress = GetLocalPlayerAddress();
+        lastTerritoryID    = DService.Instance().ClientState.TerritoryType;
+        lastPlayerAddress  = GetLocalPlayerAddress();
     }
 
     public bool CanTryOn(uint? itemID) =>
@@ -112,7 +112,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         }
 
         ClearPreview();
-        lastTerritoryID = territoryID;
+        lastTerritoryID   = territoryID;
         lastPlayerAddress = playerAddress;
     }
 
@@ -225,17 +225,17 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
 
         originalWeapons.Clear();
         originalEquipment.Clear();
-        originalGlassesID = null;
-        originalMountID = null;
+        originalGlassesID           = null;
+        originalMountID             = null;
         originalMountCharacterState = null;
-        originalCompanionID = null;
-        originalOrnamentID = null;
-        originalHairAppearance = null;
-        hasHairColorPreview = false;
-        previewHairstyleID = null;
-        previewHairstyleFeatureID = null;
-        originalEmoteState = null;
-        originalBardingState = null;
+        originalCompanionID         = null;
+        originalOrnamentID          = null;
+        originalHairAppearance      = null;
+        hasHairColorPreview         = false;
+        previewHairstyleID          = null;
+        previewHairstyleFeatureID   = null;
+        originalEmoteState          = null;
+        originalBardingState        = null;
     }
 
     public void Dispose() => ClearPreview();
@@ -382,7 +382,13 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         }
     }
 
-    public bool PreviewEquipment(uint itemID, int slot = -1, byte stain0 = 0, byte stain1 = 0)
+    public bool PreviewEquipment
+    (
+        uint itemID,
+        int  slot = -1,
+        byte stain0 = 0,
+        byte stain1 = 0
+    )
     {
         if (!TryGetLocalCharacterForPreview(out var character) ||
             !LuminaGetter.TryGetRow<Item>(itemID, out var item) ||
@@ -419,7 +425,13 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         return true;
     }
 
-    public bool IsEquipmentPreviewApplied(uint itemID, int slot = -1, byte stain0 = 0, byte stain1 = 0)
+    public bool IsEquipmentPreviewApplied
+    (
+        uint itemID,
+        int  slot = -1,
+        byte stain0 = 0,
+        byte stain1 = 0
+    )
     {
         var character = CanUseDirectPreview() ? GetLocalCharacter() : null;
         if (character == null ||
@@ -536,7 +548,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         }
 
         originalHairAppearance ??= character->DrawData.CustomizeData;
-        previewHairstyleID = hairstyleID;
+        previewHairstyleID        = hairstyleID;
         previewHairstyleFeatureID = (byte)hairstyle.FeatureID;
         ApplyHairstyle(character, previewHairstyleFeatureID.Value);
         return true;
@@ -563,12 +575,18 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         }
 
         ApplyHairstyle(character, originalHairAppearance.Value.Hairstyle);
-        previewHairstyleID = null;
+        previewHairstyleID        = null;
         previewHairstyleFeatureID = null;
         return true;
     }
 
-    public bool PreviewHairAppearance(uint hairstyleID, byte? hairColor, byte? highlightColor, bool? highlightsEnabled)
+    public bool PreviewHairAppearance
+    (
+        uint  hairstyleID,
+        byte? hairColor,
+        byte? highlightColor,
+        bool? highlightsEnabled
+    )
     {
         if (!TryGetLocalCharacterForPreview(out var character) || !TryGetOriginalHairAppearance(out var customize))
             return false;
@@ -584,22 +602,28 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         if (!hasHairColorPreview && (hairColor.HasValue || highlightColor.HasValue || highlightsEnabled.HasValue))
         {
             var original = originalHairAppearance.Value;
-            original.HairColor = customize.HairColor;
+            original.HairColor       = customize.HairColor;
             original.HighlightsColor = customize.HighlightsColor;
-            original.Highlights = customize.Highlights;
-            originalHairAppearance = original;
-            hasHairColorPreview = true;
+            original.Highlights      = customize.Highlights;
+            originalHairAppearance   = original;
+            hasHairColorPreview      = true;
         }
 
-        customize.HairColor = hairColor ?? customize.HairColor;
+        customize.HairColor       = hairColor ?? customize.HairColor;
         customize.HighlightsColor = highlightColor ?? customize.HighlightsColor;
-        customize.Highlights = highlightsEnabled ?? customize.Highlights;
-        previewHairstyleID = hairstyleID == 0 ? null : hairstyleID;
+        customize.Highlights      = highlightsEnabled ?? customize.Highlights;
+        previewHairstyleID        = hairstyleID == 0 ? null : hairstyleID;
         previewHairstyleFeatureID = hairstyleID == 0 ? null : customize.Hairstyle;
         return ApplyHairAppearance(character, customize);
     }
 
-    public bool IsHairAppearancePreviewApplied(uint hairstyleID, byte? hairColor, byte? highlightColor, bool? highlightsEnabled)
+    public bool IsHairAppearancePreviewApplied
+    (
+        uint  hairstyleID,
+        byte? hairColor,
+        byte? highlightColor,
+        bool? highlightsEnabled
+    )
     {
         var character = CanUseDirectPreview() ? GetLocalCharacter() : null;
         if (character == null || !TryGetOriginalHairAppearance(out var expected))
@@ -612,9 +636,9 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             expected.Hairstyle = previewHairstyleFeatureID.Value;
         }
 
-        expected.HairColor = hairColor ?? expected.HairColor;
+        expected.HairColor       = hairColor ?? expected.HairColor;
         expected.HighlightsColor = highlightColor ?? expected.HighlightsColor;
-        expected.Highlights = highlightsEnabled ?? expected.Highlights;
+        expected.Highlights      = highlightsEnabled ?? expected.Highlights;
         var draw = ((GameObject*)character)->GetCharacterBase();
         return draw != null && draw->GetModelType() == CharacterBase.ModelType.Human &&
                HairAppearanceMatches(character->DrawData.CustomizeData, expected) &&
@@ -641,16 +665,20 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             customize.Hairstyle = original.Hairstyle;
             if (hasHairColorPreview)
             {
-                customize.HairColor = original.HairColor;
+                customize.HairColor       = original.HairColor;
                 customize.HighlightsColor = original.HighlightsColor;
-                customize.Highlights = original.Highlights;
+                customize.Highlights      = original.Highlights;
             }
         }
 
         return true;
     }
 
-    internal static bool HairAppearanceMatches(CustomizeData actual, CustomizeData expected) =>
+    internal static bool HairAppearanceMatches
+    (
+        CustomizeData actual,
+        CustomizeData expected
+    ) =>
         actual.Hairstyle == expected.Hairstyle && actual.HairColor == expected.HairColor &&
         actual.HighlightsColor == expected.HighlightsColor && actual.Highlights == expected.Highlights;
 
@@ -679,7 +707,11 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         return true;
     }
 
-    private static void PlayLocalEmote(Character* character, Emote emote)
+    private static void PlayLocalEmote
+    (
+        Character* character,
+        Emote      emote
+    )
     {
         var intro = (ushort)emote.ActionTimeline[1].RowId;
         var loop = (ushort)emote.ActionTimeline[0].RowId;
@@ -704,9 +736,11 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         }
     }
 
-    private static CharaMakeCustomize? ResolveHairstyle(
-        uint hairstyleID,
-        Character* character)
+    private static CharaMakeCustomize? ResolveHairstyle
+    (
+        uint       hairstyleID,
+        Character* character
+    )
     {
         if (!LuminaGetter.TryGetRow<CharaMakeCustomize>(hairstyleID, out var selected))
         {
@@ -739,7 +773,12 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         return null;
     }
 
-    private static CharaMakeCustomize? GetHairstyleVariant(uint unlockLink, byte tribe, byte sex)
+    private static CharaMakeCustomize? GetHairstyleVariant
+    (
+        uint unlockLink,
+        byte tribe,
+        byte sex
+    )
     {
         if (unlockLink == 0)
         {
@@ -773,14 +812,22 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         return null;
     }
 
-    private static void ApplyHairstyle(Character* character, byte hairstyleID)
+    private static void ApplyHairstyle
+    (
+        Character* character,
+        byte       hairstyleID
+    )
     {
         var customize = character->DrawData.CustomizeData;
         customize.Hairstyle = hairstyleID;
         ApplyHairAppearance(character, customize);
     }
 
-    private static bool ApplyHairAppearance(Character* character, CustomizeData appearance)
+    private static bool ApplyHairAppearance
+    (
+        Character*    character,
+        CustomizeData appearance
+    )
     {
         var characterBase = ((GameObject*)character)->GetCharacterBase();
         if (characterBase == null || characterBase->GetModelType() != CharacterBase.ModelType.Human)
@@ -789,10 +836,10 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         }
 
         var customize = character->DrawData.CustomizeData;
-        customize.Hairstyle = appearance.Hairstyle;
-        customize.HairColor = appearance.HairColor;
+        customize.Hairstyle       = appearance.Hairstyle;
+        customize.HairColor       = appearance.HairColor;
         customize.HighlightsColor = appearance.HighlightsColor;
-        customize.Highlights = appearance.Highlights;
+        customize.Highlights      = appearance.Highlights;
         var drawData = new Human.DrawData
         {
             CustomizeData = customize
@@ -832,7 +879,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             return;
         }
 
-        lastTerritoryID = DService.Instance().ClientState.TerritoryType;
+        lastTerritoryID   = DService.Instance().ClientState.TerritoryType;
         lastPlayerAddress = GetLocalPlayerAddress();
     }
 
@@ -890,7 +937,11 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         return null;
     }
 
-    private static Character* GetLocalChocobo(uint entityID, uint ownerID)
+    private static Character* GetLocalChocobo
+    (
+        uint entityID,
+        uint ownerID
+    )
     {
         var gameObject = DService.Instance().ObjectTable.SearchByEntityID(entityID);
         return gameObject is not null && IsLocalChocobo(gameObject.ToStruct(), ownerID)
@@ -898,7 +949,11 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             : null;
     }
 
-    private static bool IsLocalChocobo(GameObject* gameObject, uint ownerID) =>
+    private static bool IsLocalChocobo
+    (
+        GameObject* gameObject,
+        uint        ownerID
+    ) =>
         gameObject != null &&
         gameObject->ObjectKind == ObjectKind.BattleNpc &&
         gameObject->BattleNpcSubKind == BattleNpcSubKind.Buddy &&
@@ -913,10 +968,14 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         UnscaledRadius = character->ModelContainer.UnscaledRadius
     };
 
-    private static void RestoreCharacterModelState(Character* character, CharacterModelState state)
+    private static void RestoreCharacterModelState
+    (
+        Character*          character,
+        CharacterModelState state
+    )
     {
-        character->ModelScale = state.ModelScale;
-        character->ModelContainer.ModelScaleId = state.ModelScaleID;
+        character->ModelScale                    = state.ModelScale;
+        character->ModelContainer.ModelScaleId   = state.ModelScaleID;
         character->ModelContainer.UnscaledRadius = state.UnscaledRadius;
         character->SetMode(state.Mode, state.ModeParam);
     }
@@ -927,13 +986,21 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         ModeParam = character->ModeParam
     };
 
-    private static void RestoreCharacterActionState(Character* character, CharacterActionState state)
+    private static void RestoreCharacterActionState
+    (
+        Character*           character,
+        CharacterActionState state
+    )
     {
         character->Timeline.TimelineSequencer.PlayTimeline(3);
         character->SetMode(state.Mode, state.ModeParam);
     }
 
-    private static void RestoreCharacterDrawState(Character* character, bool resetMode)
+    private static void RestoreCharacterDrawState
+    (
+        Character* character,
+        bool       resetMode
+    )
     {
         var gameObject = (GameObject*)character;
         gameObject->EnableDraw();
@@ -973,7 +1040,11 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         chocobo->DrawData.LoadEquipment(DrawDataContainer.EquipmentSlot.Feet, &feet, true);
     }
 
-    private static void ApplyBarding(Character* chocobo, BuddyEquip barding)
+    private static void ApplyBarding
+    (
+        Character* chocobo,
+        BuddyEquip barding
+    )
     {
         if (barding.ModelTop != 0)
         {
@@ -991,10 +1062,12 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         }
     }
 
-    private static void ApplyBardingSlot(
-        Character* chocobo,
+    private static void ApplyBardingSlot
+    (
+        Character*                      chocobo,
         DrawDataContainer.EquipmentSlot slot,
-        uint modelValue)
+        uint                            modelValue
+    )
     {
         var current = chocobo->DrawData.Equipment(slot);
         var model = new EquipmentModelId
@@ -1007,9 +1080,11 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         chocobo->DrawData.LoadEquipment(slot, &model, true);
     }
 
-    private static bool TryGetWeaponSlot(
-        EquipSlotCategory equipSlotCategory,
-        out DrawDataContainer.WeaponSlot slot)
+    private static bool TryGetWeaponSlot
+    (
+        EquipSlotCategory                equipSlotCategory,
+        out DrawDataContainer.WeaponSlot slot
+    )
     {
         if (equipSlotCategory.MainHand > 0)
         {
@@ -1027,10 +1102,12 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         return false;
     }
 
-    private static bool TryGetEquipmentSlot(
-        EquipSlotCategory equipSlotCategory,
-        int inventorySlot,
-        out DrawDataContainer.EquipmentSlot slot)
+    private static bool TryGetEquipmentSlot
+    (
+        EquipSlotCategory                   equipSlotCategory,
+        int                                 inventorySlot,
+        out DrawDataContainer.EquipmentSlot slot
+    )
     {
         if (equipSlotCategory.Head > 0)
         {
@@ -1092,7 +1169,12 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         return false;
     }
 
-    private static EquipmentModelId BuildEquipmentModel(Item item, byte stain0, byte stain1) => new()
+    private static EquipmentModelId BuildEquipmentModel
+    (
+        Item item,
+        byte stain0,
+        byte stain1
+    ) => new()
     {
         Id = (ushort)item.ModelMain,
         Variant = (byte)(item.ModelMain >> 16),
@@ -1100,7 +1182,12 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         Stain1 = stain1
     };
 
-    private static WeaponModelId BuildWeaponModel(Item item, byte stain0, byte stain1) => new()
+    private static WeaponModelId BuildWeaponModel
+    (
+        Item item,
+        byte stain0,
+        byte stain1
+    ) => new()
     {
         Id = (ushort)item.ModelMain,
         Type = (ushort)(item.ModelMain >> 16),
@@ -1119,20 +1206,32 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         Glasses = 37312
     }
 
-    private readonly record struct PreviewTarget(CollectionType Type, uint ID);
+    private readonly record struct PreviewTarget
+    (
+        CollectionType Type,
+        uint           ID
+    );
 
-    private readonly record struct CharacterModelState(
+    private readonly record struct CharacterModelState
+    (
         CharacterModes Mode,
-        byte ModeParam,
-        float ModelScale,
-        byte ModelScaleID,
-        float UnscaledRadius);
+        byte           ModeParam,
+        float          ModelScale,
+        byte           ModelScaleID,
+        float          UnscaledRadius
+    );
 
-    private readonly record struct CharacterActionState(CharacterModes Mode, byte ModeParam);
+    private readonly record struct CharacterActionState
+    (
+        CharacterModes Mode,
+        byte           ModeParam
+    );
 
-    private readonly record struct BardingPreviewState(
-        uint EntityID,
+    private readonly record struct BardingPreviewState
+    (
+        uint             EntityID,
         EquipmentModelId Head,
         EquipmentModelId Body,
-        EquipmentModelId Feet);
+        EquipmentModelId Feet
+    );
 }

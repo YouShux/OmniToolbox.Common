@@ -32,7 +32,7 @@ public static class CopyShortcut
         var framework = Framework.Instance();
         if (framework is not null)
         {
-            framework->KeyboardInputs.KeyState[(int)SeVirtualKey.C] = default;
+            framework->KeyboardInputs.KeyState[(int)SeVirtualKey.C]  = default;
             framework->KeyboardInputs2.KeyState[(int)SeVirtualKey.C] = default;
         }
     }

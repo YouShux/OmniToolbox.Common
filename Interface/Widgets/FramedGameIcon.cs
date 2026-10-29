@@ -10,31 +10,43 @@ namespace OmniToolbox.UI.Controls;
 
 internal static class FramedGameIcon
 {
-    private static readonly Vector4 DimmedTint = new(0.55f, 0.55f, 0.55f, 1f);
+    private static readonly Vector4         DimmedTint              = new(0.55f, 0.55f, 0.55f, 1f);
     private static ISharedImmediateTexture? ActiveTexture;
     private static ISharedImmediateTexture? CollectionStatusTexture;
     private static ISharedImmediateTexture? FrameTexture;
 
-    public static void DrawItem(LuminaItem item, Vector2 size, byte stain0 = 0, byte stain1 = 0) =>
+    public static void DrawItem
+    (
+        LuminaItem item,
+        Vector2    size,
+        byte       stain0 = 0,
+        byte       stain1 = 0
+    ) =>
         DrawAtCursor(item.Icon, size, !ItemCategoryMap.IsCurrency(item), item.RowId, stain0, stain1);
 
-    public static void DrawAction(LuminaAction action, Vector2 size) =>
+    public static void DrawAction
+    (
+        LuminaAction action,
+        Vector2      size
+    ) =>
         DrawAtCursor(action.Icon, size, !action.IsPvP);
 
-    public static void Draw(
-        uint iconID,
-        Vector2 position,
-        Vector2 size,
-        bool itemHQ = false,
-        bool dimmed = false,
-        Vector4? tint = null,
-        bool active = false,
-        bool drawFrame = true,
-        bool preserveAspectRatio = false,
-        uint itemID = 0,
-        byte stain0 = 0,
-        byte stain1 = 0,
-        IReadOnlyList<(byte Stain0, byte Stain1)>? recordedStains = null) =>
+    public static void Draw
+    (
+        uint                                       iconID,
+        Vector2                                    position,
+        Vector2                                    size,
+        bool                                       itemHQ = false,
+        bool                                       dimmed = false,
+        Vector4?                                   tint = null,
+        bool                                       active = false,
+        bool                                       drawFrame = true,
+        bool                                       preserveAspectRatio = false,
+        uint                                       itemID = 0,
+        byte                                       stain0 = 0,
+        byte                                       stain1 = 0,
+        IReadOnlyList<(byte Stain0, byte Stain1)>? recordedStains = null
+    ) =>
         Draw(
             ImGui.GetWindowDrawList(),
             iconID,
@@ -51,21 +63,23 @@ internal static class FramedGameIcon
             stain1,
             recordedStains);
 
-    public static void Draw(
-        ImDrawListPtr drawList,
-        uint iconID,
-        Vector2 position,
-        Vector2 size,
-        bool itemHQ = false,
-        bool dimmed = false,
-        Vector4? tint = null,
-        bool active = false,
-        bool drawFrame = true,
-        bool preserveAspectRatio = false,
-        uint itemID = 0,
-        byte stain0 = 0,
-        byte stain1 = 0,
-        IReadOnlyList<(byte Stain0, byte Stain1)>? recordedStains = null)
+    public static void Draw
+    (
+        ImDrawListPtr                              drawList,
+        uint                                       iconID,
+        Vector2                                    position,
+        Vector2                                    size,
+        bool                                       itemHQ = false,
+        bool                                       dimmed = false,
+        Vector4?                                   tint = null,
+        bool                                       active = false,
+        bool                                       drawFrame = true,
+        bool                                       preserveAspectRatio = false,
+        uint                                       itemID = 0,
+        byte                                       stain0 = 0,
+        byte                                       stain1 = 0,
+        IReadOnlyList<(byte Stain0, byte Stain1)>? recordedStains = null
+    )
     {
         if (recordedStains is { Count: > 0 })
             (stain0, stain1) = recordedStains[0];
@@ -138,7 +152,13 @@ internal static class FramedGameIcon
         }
     }
 
-    public static void DrawFrame(ImDrawListPtr drawList, Vector2 position, Vector2 size, bool active = false)
+    public static void DrawFrame
+    (
+        ImDrawListPtr drawList,
+        Vector2       position,
+        Vector2       size,
+        bool          active = false
+    )
     {
         if (TryGetFrame(out var frame))
         {
@@ -166,11 +186,13 @@ internal static class FramedGameIcon
             OmniTheme.Color(Vector4.One));
     }
 
-    public static void DrawCollectedCheck(
+    public static void DrawCollectedCheck
+    (
         ImDrawListPtr drawList,
-        Vector2 position,
-        Vector2 size,
-        float maxSize)
+        Vector2       position,
+        Vector2       size,
+        float         maxSize
+    )
     {
         var checkSize = Math.Clamp(
             MathF.Min(size.X, size.Y) * 0.5f,
@@ -186,11 +208,13 @@ internal static class FramedGameIcon
             true);
     }
 
-    public static void DrawCollectionStatus(
+    public static void DrawCollectionStatus
+    (
         ImDrawListPtr drawList,
-        Vector2 min,
-        Vector2 max,
-        bool collected)
+        Vector2       min,
+        Vector2       max,
+        bool          collected
+    )
     {
         if (GetCollectionStatusTexture() is not { } texture)
         {
@@ -200,7 +224,11 @@ internal static class FramedGameIcon
         DrawCollectionStatus(drawList, texture, min, max, collected);
     }
 
-    public static bool DrawCollectionStatusAtCursor(Vector2 size, bool collected)
+    public static bool DrawCollectionStatusAtCursor
+    (
+        Vector2 size,
+        bool    collected
+    )
     {
         if (GetCollectionStatusTexture() is not { } texture)
         {
@@ -215,12 +243,14 @@ internal static class FramedGameIcon
 
     public static bool IsCollectionStatusAvailable => GetCollectionStatusTexture() is not null;
 
-    private static void DrawCollectionStatus(
-        ImDrawListPtr drawList,
+    private static void DrawCollectionStatus
+    (
+        ImDrawListPtr       drawList,
         IDalamudTextureWrap texture,
-        Vector2 min,
-        Vector2 max,
-        bool collected) => drawList.AddImage(
+        Vector2             min,
+        Vector2             max,
+        bool                collected
+    ) => drawList.AddImage(
             texture.Handle,
             min,
             max,
@@ -233,8 +263,15 @@ internal static class FramedGameIcon
         return CollectionStatusTexture.GetWrapOrDefault();
     }
 
-    private static void DrawAtCursor(
-        uint iconID, Vector2 size, bool drawFrame, uint itemID = 0, byte stain0 = 0, byte stain1 = 0)
+    private static void DrawAtCursor
+    (
+        uint    iconID,
+        Vector2 size,
+        bool    drawFrame,
+        uint    itemID = 0,
+        byte    stain0 = 0,
+        byte    stain1 = 0
+    )
     {
         var position = ImGui.GetCursorScreenPos();
         ImGui.Dummy(size);

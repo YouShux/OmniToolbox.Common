@@ -4,7 +4,12 @@ namespace OmniToolbox.Operations;
 
 public static class OperationResponse
 {
-    public static JsonObject Request(bool accepted, OperationSnapshot? operation, string rejectionError = "request_rejected") => new()
+    public static JsonObject Request
+    (
+        bool               accepted,
+        OperationSnapshot? operation,
+        string             rejectionError = "request_rejected"
+    ) => new()
     {
         ["available"] = true,
         ["accepted"] = accepted,

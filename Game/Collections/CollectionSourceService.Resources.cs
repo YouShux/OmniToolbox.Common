@@ -18,17 +18,19 @@ public sealed partial class CollectionSourceService
     private static readonly Regex BlueMageChineseNumberSpacingRegex = new(
         @"(?<=[\p{IsCJKUnifiedIdeographs}])\s+(?=\d)|(?<=\d)\s+(?=[\p{IsCJKUnifiedIdeographs}])",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex BlueMageBossNumberRegex = new(
+    private static readonly Regex BlueMageBossNumberRegex           = new(
         @"BOSS\s*#\s*(\d+)(?=\p{IsCJKUnifiedIdeographs})",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static (
         FrozenSet<uint> UnobtainableItemIds,
         Dictionary<uint, HashSet<CollectionSource>> ItemSources,
-        Dictionary<uint, HashSet<uint>> BlindBoxDropPools) ReadWikiItemSources(
-            JsonDocument? preparedDocument = null,
+        Dictionary<uint, HashSet<uint>> BlindBoxDropPools) ReadWikiItemSources
+        (
+            JsonDocument?                      preparedDocument = null,
             IReadOnlyDictionary<uint, string>? preparedQuestNames = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken                  cancellationToken = default
+        )
     {
         using var document = preparedDocument is null ? ReadDocument("WikiItemSources.json") : null;
         var root = (preparedDocument ?? document ?? throw new InvalidOperationException()).RootElement;
@@ -184,8 +186,12 @@ public sealed partial class CollectionSourceService
             blindBoxDropPools);
     }
 
-    private static bool TryGetQuestName(uint questID, IReadOnlyDictionary<uint, string>? preparedNames,
-        out string name)
+    private static bool TryGetQuestName
+    (
+        uint                               questID,
+        IReadOnlyDictionary<uint, string>? preparedNames,
+        out string                         name
+    )
     {
         if (preparedNames is not null)
         {
@@ -238,9 +244,11 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private static void AddMogStationSource(
+    private static void AddMogStationSource
+    (
         IDictionary<uint, HashSet<CollectionSource>> target,
-        uint itemID)
+        uint                                         itemID
+    )
     {
         if (itemID == 0 || itemID is 12995 or 43587)
         {
@@ -260,12 +268,14 @@ public sealed partial class CollectionSourceService
             string.Empty));
     }
 
-    private static string FormatBlueMageDetail(
+    private static string FormatBlueMageDetail
+    (
         string location,
         float? x,
         float? y,
-        uint? level,
-        string note)
+        uint?  level,
+        string note
+    )
     {
         var parts = new List<string>(3);
         if (location.Length != 0)

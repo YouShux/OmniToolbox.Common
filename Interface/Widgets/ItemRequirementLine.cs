@@ -9,7 +9,11 @@ namespace OmniToolbox.UI.Controls;
 
 public static class ItemRequirementLine
 {
-    public static void Draw(uint? itemID, decimal patch)
+    public static void Draw
+    (
+        uint?   itemID,
+        decimal patch
+    )
     {
         var hasPart = false;
         var lineStart = ImGui.GetCursorPosX();
@@ -42,7 +46,11 @@ public static class ItemRequirementLine
                 neutral);
         }
 
-        void DrawPart(string text, Vector4 color)
+        void DrawPart
+        (
+            string  text,
+            Vector4 color
+        )
         {
             if (hasPart)
             {

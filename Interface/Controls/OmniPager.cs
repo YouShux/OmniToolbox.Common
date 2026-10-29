@@ -6,10 +6,17 @@ public static class OmniPager
 {
     private static readonly List<(int Value, string Label)> PageTokens = new(MAX_PAGE_TOKENS);
 
-    public static void Draw(string id, ref int page, ref int jumpPage, int itemCount, int pageSize)
+    public static void Draw
+    (
+        string  id,
+        ref int page,
+        ref int jumpPage,
+        int     itemCount,
+        int     pageSize
+    )
     {
         var pageCount = Math.Max(1, (itemCount + pageSize - 1) / pageSize);
-        page = Math.Clamp(page, 1, pageCount);
+        page     = Math.Clamp(page, 1, pageCount);
         jumpPage = Math.Clamp(jumpPage, 1, pageCount);
         ImGui.PushID(id);
         PageTokens.Clear();

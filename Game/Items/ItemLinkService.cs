@@ -21,10 +21,10 @@ public static unsafe class ItemLinkService
         try
         {
             agent->LinkedItem.Clear();
-            agent->LinkedItem.ItemId = itemID;
-            agent->LinkedItem.Quantity = 1;
-            agent->LinkedItem.Container = InventoryType.Invalid;
-            agent->LinkedItem.Slot = -1;
+            agent->LinkedItem.ItemId            = itemID;
+            agent->LinkedItem.Quantity          = 1;
+            agent->LinkedItem.Container         = InventoryType.Invalid;
+            agent->LinkedItem.Slot              = -1;
             agent->LinkedItem.LinkedItemQuality = item.Rarity;
             agent->LinkedItemName.SetString(item.Name.ExtractText());
             agent->ContextItemId = itemID;

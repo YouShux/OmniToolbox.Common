@@ -6,28 +6,33 @@ using OmenTools.Extensions;
 using OmenTools.Interop.Game.Helpers;
 using OmniToolbox.Config;
 using OmniToolbox.Host;
-using TreeTools.Lifecycle;
 using OmniToolbox.UI.Controls;
 using OmniToolbox.UI.Theme;
+using TreeTools.Lifecycle;
+using static OmniToolbox.Items.ItemPreviewService;
 
 namespace OmniToolbox.Items;
 
 internal sealed unsafe class ItemDetailImagePreview : IDisposable
 {
     private readonly ItemImagePreviewConfig config;
-    private readonly ItemPreviewService itemPreviewService;
-    private readonly AddonEventRegistry addonEvents = new(DalamudServices.AddonLifecycle);
-    private ISharedImmediateTexture? previewTexture;
-    private ItemPreviewImage? preview;
-    private uint currentItemID;
-    private long nextRetryTick;
-    private bool lookupPending;
-    private bool drawRegistered;
-    private bool disposed;
+    private readonly ItemPreviewService     itemPreviewService;
+    private readonly AddonEventRegistry     addonEvents        = new(DalamudServices.AddonLifecycle);
+    private ISharedImmediateTexture?        previewTexture;
+    private ItemPreviewImage?               preview;
+    private uint                            currentItemID;
+    private long                            nextRetryTick;
+    private bool                            lookupPending;
+    private bool                            drawRegistered;
+    private bool                            disposed;
 
-    public ItemDetailImagePreview(ItemImagePreviewConfig config, ItemPreviewService itemPreviewService)
+    public ItemDetailImagePreview
+    (
+        ItemImagePreviewConfig config,
+        ItemPreviewService     itemPreviewService
+    )
     {
-        this.config = config;
+        this.config             = config;
         this.itemPreviewService = itemPreviewService;
 
         try
@@ -77,9 +82,17 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
         }
     }
 
-    private void OnItemDetailUpdate(AddonEvent _, AddonArgs args) => UpdateCurrentItem(false);
+    private void OnItemDetailUpdate
+    (
+        AddonEvent _,
+        AddonArgs  args
+    ) => UpdateCurrentItem(false);
 
-    private void OnItemDetailFinalize(AddonEvent _, AddonArgs args) => ClearCurrentItem();
+    private void OnItemDetailFinalize
+    (
+        AddonEvent _,
+        AddonArgs  args
+    ) => ClearCurrentItem();
 
     private void UpdateCurrentItem(bool force)
     {
@@ -207,7 +220,7 @@ internal sealed unsafe class ItemDetailImagePreview : IDisposable
 
     private void ClearImage()
     {
-        preview = null;
+        preview        = null;
         previewTexture = null;
     }
 

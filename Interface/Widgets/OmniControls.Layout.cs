@@ -9,7 +9,11 @@ namespace OmniToolbox.UI.Controls;
 
 public static partial class OmniControls
 {
-    public static unsafe void SetNextAutoResizeWindowSizeConstraints(Vector2 minimumSize, Vector2 maximumSize)
+    public static unsafe void SetNextAutoResizeWindowSizeConstraints
+    (
+        Vector2 minimumSize,
+        Vector2 maximumSize
+    )
     {
         // ImGui 会向下取整窗口尺寸，向上取整内容尺寸以容纳缩放后的非整数内边距。
         maximumSize.X = MathF.Floor(maximumSize.X);
@@ -19,14 +23,31 @@ public static partial class OmniControls
                 MathF.Ceiling(data->DesiredSize.X), MathF.Ceiling(data->DesiredSize.Y)));
     }
 
-    public static ImRaii.TableDisposable DataTable(string id, ReadOnlySpan<string> labels,
-        ReadOnlySpan<float> minimumWidths, ReadOnlySpan<float> desiredWidths, out bool detailLayout,
-        ImGuiTableFlags flags, Vector2 size = default, int stretchColumn = 0) =>
+    public static ImRaii.TableDisposable DataTable
+    (
+        string               id,
+        ReadOnlySpan<string> labels,
+        ReadOnlySpan<float>  minimumWidths,
+        ReadOnlySpan<float>  desiredWidths,
+        out bool             detailLayout,
+        ImGuiTableFlags      flags,
+        Vector2              size = default,
+        int                  stretchColumn = 0
+    ) =>
         DataTable(id, labels, minimumWidths, desiredWidths, out detailLayout, flags, -1, size, stretchColumn);
 
-    public static unsafe ImRaii.TableDisposable DataTable(string id, ReadOnlySpan<string> labels,
-        ReadOnlySpan<float> minimumWidths, ReadOnlySpan<float> desiredWidths, out bool detailLayout,
-        ImGuiTableFlags flags, int secondStretchColumn, Vector2 size = default, int stretchColumn = 0)
+    public static unsafe ImRaii.TableDisposable DataTable
+    (
+        string               id,
+        ReadOnlySpan<string> labels,
+        ReadOnlySpan<float>  minimumWidths,
+        ReadOnlySpan<float>  desiredWidths,
+        out bool             detailLayout,
+        ImGuiTableFlags      flags,
+        int                  secondStretchColumn,
+        Vector2              size = default,
+        int                  stretchColumn = 0
+    )
     {
         var width = size.X > 0f ? size.X : ImGui.GetContentRegionAvail().X;
         var contentWidth = width - ImGui.GetStyle().CellPadding.X * labels.Length * 2f - labels.Length - 1f;
@@ -90,7 +111,7 @@ public static partial class OmniControls
                 }
                 if (secondStretchColumn >= 0)
                 {
-                    nativeTable.Columns.Data[stretchColumn].StretchWeight = 1f;
+                    nativeTable.Columns.Data[stretchColumn].StretchWeight       = 1f;
                     nativeTable.Columns.Data[secondStretchColumn].StretchWeight = 1f;
                 }
                 // 固定列使用像素宽度；布局变化或旧宽度失效时更新，稳定布局保留手动列宽。
@@ -112,11 +133,19 @@ public static partial class OmniControls
         return table;
     }
 
-    public static int ColumnsThatFit(int maximumColumns, float minimumWidth) =>
+    public static int ColumnsThatFit
+    (
+        int   maximumColumns,
+        float minimumWidth
+    ) =>
         Math.Clamp((int)(ImGui.GetContentRegionAvail().X /
             MathF.Max(1f, minimumWidth + ImGui.GetStyle().CellPadding.X * 2f)), 1, maximumColumns);
 
-    public static void NextTableField(string label, bool detailLayout)
+    public static void NextTableField
+    (
+        string label,
+        bool   detailLayout
+    )
     {
         ImGui.TableNextColumn();
         if (detailLayout)
@@ -126,7 +155,11 @@ public static partial class OmniControls
         }
     }
 
-    public static unsafe void TableWorldNameCentered(string worldName, float contentHeight)
+    public static unsafe void TableWorldNameCentered
+    (
+        string worldName,
+        float  contentHeight
+    )
     {
         using var rented = new RentedSeStringBuilder();
         var icon = rented.Builder
@@ -158,7 +191,7 @@ public static partial class OmniControls
         }
 
         style.TargetDrawList = ImGui.GetWindowDrawList();
-        style.ScreenOffset = new Vector2(groupLeft, textTop + textCenter - iconSize.Y * 0.5f);
+        style.ScreenOffset   = new Vector2(groupLeft, textTop + textCenter - iconSize.Y * 0.5f);
         ImGuiHelpers.SeStringWrapped(icon, style);
         ImGui.GetWindowDrawList().AddText(
             ImGui.GetFont(), ImGui.GetFontSize(),
@@ -168,18 +201,34 @@ public static partial class OmniControls
         ImGui.Dummy(new Vector2(0f, height));
     }
 
-    public static bool WrappedSelectable(string label, bool selected = false,
-        ImGuiSelectableFlags flags = ImGuiSelectableFlags.None, Vector2 size = default)
+    public static bool WrappedSelectable
+    (
+        string               label,
+        bool                 selected = false,
+        ImGuiSelectableFlags flags = ImGuiSelectableFlags.None,
+        Vector2              size = default
+    )
         => DrawSelectable(label, selected, flags, size, true, false);
 
-    public static ImRaii.TableDisposable SettingsTable(string id, ReadOnlySpan<Vector2> groups,
-        ReadOnlySpan<string> labels, ReadOnlySpan<float> weights = default,
-        ImGuiTableFlags flags = ImGuiTableFlags.SizingStretchProp) =>
+    public static ImRaii.TableDisposable SettingsTable
+    (
+        string                id,
+        ReadOnlySpan<Vector2> groups,
+        ReadOnlySpan<string>  labels,
+        ReadOnlySpan<float>   weights = default,
+        ImGuiTableFlags       flags = ImGuiTableFlags.SizingStretchProp
+    ) =>
         SettingsTable(id, groups, labels, 0, weights, flags);
 
-    public static unsafe ImRaii.TableDisposable SettingsTable(string id, ReadOnlySpan<Vector2> groups,
-        ReadOnlySpan<string> labels, int columnsPerRow, ReadOnlySpan<float> weights = default,
-        ImGuiTableFlags flags = ImGuiTableFlags.SizingStretchProp)
+    public static unsafe ImRaii.TableDisposable SettingsTable
+    (
+        string                id,
+        ReadOnlySpan<Vector2> groups,
+        ReadOnlySpan<string>  labels,
+        int                   columnsPerRow,
+        ReadOnlySpan<float>   weights = default,
+        ImGuiTableFlags       flags = ImGuiTableFlags.SizingStretchProp
+    )
     {
         var layoutColumns = columnsPerRow > 0 ? columnsPerRow : groups.Length;
         var groupCount = groups.Length;
@@ -207,7 +256,7 @@ public static partial class OmniControls
                     columnWeights[column] = MathF.Max(columnWeights[column], weights.IsEmpty ? 1f : weights[index]);
             }
             requiredWidth = innerPadding * (columns - 1) + outerPadding;
-            totalWeight = 0f;
+            totalWeight   = 0f;
             for (var index = 0; index < columns; index++)
             {
                 requiredWidth += widths[index];
@@ -278,7 +327,11 @@ public static partial class OmniControls
             ImGui.NewLine();
     }
 
-    public static Vector2 MeasureCheckbox(string label, float controlSize = 0f)
+    public static Vector2 MeasureCheckbox
+    (
+        string label,
+        float  controlSize = 0f
+    )
     {
         var side = MathF.Max(ImGui.GetTextLineHeight(), controlSize > 0f ? controlSize : OmniTheme.CheckboxSize());
         var text = DisplayLabel(label);
@@ -287,7 +340,11 @@ public static partial class OmniControls
             MathF.Max(side, textSize.Y));
     }
 
-    public static Vector2 MeasureTableHeader(string label, bool hasTooltip = false)
+    public static Vector2 MeasureTableHeader
+    (
+        string label,
+        bool   hasTooltip = false
+    )
     {
         var size = ImGui.CalcTextSize(DisplayLabel(label));
         if (hasTooltip)
@@ -299,19 +356,32 @@ public static partial class OmniControls
         return new(MathF.Ceiling(size.X), MathF.Ceiling(size.Y));
     }
 
-    public static Vector2 MeasureTableHeader(string label, string status)
+    public static Vector2 MeasureTableHeader
+    (
+        string label,
+        string status
+    )
     {
         var size = MeasureGroup([ImGui.CalcTextSize(DisplayLabel(label)), ImGui.CalcTextSize($"[{status}]")], OmniTheme.Scale(4f));
         return new(MathF.Ceiling(size.X), MathF.Ceiling(size.Y));
     }
 
-    public static Vector2 MeasureCombo(string preview, float minimumWidth = 0f)
+    public static Vector2 MeasureCombo
+    (
+        string preview,
+        float  minimumWidth = 0f
+    )
     {
         var height = MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight());
         return new(MathF.Max(minimumWidth, ImGui.CalcTextSize(preview).X + ImGui.GetStyle().FramePadding.X * 2f + height), height);
     }
 
-    public static Vector2 MeasureInput(string displayText, float minimumWidth = 0f, int step = 0)
+    public static Vector2 MeasureInput
+    (
+        string displayText,
+        float  minimumWidth = 0f,
+        int    step = 0
+    )
     {
         var height = MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight());
         var width = MathF.Max(minimumWidth, ImGui.CalcTextSize(displayText).X + ImGui.GetStyle().FramePadding.X * 2f);
@@ -322,13 +392,23 @@ public static partial class OmniControls
         return new(width, height);
     }
 
-    public static Vector2 MeasureSteppedInput(string displayText, float minimumWidth = 0f)
+    public static Vector2 MeasureSteppedInput
+    (
+        string displayText,
+        float  minimumWidth = 0f
+    )
     {
         var input = MeasureInput(displayText, minimumWidth);
         return MeasureGroup([input, new(input.Y), new(input.Y)], OmniTheme.Scale(6f));
     }
 
-    public static Vector2 MeasureFloatInput(float value, string format, float minimumWidth = 0f, bool stepped = false)
+    public static Vector2 MeasureFloatInput
+    (
+        float  value,
+        string format,
+        float  minimumWidth = 0f,
+        bool   stepped = false
+    )
     {
         Span<byte> buffer = stackalloc byte[64];
         var formatted = ImGui.DataTypeFormatString(buffer, value, format);
@@ -336,14 +416,23 @@ public static partial class OmniControls
             minimumWidth, stepped ? 1 : 0);
     }
 
-    public static Vector2 MeasureIntInput(int value, string format, float minimumWidth = 0f)
+    public static Vector2 MeasureIntInput
+    (
+        int    value,
+        string format,
+        float  minimumWidth = 0f
+    )
     {
         Span<byte> buffer = stackalloc byte[64];
         var formatted = ImGui.DataTypeFormatString(buffer, value, format);
         return MeasureInput(Encoding.UTF8.GetString(formatted), minimumWidth);
     }
 
-    public static Vector2 MeasureGroup(ReadOnlySpan<Vector2> sizes, float spacing = -1f)
+    public static Vector2 MeasureGroup
+    (
+        ReadOnlySpan<Vector2> sizes,
+        float                 spacing = -1f
+    )
     {
         spacing = spacing < 0f ? ImGui.GetStyle().ItemSpacing.X : spacing;
         var size = Vector2.Zero;
@@ -356,7 +445,11 @@ public static partial class OmniControls
     }
 
     // 参数为已测量的屏幕尺寸；只调整下一组的位置，不提交控件或改变最后项目。
-    public static void SameLineOrWrap(float nextWidth, float spacing = -1f)
+    public static void SameLineOrWrap
+    (
+        float nextWidth,
+        float spacing = -1f
+    )
     {
         spacing = spacing < 0f ? ImGui.GetStyle().ItemSpacing.X : spacing;
         var right = ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X;
@@ -366,7 +459,12 @@ public static partial class OmniControls
         }
     }
 
-    public static float WrappedGroupHeight(ReadOnlySpan<Vector2> sizes, float width, float spacing = -1f)
+    public static float WrappedGroupHeight
+    (
+        ReadOnlySpan<Vector2> sizes,
+        float                 width,
+        float                 spacing = -1f
+    )
     {
         spacing = spacing < 0f ? ImGui.GetStyle().ItemSpacing.X : spacing;
         var rowWidth = 0f;
@@ -377,7 +475,7 @@ public static partial class OmniControls
             if (rowWidth > 0f && rowWidth + spacing + size.X > width + 1f)
             {
                 height += rowHeight + ImGui.GetStyle().ItemSpacing.Y;
-                rowWidth = 0f;
+                rowWidth  = 0f;
                 rowHeight = 0f;
             }
             rowWidth += (rowWidth == 0f ? 0f : spacing) + size.X;
@@ -386,8 +484,14 @@ public static partial class OmniControls
         return height + rowHeight;
     }
 
-    public static bool FitColumns(ReadOnlySpan<float> minimum, ReadOnlySpan<float> desired, float width, Span<float> result,
-        int stretchColumn = -1)
+    public static bool FitColumns
+    (
+        ReadOnlySpan<float> minimum,
+        ReadOnlySpan<float> desired,
+        float               width,
+        Span<float>         result,
+        int                 stretchColumn = -1
+    )
     {
         width = MathF.Floor(width);
         var minimumSum = 0f;

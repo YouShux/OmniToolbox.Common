@@ -8,10 +8,10 @@ namespace OmniToolbox.Commands;
 
 public static class OmniCommandCatalog
 {
-    private static readonly Lazy<FrozenDictionary<string, OmniCommandDefinition>> Aliases = new(CreateAliases);
-    private static readonly Regex CommandTextPattern = new(@"(?<prefix>/omni[ \t]+)(?<name>\S+)",
+    private static readonly Lazy<FrozenDictionary<string, OmniCommandDefinition>> Aliases            = new(CreateAliases);
+    private static readonly Regex                                                 CommandTextPattern = new(@"(?<prefix>/omni[ \t]+)(?<name>\S+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    private static CommandDisplayMode DisplayMode;
+    private static CommandDisplayMode                                             DisplayMode;
 
     public static void SetDisplayMode(CommandDisplayMode value) => DisplayMode = value;
 
@@ -35,7 +35,11 @@ public static class OmniCommandCatalog
         return (text[..end], text[end..].TrimStart());
     }
 
-    public static bool TryParseScenarioDestination(string arguments, out uint territoryID)
+    public static bool TryParseScenarioDestination
+    (
+        string   arguments,
+        out uint territoryID
+    )
     {
         var text = arguments.Trim();
         territoryID = text.ToLowerInvariant() switch
@@ -48,21 +52,33 @@ public static class OmniCommandCatalog
             && territoryID != 0;
     }
 
-    public static string Format(string canonicalName, string arguments = "")
+    public static string Format
+    (
+        string canonicalName,
+        string arguments = ""
+    )
     {
         var definition = Find(canonicalName) ?? throw new ArgumentException("Unknown Omni command.", nameof(canonicalName));
         return arguments.Length == 0 ? $"/omni {definition.Name}" : $"/omni {definition.Name} {arguments}";
     }
 
     /// <summary>使用稳定模块名生成可供显示、复制和解析的模块指令。</summary>
-    public static string FormatModule(string moduleName, string arguments = "")
+    public static string FormatModule
+    (
+        string moduleName,
+        string arguments = ""
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(moduleName);
         if (moduleName.Any(char.IsWhiteSpace)) throw new ArgumentException("Module command names cannot contain whitespace.", nameof(moduleName));
         return arguments.Length == 0 ? $"/omni {moduleName}" : $"/omni {moduleName} {arguments}";
     }
 
-    public static string FormatDisplayText(string text, UILanguage? language = null)
+    public static string FormatDisplayText
+    (
+        string      text,
+        UILanguage? language = null
+    )
     {
         if (!text.Contains("/omni", StringComparison.OrdinalIgnoreCase))
             return text;

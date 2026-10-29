@@ -1,22 +1,22 @@
-using TreeTools.Text;
 using Lumina.Excel.Sheets;
 using OmenTools;
 using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.UI.Theme;
+using TreeTools.Text;
 
 namespace OmniToolbox.UI.Controls;
 
 public sealed class TerritorySelector
 {
-    private static readonly List<TerritoryOption> TerritoryOptions = [];
-    private static readonly HashSet<uint> TerritoryOptionIDs = [];
-    private static bool TerritoryOptionsLoaded;
+    private static readonly List<TerritoryOption> TerritoryOptions       = [];
+    private static readonly HashSet<uint>         TerritoryOptionIDs     = [];
+    private static bool                           TerritoryOptionsLoaded;
 
-    private readonly string id;
-    private readonly List<TerritoryOption> visibleTerritoryOptions = [];
-    private string search = string.Empty;
-    private string? visibleQuery;
-    private readonly HashSet<uint> visibleSelection = [];
+    private readonly string                                                                                 id;
+    private readonly List<TerritoryOption>                                                                  visibleTerritoryOptions = [];
+    private string                                                                                          search                  = string.Empty;
+    private string?                                                                                         visibleQuery;
+    private readonly HashSet<uint>                                                                          visibleSelection        = [];
     private (float MapWidth, float RegionWidth, float BaseHeight, float FontSize, nint Font, float Height)? estimatedLayout;
     private (float MapWidth, float RegionWidth, float BaseHeight, float FontSize, nint Font, float Height)? actualLayout;
 
@@ -25,7 +25,11 @@ public sealed class TerritorySelector
         this.id = id;
     }
 
-    public bool Draw(HashSet<uint> selectedTerritoryIds, string emptyText)
+    public bool Draw
+    (
+        HashSet<uint> selectedTerritoryIds,
+        string        emptyText
+    )
     {
         EnsureTerritoryOptions();
         var changed = TerritoryOptionIDs.Count > 0 &&
@@ -204,9 +208,11 @@ public sealed class TerritorySelector
         return changed;
     }
 
-    private IReadOnlyList<TerritoryOption> GetVisibleTerritories(
+    private IReadOnlyList<TerritoryOption> GetVisibleTerritories
+    (
         HashSet<uint> selectedTerritoryIds,
-        string query)
+        string        query
+    )
     {
         if (visibleQuery == query && visibleSelection.SetEquals(selectedTerritoryIds))
             return visibleTerritoryOptions;
@@ -238,7 +244,13 @@ public sealed class TerritorySelector
         return visibleTerritoryOptions;
     }
 
-    private unsafe float MeasureRowHeight(float mapWidth, float regionWidth, float baseHeight, bool actual)
+    private unsafe float MeasureRowHeight
+    (
+        float mapWidth,
+        float regionWidth,
+        float baseHeight,
+        bool  actual
+    )
     {
         ref var cached = ref (actual ? ref actualLayout : ref estimatedLayout);
         var font = (nint)ImGui.GetFont().Handle;
@@ -317,10 +329,14 @@ public sealed class TerritorySelector
         return string.Format(OmniLoc.Get("Common.TerritorySelector.Fallback"), territoryID);
     }
 
-    private static string BuildRegionText(string regionName, string zoneName)
+    private static string BuildRegionText
+    (
+        string regionName,
+        string zoneName
+    )
     {
         regionName = regionName.Trim();
-        zoneName = zoneName.Trim();
+        zoneName   = zoneName.Trim();
         if (regionName.Length == 0)
         {
             return zoneName;
@@ -331,5 +347,11 @@ public sealed class TerritorySelector
             : $"{regionName} / {zoneName}";
     }
 
-    private readonly record struct TerritoryOption(uint ID, string Name, string Region, string SearchText);
+    private readonly record struct TerritoryOption
+    (
+        uint   ID,
+        string Name,
+        string Region,
+        string SearchText
+    );
 }

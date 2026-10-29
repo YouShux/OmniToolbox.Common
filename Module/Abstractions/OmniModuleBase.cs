@@ -5,8 +5,8 @@ using OmenTools;
 using OmniToolbox.Common.Module.Models;
 using OmniToolbox.Common.Module.Runtime;
 using OmniToolbox.Config;
-using TreeTools.Lifecycle;
 using OmniToolbox.UI;
+using TreeTools.Lifecycle;
 
 namespace OmniToolbox.Common.Module.Abstractions;
 
@@ -17,16 +17,16 @@ public abstract class OmniModuleBase : IAsyncDisposable
 {
     public abstract ModuleInfo Info { get; }
 
-    private readonly List<OmniModuleBase> ownedChildren = [];
-    private readonly List<IDisposable> childRegistrations = [];
-    private bool disposed;
-    private readonly object disposalLock = new();
-    private bool disposing;
-    private Task? disposalTask;
-    private FeatureLifetime? activation;
-    private FeatureLifetime? instanceLifetime;
-    private bool activationDisabled;
-    private Action<uint>? iconSelection;
+    private readonly List<OmniModuleBase> ownedChildren      = [];
+    private readonly List<IDisposable>    childRegistrations = [];
+    private bool                          disposed;
+    private readonly object               disposalLock       = new();
+    private bool                          disposing;
+    private Task?                         disposalTask;
+    private FeatureLifetime?              activation;
+    private FeatureLifetime?              instanceLifetime;
+    private bool                          activationDisabled;
+    private Action<uint>?                 iconSelection;
 
     internal OmniLoc.ModuleRegistration? LocalizationRegistration { get; set; }
 
@@ -88,7 +88,11 @@ public abstract class OmniModuleBase : IAsyncDisposable
 
     public virtual bool HasSettings => false;
 
-    internal async Task SetEnabledAsync(bool enabled, Func<Action, Task> dispatcher)
+    internal async Task SetEnabledAsync
+    (
+        bool               enabled,
+        Func<Action, Task> dispatcher
+    )
     {
         ArgumentNullException.ThrowIfNull(dispatcher);
         ObjectDisposedException.ThrowIf(disposed, this);
@@ -130,7 +134,11 @@ public abstract class OmniModuleBase : IAsyncDisposable
     /// </summary>
     public virtual bool TryHandleCommand(string arguments) => false;
 
-    public virtual bool TryHandleCommand(string command, string arguments) => TryHandleCommand(arguments);
+    public virtual bool TryHandleCommand
+    (
+        string command,
+        string arguments
+    ) => TryHandleCommand(arguments);
 
     public bool InterruptAutomation()
     {
@@ -155,8 +163,8 @@ public abstract class OmniModuleBase : IAsyncDisposable
             if (disposed)
                 return Task.CompletedTask;
 
-            disposing = true;
-            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            disposing    = true;
+            completion   = new(TaskCreationOptions.RunContinuationsAsynchronously);
             disposalTask = completion.Task;
         }
 
@@ -176,14 +184,22 @@ public abstract class OmniModuleBase : IAsyncDisposable
         childRegistrations.Add(registration);
     }
 
-    protected Task SetChildEnabledAsync(OmniModuleBase child, bool enabled)
+    protected Task SetChildEnabledAsync
+    (
+        OmniModuleBase child,
+        bool           enabled
+    )
     {
         if (enabled && !child.SupportsLanguage(OmniLoc.CurrentLanguage))
             throw new InvalidOperationException(OmniLoc.Get("Localization.ModuleUnavailable"));
         return child.SetEnabledAsync(enabled, Dispatch);
     }
 
-    protected void RequestEnabled(bool enabled, bool affectConfig = false)
+    protected void RequestEnabled
+    (
+        bool enabled,
+        bool affectConfig = false
+    )
     {
         var request = StateChangeRequest
             ?? throw new InvalidOperationException("The host has not provided module operation requests.");
@@ -233,7 +249,7 @@ public abstract class OmniModuleBase : IAsyncDisposable
         if (activation is not null)
             throw new InvalidOperationException("The previous activation has not been cleaned up.");
 
-        activation = new();
+        activation         = new();
         activationDisabled = false;
         OnStart(activation);
     }
@@ -297,7 +313,11 @@ public abstract class OmniModuleBase : IAsyncDisposable
             throw new AggregateException("The module failed to dispose.", errors);
     }
 
-    private async Task CompleteDisposalAsync(TaskCompletionSource completion, Func<Action, Task> dispatcher)
+    private async Task CompleteDisposalAsync
+    (
+        TaskCompletionSource completion,
+        Func<Action, Task>   dispatcher
+    )
     {
         try
         {
@@ -319,13 +339,13 @@ public abstract class OmniModuleBase : IAsyncDisposable
         finally
         {
             LocalizationRegistration = null;
-            HostIconBrowser = null;
-            SaveHostConfig = null;
-            StateChangeRequest = null;
-            ErrorReporter = null;
-            EnabledChanged = null;
-            IsEnabled = false;
-            disposed = true;
+            HostIconBrowser          = null;
+            SaveHostConfig           = null;
+            StateChangeRequest       = null;
+            ErrorReporter            = null;
+            EnabledChanged           = null;
+            IsEnabled                = false;
+            disposed                 = true;
         }
     }
 
@@ -375,7 +395,11 @@ public abstract class OmniModuleBase : IAsyncDisposable
         }
     }
 
-    private static void Capture(List<Exception> errors, Action operation)
+    private static void Capture
+    (
+        List<Exception> errors,
+        Action          operation
+    )
     {
         try
         {
@@ -387,7 +411,11 @@ public abstract class OmniModuleBase : IAsyncDisposable
         }
     }
 
-    private static async Task CaptureAsync(List<Exception> errors, Func<Task> operation)
+    private static async Task CaptureAsync
+    (
+        List<Exception> errors,
+        Func<Task>      operation
+    )
     {
         try
         {

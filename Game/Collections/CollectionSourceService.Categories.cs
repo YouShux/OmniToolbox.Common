@@ -137,10 +137,12 @@ public sealed partial class CollectionSourceService
         return categories;
     }
 
-    private FrozenDictionary<uint, FrozenSet<CollectionSourceCategory>> ResolveCategories(
+    private FrozenDictionary<uint, FrozenSet<CollectionSourceCategory>> ResolveCategories
+    (
         Dictionary<uint, HashSet<CollectionSourceCategory>> categories,
-        IReadOnlyDictionary<uint, HashSet<uint>> dependencies,
-        CancellationToken cancellationToken = default)
+        IReadOnlyDictionary<uint, HashSet<uint>>            dependencies,
+        CancellationToken                                   cancellationToken = default
+    )
     {
         PropagateCategories(categories, dependencies, cancellationToken);
         foreach (var (setItemID, memberItemIDs) in itemSetItemIDs)
@@ -163,10 +165,12 @@ public sealed partial class CollectionSourceService
             .ToFrozenDictionary(pair => pair.Key, pair => pair.Value.ToFrozenSet());
     }
 
-    private static void PropagateCategories(
+    private static void PropagateCategories
+    (
         Dictionary<uint, HashSet<CollectionSourceCategory>> categories,
-        IReadOnlyDictionary<uint, HashSet<uint>> dependencies,
-        CancellationToken cancellationToken = default)
+        IReadOnlyDictionary<uint, HashSet<uint>>            dependencies,
+        CancellationToken                                   cancellationToken = default
+    )
     {
         for (var depth = 0; depth < 10; depth++)
         {
@@ -206,8 +210,10 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private static Dictionary<uint, HashSet<uint>> BuildWikiShopDependencies(
-        IReadOnlyDictionary<uint, HashSet<CollectionSource>> itemRows)
+    private static Dictionary<uint, HashSet<uint>> BuildWikiShopDependencies
+    (
+        IReadOnlyDictionary<uint, HashSet<CollectionSource>> itemRows
+    )
     {
         var dependencies = new Dictionary<uint, HashSet<uint>>();
         foreach (var (itemId, sources) in itemRows)
@@ -229,8 +235,10 @@ public sealed partial class CollectionSourceService
         return dependencies;
     }
 
-    private static FrozenDictionary<uint, IReadOnlyList<uint>> BuildExchangeTargetsByCostItemID(
-        IReadOnlyDictionary<uint, HashSet<uint>> dependencies)
+    private static FrozenDictionary<uint, IReadOnlyList<uint>> BuildExchangeTargetsByCostItemID
+    (
+        IReadOnlyDictionary<uint, HashSet<uint>> dependencies
+    )
     {
         var targetsByCostItemID = new Dictionary<uint, HashSet<uint>>();
         foreach (var (targetItemID, costItemIDs) in dependencies)
@@ -246,10 +254,12 @@ public sealed partial class CollectionSourceService
             pair => (IReadOnlyList<uint>)Array.AsReadOnly(pair.Value.Order().ToArray()));
     }
 
-    private static void AddWikiGilCategories(
+    private static void AddWikiGilCategories
+    (
         IDictionary<uint, HashSet<CollectionSourceCategory>> categories,
         IReadOnlyDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, Item> itemsByID)
+        IReadOnlyDictionary<uint, Item>                      itemsByID
+    )
     {
         foreach (var (itemId, sources) in itemRows)
         {
@@ -269,7 +279,11 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    internal static bool TryGetWikiShopRequirements(string detail, out string requirements)
+    internal static bool TryGetWikiShopRequirements
+    (
+        string     detail,
+        out string requirements
+    )
     {
         const string REQUIRED_PREFIX = "所需：";
         var startIndex = detail.IndexOf(REQUIRED_PREFIX, StringComparison.Ordinal);
@@ -286,9 +300,11 @@ public sealed partial class CollectionSourceService
         return requirements.Length != 0;
     }
 
-    private static Dictionary<uint, HashSet<CollectionSourceCategory>> BuildCategorySeeds(
+    private static Dictionary<uint, HashSet<CollectionSourceCategory>> BuildCategorySeeds
+    (
         IReadOnlyDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, ContentFinderCondition> contentFinderConditions)
+        IReadOnlyDictionary<uint, ContentFinderCondition>    contentFinderConditions
+    )
     {
         var categories = new Dictionary<uint, HashSet<CollectionSourceCategory>>(itemRows.Count);
         foreach (var (itemId, sources) in itemRows)
@@ -314,9 +330,11 @@ public sealed partial class CollectionSourceService
         return categories;
     }
 
-    private static CollectionSourceCategory GetDutyCategory(
-        uint contentID,
-        IReadOnlyDictionary<uint, ContentFinderCondition> contentFinderConditions)
+    private static CollectionSourceCategory GetDutyCategory
+    (
+        uint                                              contentID,
+        IReadOnlyDictionary<uint, ContentFinderCondition> contentFinderConditions
+    )
     {
         if (!contentFinderConditions.TryGetValue(contentID, out var condition))
         {
@@ -333,10 +351,12 @@ public sealed partial class CollectionSourceService
         };
     }
 
-    private static FrozenSet<uint> BuildOpeningStageRestrictedItems(
+    private static FrozenSet<uint> BuildOpeningStageRestrictedItems
+    (
         IReadOnlyDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, HashSet<uint>> dependencies,
-        IReadOnlyDictionary<uint, ContentFinderCondition> contentFinderConditions)
+        IReadOnlyDictionary<uint, HashSet<uint>>             dependencies,
+        IReadOnlyDictionary<uint, ContentFinderCondition>    contentFinderConditions
+    )
     {
         var restrictedItems = itemRows
             .Where(pair => pair.Value.Any(source =>
@@ -350,9 +370,11 @@ public sealed partial class CollectionSourceService
         return ExpandOpeningStageRestrictedItems(restrictedItems, dependencies);
     }
 
-    private static FrozenSet<uint> ExpandOpeningStageRestrictedItems(
-        IEnumerable<uint> seeds,
-        IReadOnlyDictionary<uint, HashSet<uint>> dependencies)
+    private static FrozenSet<uint> ExpandOpeningStageRestrictedItems
+    (
+        IEnumerable<uint>                        seeds,
+        IReadOnlyDictionary<uint, HashSet<uint>> dependencies
+    )
     {
         var restrictedItems = seeds.ToHashSet();
         for (var depth = 0; depth < 10; depth++)
@@ -375,9 +397,11 @@ public sealed partial class CollectionSourceService
         return restrictedItems.ToFrozenSet();
     }
 
-    private static void AddCurrencyCategories(
+    private static void AddCurrencyCategories
+    (
         IDictionary<uint, HashSet<CollectionSourceCategory>> categories,
-        IEnumerable<Item> items)
+        IEnumerable<Item>                                    items
+    )
     {
         for (var index = 0; index < FixedCurrencyCategories.Length; index++)
         {
@@ -449,10 +473,12 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private static void AddCategory(
+    private static void AddCategory
+    (
         IDictionary<uint, HashSet<CollectionSourceCategory>> categories,
-        uint itemID,
-        CollectionSourceCategory category)
+        uint                                                 itemID,
+        CollectionSourceCategory                             category
+    )
     {
         if (!categories.TryGetValue(itemID, out var values))
         {
@@ -463,10 +489,12 @@ public sealed partial class CollectionSourceService
         values.Add(category);
     }
 
-    private static void AddDependency(
+    private static void AddDependency
+    (
         IDictionary<uint, HashSet<uint>> dependencies,
-        uint itemID,
-        uint sourceItemID)
+        uint                             itemID,
+        uint                             sourceItemID
+    )
     {
         if (itemID == 0 || sourceItemID == 0 || itemID == sourceItemID)
         {

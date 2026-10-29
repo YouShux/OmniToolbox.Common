@@ -4,8 +4,8 @@ namespace OmniToolbox.UI.Theme;
 
 public static class GlassMotion
 {
-    private static readonly Dictionary<ulong, State> States = [];
-    private static readonly List<ulong> Expired = [];
+    private static readonly Dictionary<ulong, State> States  = [];
+    private static readonly List<ulong>              Expired = [];
 
     public static UIMotionMode Mode { get; internal set; }
 
@@ -16,7 +16,14 @@ public static class GlassMotion
     internal static unsafe bool IsDisabled =>
         (new ImGuiContextPtr(ImGui.GetCurrentContext()).CurrentItemFlags & ImGuiItemFlags.Disabled) != 0;
 
-    public static float Value(uint id, uint channel, float target, float duration, bool spring = false)
+    public static float Value
+    (
+        uint  id,
+        uint  channel,
+        float target,
+        float duration,
+        bool  spring = false
+    )
     {
         if (!OmniTheme.UsesMaterial || Mode == UIMotionMode.Off)
         {
@@ -27,7 +34,7 @@ public static class GlassMotion
         var frame = ImGui.GetFrameCount();
         if (!States.TryGetValue(key, out var state) || frame - state.Frame > 1)
         {
-            state = new State { Value = target, Frame = frame };
+            state       = new State { Value = target, Frame = frame };
             States[key] = state;
             return target;
         }
@@ -37,7 +44,7 @@ public static class GlassMotion
         }
         if (MathF.Abs(state.Value - target) < 0.0001f && MathF.Abs(state.Velocity) < 0.0001f)
         {
-            state.Value = target;
+            state.Value    = target;
             state.Velocity = 0f;
         }
         else
@@ -50,7 +57,7 @@ public static class GlassMotion
                 var displacement = state.Value - target;
                 var impulse = state.Velocity + speed * displacement;
                 var decay = MathF.Exp(-speed * dt);
-                state.Value = target + (displacement + impulse * dt) * decay;
+                state.Value    = target + (displacement + impulse * dt) * decay;
                 state.Velocity = (state.Velocity - speed * impulse * dt) * decay;
             }
             else
@@ -69,7 +76,13 @@ public static class GlassMotion
         => ControlFill(CurrentItemID, normal,
             ImGui.IsItemHovered() || ImGui.IsItemFocused(), ImGui.IsItemActive());
 
-    internal static Vector4 ControlFill(uint id, Vector4 normal, bool hovered, bool active)
+    internal static Vector4 ControlFill
+    (
+        uint    id,
+        Vector4 normal,
+        bool    hovered,
+        bool    active
+    )
     {
         hovered &= !IsDisabled;
         active &= !IsDisabled;
@@ -80,7 +93,7 @@ public static class GlassMotion
         if (!OmniTheme.IsGlass)
         {
             selected = Value(id, 3, normal == OmniTheme.Tokens.Accent ? 1f : 0f, 0.16f);
-            fill = Vector4.Lerp(normal == OmniTheme.Tokens.Accent ? OmniTheme.Tokens.Surface : normal,
+            fill     = Vector4.Lerp(normal == OmniTheme.Tokens.Accent ? OmniTheme.Tokens.Surface : normal,
                 OmniTheme.Tokens.Accent, selected);
         }
         return Vector4.Lerp(
@@ -93,7 +106,12 @@ public static class GlassMotion
             ImGui.IsItemActive() ? 0.08f : 0.18f, true)
         : 0f;
 
-    internal static Vector2 Pointer(uint id, Vector2 target, bool tracking)
+    internal static Vector2 Pointer
+    (
+        uint    id,
+        Vector2 target,
+        bool    tracking
+    )
     {
         if (!tracking)
         {
@@ -145,6 +163,6 @@ public static class GlassMotion
     {
         public float Value;
         public float Velocity;
-        public int Frame;
+        public int   Frame;
     }
 }

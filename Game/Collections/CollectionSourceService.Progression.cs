@@ -45,9 +45,11 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private static void AddCosmicToolSources(
+    private static void AddCosmicToolSources
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        WKSCosmoToolClass toolClass)
+        WKSCosmoToolClass                            toolClass
+    )
     {
         if (toolClass.RowId == 0 || toolClass.DataAmount.ValueNullable is not { } dataAmounts)
             return;

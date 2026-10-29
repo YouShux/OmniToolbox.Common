@@ -38,10 +38,10 @@ public sealed class ItemCategoryMap
         12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 99
     ];
 
-    private static readonly uint[] ArmorItemUICategoryIDs = [11, 34, 35, 37, 36, 38];
-    private static readonly uint[] AccessoryItemUICategoryIDs = [41, 40, 42, 43, 62];
+    private static readonly uint[] ArmorItemUICategoryIDs      = [11, 34, 35, 37, 36, 38];
+    private static readonly uint[] AccessoryItemUICategoryIDs  = [41, 40, 42, 43, 62];
     private static readonly uint[] ConsumableItemUICategoryIDs = [44, 46];
-    private static readonly uint[] MaterialItemUICategoryIDs =
+    private static readonly uint[] MaterialItemUICategoryIDs   =
     [
         45, 47, 48, 49, 50, 51, 52, 53, 54, 56, 55, 90, 91, 93, 92, 101, 102, 103, 104
     ];
@@ -90,18 +90,27 @@ public sealed class ItemCategoryMap
             {
                 Label = $"{OmniToolbox.UI.OmniLoc.Get($"ItemSearch.Category.{entry.Key}")}/{value.Label}"
             })));
-        subcategories = categories;
+        subcategories                = categories;
 
-        IReadOnlyList<ItemSubcategory> FromIDs(ItemCategory category, IEnumerable<uint> ids) =>
+        IReadOnlyList<ItemSubcategory> FromIDs
+        (
+            ItemCategory      category,
+            IEnumerable<uint> ids
+        ) =>
             PrependAll(ids.Select(id => new ItemSubcategory(
                 itemUICategories.GetRow(id).Name.ExtractText(), category, id, 0)));
     }
 
     public IReadOnlyList<ItemSubcategory> Get(ItemCategory category) => subcategories[category];
 
-    internal static bool Matches(
-        ItemCategory mainCategory, uint itemUICategoryID, ulong jobMask,
-        ItemCategory category, ItemSubcategory subcategory)
+    internal static bool Matches
+    (
+        ItemCategory    mainCategory,
+        uint            itemUICategoryID,
+        ulong           jobMask,
+        ItemCategory    category,
+        ItemSubcategory subcategory
+    )
     {
         if (subcategory.JobID != 0)
         {
@@ -124,7 +133,11 @@ public sealed class ItemCategoryMap
         item.ItemSearchCategory.RowId == 0 &&
         item.ItemSortCategory.RowId == 3;
 
-    public static ItemCategory Classify(uint itemUICategoryID, uint equipSlotCategoryID)
+    public static ItemCategory Classify
+    (
+        uint itemUICategoryID,
+        uint equipSlotCategoryID
+    )
     {
         if (MainCategoryByItemUICategoryID.TryGetValue(itemUICategoryID, out var category))
         {

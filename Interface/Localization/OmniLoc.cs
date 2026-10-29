@@ -13,12 +13,12 @@ namespace OmniToolbox.UI;
 
 public static class OmniLoc
 {
-    private static readonly object Sync = new();
-    private static readonly ConcurrentDictionary<string, ModuleRegistration> Modules = new(StringComparer.Ordinal);
-    private static FrozenDictionary<string, TextSource> Texts = new Dictionary<string, TextSource>().ToFrozenDictionary(StringComparer.Ordinal);
-    private static TextSource[] OfficialSources;
-    private static long ResourceRevision;
-    private static int Language;
+    private static readonly object                                           Sync             = new();
+    private static readonly ConcurrentDictionary<string, ModuleRegistration> Modules          = new(StringComparer.Ordinal);
+    private static FrozenDictionary<string, TextSource>                      Texts            = new Dictionary<string, TextSource>().ToFrozenDictionary(StringComparer.Ordinal);
+    private static TextSource[]                                              OfficialSources;
+    private static long                                                      ResourceRevision;
+    private static int                                                       Language;
 
     static OmniLoc()
     {
@@ -66,31 +66,55 @@ public static class OmniLoc
 
     public static string Get(string key) => Get(key, CurrentLanguage);
 
-    public static string Get(string key, UILanguage value) => TryGet(key, value, out var text)
+    public static string Get
+    (
+        string     key,
+        UILanguage value
+    ) => TryGet(key, value, out var text)
         ? text : throw new KeyNotFoundException($"Official localization key is not registered: {key}");
 
     /// <summary>
     /// 查询模块自带词条。模块之间的同名键相互隔离，缺失词条会明确报错。
     /// </summary>
-    public static string Get(OmniModuleBase owner, string key) => Get(owner, key, CurrentLanguage);
+    public static string Get
+    (
+        OmniModuleBase owner,
+        string         key
+    ) => Get(owner, key, CurrentLanguage);
 
     /// <summary>
     /// 按指定语言查询模块自带词条，缺失词条会明确报错。
     /// </summary>
-    public static string Get(OmniModuleBase owner, string key, UILanguage value) =>
+    public static string Get
+    (
+        OmniModuleBase owner,
+        string         key,
+        UILanguage     value
+    ) =>
         TryGet(owner, key, value, out var text) ? text
             : throw new KeyNotFoundException($"Module localization key is not registered: {owner.ModuleName}/{key}");
 
     /// <summary>
     /// 尝试按当前语言获取模块自带词条。
     /// </summary>
-    public static bool TryGet(OmniModuleBase owner, string key, out string text) =>
+    public static bool TryGet
+    (
+        OmniModuleBase owner,
+        string         key,
+        out string     text
+    ) =>
         TryGet(owner, key, CurrentLanguage, out text);
 
     /// <summary>
     /// 尝试按指定语言获取模块自带词条。
     /// </summary>
-    public static bool TryGet(OmniModuleBase owner, string key, UILanguage value, out string text)
+    public static bool TryGet
+    (
+        OmniModuleBase owner,
+        string         key,
+        UILanguage     value,
+        out string     text
+    )
     {
         ArgumentNullException.ThrowIfNull(owner);
         if (owner.LocalizationRegistration is { } registration && (registration.IsReadable || owner.IsDisposing) && registration.Source.TryGet(key, value, out text))
@@ -105,7 +129,12 @@ public static class OmniLoc
     /// <summary>
     /// 尝试按指定语言获取公共词条，能够区分缺失词条与内容恰好等于键名的词条。
     /// </summary>
-    public static bool TryGet(string key, UILanguage value, out string text)
+    public static bool TryGet
+    (
+        string     key,
+        UILanguage value,
+        out string text
+    )
     {
         if (Volatile.Read(ref Texts).TryGetValue(key, out var source) && source.TryGet(key, value, out text))
         {
@@ -173,7 +202,11 @@ public static class OmniLoc
         ReadResources(assembly.GetManifestResourceNames(), name => assembly.GetManifestResourceStream(name)
             ?? throw new InvalidDataException($"Missing localization resource: {name}"));
 
-    internal static IReadOnlyList<TextSource> ReadResources(IReadOnlyCollection<string> resourceNames, Func<string, Stream> openResource)
+    internal static IReadOnlyList<TextSource> ReadResources
+    (
+        IReadOnlyCollection<string> resourceNames,
+        Func<string, Stream>        openResource
+    )
     {
         var groups = new Dictionary<string, Dictionary<UILanguage, string>>(StringComparer.Ordinal);
         foreach (var name in resourceNames.Where(static name => name.StartsWith(RESOURCE_PREFIX, StringComparison.Ordinal)))
@@ -227,15 +260,19 @@ public static class OmniLoc
     /// </summary>
     internal sealed class ModuleRegistration : IDisposable
     {
-        private readonly string moduleName;
+        private readonly string     moduleName;
         private ModuleRegistration? previous;
-        private volatile bool activated;
-        private volatile bool disposed;
+        private volatile bool       activated;
+        private volatile bool       disposed;
 
-        internal ModuleRegistration(string moduleName, TextSource source)
+        internal ModuleRegistration
+        (
+            string     moduleName,
+            TextSource source
+        )
         {
             this.moduleName = moduleName;
-            Source = source;
+            Source          = source;
         }
 
         internal TextSource Source { get; }
@@ -253,10 +290,10 @@ public static class OmniLoc
                 ObjectDisposedException.ThrowIf(disposed, this);
                 if (activated)
                     return;
-                previous = Modules.GetValueOrDefault(moduleName);
+                previous            = Modules.GetValueOrDefault(moduleName);
                 Modules[moduleName] = this;
-                activated = true;
-                changed = true;
+                activated           = true;
+                changed             = true;
             }
             if (changed)
                 NotifyChanged();
@@ -319,7 +356,7 @@ public static class OmniLoc
             var source = copied[UILanguage.SimplifiedChinese];
             foreach (var language in UILanguages.All.Where(static language => language != UILanguage.SimplifiedChinese))
                 XliffResourceParser.ValidateTranslation(source, copied[language], language == UILanguage.TraditionalChinese);
-            Catalogs = copied.ToFrozenDictionary();
+            Catalogs          = copied.ToFrozenDictionary();
             CompleteLanguages = copied.Where(pair => pair.Value.Count == source.Count && pair.Value.Values.All(static text => !string.IsNullOrWhiteSpace(text)))
                 .Select(static pair => pair.Key).ToFrozenSet();
         }
@@ -333,7 +370,12 @@ public static class OmniLoc
             return CompleteLanguages.Contains(value);
         }
 
-        internal bool TryGet(string key, UILanguage value, out string text)
+        internal bool TryGet
+        (
+            string     key,
+            UILanguage value,
+            out string text
+        )
         {
             UILanguages.GetCode(value);
             if (Catalogs[value].TryGetValue(key, out var translated) && !string.IsNullOrWhiteSpace(translated))

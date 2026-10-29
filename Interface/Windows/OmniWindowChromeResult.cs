@@ -3,10 +3,12 @@ using OmniToolbox.UI.Theme;
 
 namespace OmniToolbox.UI;
 
-public readonly record struct OmniWindowChromeResult(
+public readonly record struct OmniWindowChromeResult
+(
     bool CollapseClicked,
     bool CloseClicked,
-    bool TitleDoubleClicked)
+    bool TitleDoubleClicked
+)
 {
     public bool ToggleCollapse => CollapseClicked || TitleDoubleClicked;
 }

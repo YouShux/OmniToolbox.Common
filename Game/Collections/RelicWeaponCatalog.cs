@@ -306,7 +306,12 @@ internal static class RelicWeaponCatalog
 
     public static readonly FrozenSet<uint> AllKnownItemIds = BuildAllKnownItemIds();
 
-    public static uint GetItemID(RelicWeaponSeries series, uint jobID, int stageIndex)
+    public static uint GetItemID
+    (
+        RelicWeaponSeries series,
+        uint              jobID,
+        int               stageIndex
+    )
     {
         if ((uint)stageIndex >= (uint)series.StageItemIds.Length)
         {
@@ -327,7 +332,11 @@ internal static class RelicWeaponCatalog
             : 0;
     }
 
-    public static uint GetShieldItemID(RelicWeaponSeries series, int stageIndex) =>
+    public static uint GetShieldItemID
+    (
+        RelicWeaponSeries series,
+        int               stageIndex
+    ) =>
         (uint)stageIndex < (uint)series.ShieldItemIds.Length
             ? series.ShieldItemIds[stageIndex]
             : 0;
@@ -660,7 +669,13 @@ internal static class RelicWeaponCatalog
         return result.ToFrozenSet();
     }
 
-    private static void AddRangeMap(IDictionary<uint, uint> target, uint sourceStart, uint replicaStart, int count)
+    private static void AddRangeMap
+    (
+        IDictionary<uint, uint> target,
+        uint                    sourceStart,
+        uint                    replicaStart,
+        int                     count
+    )
     {
         for (var offset = 0; offset < count; offset++)
         {
@@ -668,14 +683,22 @@ internal static class RelicWeaponCatalog
         }
     }
 
-    private static uint[] SkysteelRange(uint start, int count)
+    private static uint[] SkysteelRange
+    (
+        uint start,
+        int  count
+    )
     {
         var result = Range(start, count);
         (result[8], result[9]) = (result[9], result[8]);
         return result;
     }
 
-    private static uint[] Range(uint start, int count)
+    private static uint[] Range
+    (
+        uint start,
+        int  count
+    )
     {
         var result = new uint[count];
         for (var index = 0; index < count; index++)
@@ -686,7 +709,11 @@ internal static class RelicWeaponCatalog
         return result;
     }
 
-    private static string[] Keys(string series, int count)
+    private static string[] Keys
+    (
+        string series,
+        int    count
+    )
     {
         var result = new string[count];
         for (var index = 0; index < count; index++)
