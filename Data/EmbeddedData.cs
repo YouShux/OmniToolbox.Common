@@ -11,7 +11,11 @@ internal static class EmbeddedData
         typeof(EmbeddedData).Assembly.GetManifestResourceStream("OmniToolbox.Data." + fileName)
         ?? throw new InvalidDataException($"Embedded data resource is missing: {fileName}");
 
-    public static void ReadCSV(string fileName, Action<CsvReader> readRow)
+    public static void ReadCSV
+    (
+        string            fileName,
+        Action<CsvReader> readRow
+    )
     {
         using var reader = new StreamReader(Open(fileName));
         using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)

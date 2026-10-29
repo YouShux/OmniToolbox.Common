@@ -8,7 +8,12 @@ public interface IModuleAutomation
 
     string AutomationState { get; }
 
-    bool TryRunAutomation(string action, string arguments, out string error);
+    bool TryRunAutomation
+    (
+        string     action,
+        string     arguments,
+        out string error
+    );
 
     bool StopAutomation();
 }

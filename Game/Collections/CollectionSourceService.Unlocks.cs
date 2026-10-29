@@ -100,7 +100,11 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private static IReadOnlyList<CollectionSource> BuildQuestUnlockSources(uint questID, string detail = "") =>
+    private static IReadOnlyList<CollectionSource> BuildQuestUnlockSources
+    (
+        uint   questID,
+        string detail = ""
+    ) =>
         LuminaGetter.TryGetRow<Quest>(questID, out var quest)
             ? [new(CollectionSourceCategory.Quest, questID, quest.Name.ExtractText(), detail)]
             : [];

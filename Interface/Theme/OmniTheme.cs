@@ -117,9 +117,19 @@ public static class OmniTheme
 
     internal static ThemeTokens? LiquidGlassTokens { get; set; }
 
-    internal delegate bool GlassSurfacePainter(
-        ImDrawListPtr drawList, Vector2 pos, Vector2 size, Vector4 fill, float radius,
-        float opacity, bool sampleBackground, ImDrawFlags corners, uint interactionID, bool selected);
+    internal delegate bool GlassSurfacePainter
+    (
+        ImDrawListPtr drawList,
+        Vector2       pos,
+        Vector2       size,
+        Vector4       fill,
+        float         radius,
+        float         opacity,
+        bool          sampleBackground,
+        ImDrawFlags   corners,
+        uint          interactionID,
+        bool          selected
+    );
 
     internal static GlassSurfacePainter? GlassPainter { get; set; }
 
@@ -198,12 +208,20 @@ public static class OmniTheme
     public static Vector2 ClampWindowSize(Vector2 size) =>
         Vector2.Clamp(size, Vector2.One, Vector2.Max(Vector2.One, OmniWindowPlacement.GetWorkArea().Size));
 
-    public static Vector2 ClampWindowPosition(Vector2 position, Vector2 size)
+    public static Vector2 ClampWindowPosition
+    (
+        Vector2 position,
+        Vector2 size
+    )
     {
         return OmniWindowPlacement.ClampPosition(position, size, true);
     }
 
-    public static Vector2 PreserveWindowSize(Vector2 actual, Vector2 expected)
+    public static Vector2 PreserveWindowSize
+    (
+        Vector2 actual,
+        Vector2 expected
+    )
     {
         var viewport = OmniWindowPlacement.GetWorkArea().Size;
         return new(actual.X >= viewport.X - 1f && expected.X > viewport.X ? expected.X : actual.X,
@@ -236,7 +254,11 @@ public static class OmniTheme
 
     public static Vector2 StatusIconSize(float height) => new(MathF.Round(height * (24f / 32f)), height);
 
-    public static Vector2 FitImageSize(Vector2 sourceSize, float maximumDimension) =>
+    public static Vector2 FitImageSize
+    (
+        Vector2 sourceSize,
+        float   maximumDimension
+    ) =>
         sourceSize * (maximumDimension / MathF.Max(sourceSize.X, sourceSize.Y));
 
     public static Vector2 NavButtonSize() => new(Scale(148f), Scale(34f));
@@ -290,24 +312,24 @@ public static class OmniTheme
 
     public readonly struct ThemeScope : IDisposable
     {
-        private readonly UITheme? previousTheme;
+        private readonly UITheme?     previousTheme;
         private readonly ThemeTokens? previousTokens;
-        private readonly Vector4? previousAccent;
+        private readonly Vector4?     previousAccent;
 
         public ThemeScope(UITheme theme)
         {
-            previousTheme = scopedTheme;
-            previousTokens = scopedTokens;
-            previousAccent = scopedControlAccent;
-            scopedTheme = NormalizeTheme(theme);
-            scopedTokens = null;
+            previousTheme       = scopedTheme;
+            previousTokens      = scopedTokens;
+            previousAccent      = scopedControlAccent;
+            scopedTheme         = NormalizeTheme(theme);
+            scopedTokens        = null;
             scopedControlAccent = null;
         }
 
         public void Dispose()
         {
-            scopedTheme = previousTheme;
-            scopedTokens = previousTokens;
+            scopedTheme         = previousTheme;
+            scopedTokens        = previousTokens;
             scopedControlAccent = previousAccent;
         }
     }
@@ -316,19 +338,23 @@ public static class OmniTheme
     public readonly struct ColorScope : IDisposable
     {
         private readonly ThemeTokens? previousTokens;
-        private readonly Vector4? previousAccent;
+        private readonly Vector4?     previousAccent;
 
-        public ColorScope(ThemeTokens tokens, Vector4? controlAccent = null)
+        public ColorScope
+        (
+            ThemeTokens tokens,
+            Vector4?    controlAccent = null
+        )
         {
-            previousTokens = scopedTokens;
-            previousAccent = scopedControlAccent;
-            scopedTokens = tokens;
+            previousTokens      = scopedTokens;
+            previousAccent      = scopedControlAccent;
+            scopedTokens        = tokens;
             scopedControlAccent = controlAccent;
         }
 
         public void Dispose()
         {
-            scopedTokens = previousTokens;
+            scopedTokens        = previousTokens;
             scopedControlAccent = previousAccent;
         }
     }
@@ -341,7 +367,7 @@ public static class OmniTheme
         public ScaleScope(float scale)
         {
             previousScale = scopedScale;
-            scopedScale = scale;
+            scopedScale   = scale;
         }
 
         public void Dispose() => scopedScale = previousScale;

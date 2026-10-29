@@ -17,25 +17,25 @@ namespace OmniToolbox.UI;
 
 internal static class PluginIconResolver
 {
-    private static readonly object? ImageCache =
+    private static readonly object?                                      ImageCache          =
         DalamudServices.GetInternalService("Dalamud.Interface.Internal.Windows.PluginImageCache");
-    private static readonly FieldInfo? LocalPluginField = typeof(IExposedPlugin).Assembly
+    private static readonly FieldInfo?                                   LocalPluginField    = typeof(IExposedPlugin).Assembly
         .GetType("Dalamud.Plugin.ExposedPlugin")?
         .GetField("<plugin>P", INSTANCE_MEMBER_FLAGS);
-    private static readonly MethodInfo? TryGetIconMethod = ImageCache?.GetType()
+    private static readonly MethodInfo?                                  TryGetIconMethod    = ImageCache?.GetType()
         .GetMethod("TryGetIcon", INSTANCE_MEMBER_FLAGS);
-    private static readonly PropertyInfo? DefaultIconProperty = ImageCache?.GetType()
+    private static readonly PropertyInfo?                                DefaultIconProperty = ImageCache?.GetType()
         .GetProperty("DefaultIcon", INSTANCE_MEMBER_FLAGS);
-    private static readonly Dictionary<string, ISharedImmediateTexture?> LocalTextures =
+    private static readonly Dictionary<string, ISharedImmediateTexture?> LocalTextures       =
         new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, string?> LocalIconPaths =
+    private static readonly Dictionary<string, string?>                  LocalIconPaths      =
         new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, CachedIcon> CachedIcons = new(StringComparer.Ordinal);
-    private static readonly string CacheDirectory = Path.Combine(
+    private static readonly Dictionary<string, CachedIcon>               CachedIcons         = new(StringComparer.Ordinal);
+    private static readonly string                                       CacheDirectory      = Path.Combine(
         DalamudServices.PluginInterface.GetPluginConfigDirectory(), "TreeHouse", "MultiToolbar", "Cache", "PluginIcons");
-    private static readonly FeatureLifetime CacheLifetime = new();
-    private static Guid? PNGContainerGUID;
-    private static bool CacheMigrated;
+    private static readonly FeatureLifetime                              CacheLifetime       = new();
+    private static Guid?                                                 PNGContainerGUID;
+    private static bool                                                  CacheMigrated;
 
     static PluginIconResolver()
     {
@@ -49,7 +49,11 @@ internal static class PluginIconResolver
         texture.Handle != nint.Zero &&
         Math.Max(texture.Width, texture.Height) > 4;
 
-    internal static IDalamudTextureWrap? GetIcon(IExposedPlugin? plugin, float displaySize)
+    internal static IDalamudTextureWrap? GetIcon
+    (
+        IExposedPlugin? plugin,
+        float           displaySize
+    )
     {
         if (CacheLifetime.IsStopping)
             return null;
@@ -66,7 +70,7 @@ internal static class PluginIconResolver
             {
                 if (!LocalTextures.TryGetValue(iconPath, out var texture))
                 {
-                    texture = DalamudServices.TextureProvider.GetFromFile(iconPath);
+                    texture                 = DalamudServices.TextureProvider.GetFromFile(iconPath);
                     LocalTextures[iconPath] = texture;
                 }
 
@@ -98,7 +102,7 @@ internal static class PluginIconResolver
             if (saveTask.IsCompletedSuccessfully && saveTask.Result)
             {
                 DService.Instance().TextureSubstitution.InvalidatePaths([cachedIcon.Path]);
-                cachedIcon.Texture = null;
+                cachedIcon.Texture     = null;
                 cachedIcon.FileChecked = false;
             }
         }
@@ -139,7 +143,7 @@ internal static class PluginIconResolver
                     if (cachedIcon.SaveTask is null && Environment.TickCount64 >= cachedIcon.RetryAfter)
                     {
                         cachedIcon.RetryAfter = Environment.TickCount64 + 60_000;
-                        cachedIcon.SaveTask = SaveIconAsync(texture, cachedIcon.Path, CacheLifetime.CancellationToken);
+                        cachedIcon.SaveTask   = SaveIconAsync(texture, cachedIcon.Path, CacheLifetime.CancellationToken);
                         CacheLifetime.Track(cachedIcon.SaveTask);
                     }
                     return texture;
@@ -155,7 +159,12 @@ internal static class PluginIconResolver
 
     internal static ValueTask DisposeAsync() => CacheLifetime.DisposeAsync();
 
-    private static async Task<bool> SaveIconAsync(IDalamudTextureWrap texture, string path, CancellationToken cancellationToken)
+    private static async Task<bool> SaveIconAsync
+    (
+        IDalamudTextureWrap texture,
+        string              path,
+        CancellationToken   cancellationToken
+    )
     {
         try
         {
@@ -212,7 +221,11 @@ internal static class PluginIconResolver
         }
     }
 
-    private static void RecycleOldCache(string? currentPath, string prefix)
+    private static void RecycleOldCache
+    (
+        string? currentPath,
+        string  prefix
+    )
     {
         try
         {
@@ -349,15 +362,19 @@ internal static class PluginIconResolver
         return null;
     }
 
-    private sealed class CachedIcon(string path, string prefix)
+    private sealed class CachedIcon
+    (
+        string path,
+        string prefix
+    )
     {
         public string Path { get; } = path;
         public string Prefix { get; } = prefix;
-        public bool FileChecked;
-        public bool OldCacheRecycled;
+        public bool                     FileChecked;
+        public bool                     OldCacheRecycled;
         public ISharedImmediateTexture? Texture;
-        public Task<bool>? SaveTask;
-        public long RetryAfter;
+        public Task<bool>?              SaveTask;
+        public long                     RetryAfter;
     }
 
     #region 常量

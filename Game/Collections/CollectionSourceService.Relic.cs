@@ -6,9 +6,11 @@ namespace OmniToolbox.Collections;
 
 public sealed partial class CollectionSourceService
 {
-    private static void AddRelicSources(
+    private static void AddRelicSources
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        RelicItem relic)
+        RelicItem                                    relic
+    )
     {
         var (questID, detailKey) = relic.RowId switch
         {

@@ -1,6 +1,7 @@
 namespace OmniToolbox.UI.Theme;
 
-public readonly record struct ThemeTokens(
+public readonly record struct ThemeTokens
+(
     Vector4 Primary,
     Vector4 Secondary,
     Vector4 Accent,
@@ -12,11 +13,12 @@ public readonly record struct ThemeTokens(
     Vector4 Error,
     Vector4 Border,
     Vector4 Shadow,
-    float ShadowOffset,
-    float BorderRadius,
-    float ButtonRadius,
-    float BorderThickness,
-    float HighlightStrength,
+    float   ShadowOffset,
+    float   BorderRadius,
+    float   ButtonRadius,
+    float   BorderThickness,
+    float   HighlightStrength,
     Vector2 WindowPadding,
     Vector2 FramePadding,
-    Vector2 ItemSpacing);
+    Vector2 ItemSpacing
+);

@@ -4,4 +4,10 @@ using OmniToolbox.Host;
 
 namespace OmniToolbox.Items;
 
-public readonly record struct ItemSubcategory(string Label, ItemCategory Category, uint ItemUICategoryID, uint JobID);
+public readonly record struct ItemSubcategory
+(
+    string       Label,
+    ItemCategory Category,
+    uint         ItemUICategoryID,
+    uint         JobID
+);

@@ -263,66 +263,97 @@ internal static class RelicMaterialCatalog
         Range(6, 41301, string.Empty, string.Empty, 18)
     ];
 
-    private static RelicMaterialRequirement Item(int stageIndex, uint itemID, int quantity, uint jobID = 0) =>
+    private static RelicMaterialRequirement Item
+    (
+        int  stageIndex,
+        uint itemID,
+        int  quantity,
+        uint jobID = 0
+    ) =>
         new(stageIndex, itemID, quantity, string.Empty, string.Empty, jobID,
             RelicMaterialScope.PerWeapon, string.Empty, 0);
 
-    private static RelicMaterialRequirement FreeItem(
-        int stageIndex,
+    private static RelicMaterialRequirement FreeItem
+    (
+        int  stageIndex,
         uint itemID,
-        int quantity,
-        int freeWeapons) =>
+        int  quantity,
+        int  freeWeapons
+    ) =>
         new(stageIndex, itemID, quantity, string.Empty, string.Empty, 0,
             RelicMaterialScope.PerWeapon, string.Empty, freeWeapons);
 
-    private static RelicMaterialRequirement Once(int stageIndex, uint itemID, int quantity) =>
+    private static RelicMaterialRequirement Once
+    (
+        int  stageIndex,
+        uint itemID,
+        int  quantity
+    ) =>
         new(stageIndex, itemID, quantity, string.Empty, string.Empty, 0,
             RelicMaterialScope.OncePerSeries, string.Empty, 0);
 
-    private static RelicMaterialRequirement Once(int stageIndex, uint itemID, string quantityText) =>
+    private static RelicMaterialRequirement Once
+    (
+        int    stageIndex,
+        uint   itemID,
+        string quantityText
+    ) =>
         new(stageIndex, itemID, 0, quantityText, string.Empty, 0,
             RelicMaterialScope.OncePerSeries, string.Empty, 0);
 
-    private static RelicMaterialRequirement Cost(
-        int stageIndex,
+    private static RelicMaterialRequirement Cost
+    (
+        int  stageIndex,
         uint itemID,
-        int quantity) =>
+        int  quantity
+    ) =>
         new(stageIndex, itemID, quantity, string.Empty, string.Empty, 0,
             RelicMaterialScope.PerWeapon, string.Empty, 0)
         {
             CostPerTargetItem = 1
         };
 
-    private static RelicMaterialRequirement Cost(
-        int stageIndex,
-        uint itemID,
-        int quantity,
-        uint targetItemID,
-        int costPerTargetItem,
-        RelicMaterialScope scope = RelicMaterialScope.PerWeapon) =>
+    private static RelicMaterialRequirement Cost
+    (
+        int                stageIndex,
+        uint               itemID,
+        int                quantity,
+        uint               targetItemID,
+        int                costPerTargetItem,
+        RelicMaterialScope scope = RelicMaterialScope.PerWeapon
+    ) =>
         new(stageIndex, itemID, quantity, string.Empty, string.Empty, 0, scope, string.Empty, 0)
         {
             CostTargetItemID = targetItemID,
             CostPerTargetItem = costPerTargetItem
         };
 
-    private static RelicMaterialRequirement Progress(
-        int stageIndex,
-        string labelKey,
-        string quantityText,
-        RelicMaterialScope scope = RelicMaterialScope.PerWeapon) =>
+    private static RelicMaterialRequirement Progress
+    (
+        int                stageIndex,
+        string             labelKey,
+        string             quantityText,
+        RelicMaterialScope scope = RelicMaterialScope.PerWeapon
+    ) =>
         new(stageIndex, 0, 0, quantityText, string.Empty, 0, scope, labelKey, 0);
 
-    private static RelicMaterialRequirement Range(
-        int stageIndex,
-        uint itemID,
+    private static RelicMaterialRequirement Range
+    (
+        int    stageIndex,
+        uint   itemID,
         string quantityText,
         string maximumQuantityText,
-        uint jobID) =>
+        uint   jobID
+    ) =>
         new(stageIndex, itemID, 0, quantityText, maximumQuantityText, jobID,
             RelicMaterialScope.PerWeapon, string.Empty, 0);
 
-    private static RelicMaterialRequirement[] Crafting(int stageIndex, int quantity, uint[] itemIDs)
+    private static RelicMaterialRequirement[] Crafting
+    (
+        int    stageIndex,
+        int    quantity,
+        uint[] itemIDs
+    )
     {
         var result = new RelicMaterialRequirement[itemIDs.Length];
         for (var index = 0; index < itemIDs.Length; index++)
@@ -333,11 +364,13 @@ internal static class RelicMaterialCatalog
         return result;
     }
 
-    private static RelicMaterialRequirement[] CraftingRange(
-        int stageIndex,
+    private static RelicMaterialRequirement[] CraftingRange
+    (
+        int    stageIndex,
         string quantityText,
         string maximumQuantityText,
-        uint[] itemIDs)
+        uint[] itemIDs
+    )
     {
         var result = new RelicMaterialRequirement[itemIDs.Length];
         for (var index = 0; index < itemIDs.Length; index++)

@@ -6,7 +6,7 @@ namespace OmniToolbox.Config;
 
 public sealed class TreeHouseConfig
 {
-    private static readonly string[] DefaultEnabledModuleNames =
+    internal static readonly string[] DefaultEnabledModuleNames =
     [
         "ItemPriceQuery",
         "ItemQuery",
@@ -25,7 +25,7 @@ public sealed class TreeHouseConfig
     private readonly Dictionary<string, object> moduleConfigs = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, JToken> rawModuleConfigs = new(StringComparer.Ordinal);
-    private readonly HashSet<string> localModuleNames = new(StringComparer.Ordinal);
+    private readonly HashSet<string>            localModuleNames = new(StringComparer.Ordinal);
 
     public Dictionary<string, bool> ModuleStates { get; set; } = new(StringComparer.Ordinal)
     {
@@ -52,7 +52,11 @@ public sealed class TreeHouseConfig
 
     public bool IsLocalModule(string moduleName) => localModuleNames.Contains(moduleName);
 
-    public void SetEnabled(string moduleName, bool enabled) => ModuleStates[moduleName] = enabled;
+    public void SetEnabled
+    (
+        string moduleName,
+        bool   enabled
+    ) => ModuleStates[moduleName] = enabled;
 
     internal bool RemoveModule(string moduleName)
     {
@@ -94,7 +98,11 @@ public sealed class TreeHouseConfig
         return config;
     }
 
-    public object GetOrCreateModuleConfig(string moduleName, object defaultConfig)
+    public object GetOrCreateModuleConfig
+    (
+        string moduleName,
+        object defaultConfig
+    )
     {
         ArgumentNullException.ThrowIfNull(defaultConfig);
         ValidateModuleConfig(defaultConfig);
@@ -137,10 +145,18 @@ public sealed class TreeHouseConfig
 
     internal static void ValidateModuleConfig(object config) => CollectibleConfigJSON.Validate(config);
 
-    internal JToken SerializeModuleConfig(string moduleName, JsonSerializerSettings? settings = null) =>
+    internal JToken SerializeModuleConfig
+    (
+        string                  moduleName,
+        JsonSerializerSettings? settings = null
+    ) =>
         CollectibleConfigJSON.Serialize(moduleConfigs[moduleName], settings);
 
-    internal void RestoreModuleConfig(string moduleName, ModuleConfigSnapshot snapshot)
+    internal void RestoreModuleConfig
+    (
+        string               moduleName,
+        ModuleConfigSnapshot snapshot
+    )
     {
         moduleConfigs.Remove(moduleName);
         rawModuleConfigs.Remove(moduleName);
@@ -152,7 +168,13 @@ public sealed class TreeHouseConfig
         else ModuleStates.Remove(moduleName);
     }
 
-    internal sealed record ModuleConfigSnapshot(object? Materialized, JToken? Raw, bool IsLocal, bool? Enabled);
+    internal sealed record ModuleConfigSnapshot
+    (
+        object? Materialized,
+        JToken? Raw,
+        bool    IsLocal,
+        bool?   Enabled
+    );
 
     public bool ResetModuleSettings(string moduleName)
     {
@@ -186,7 +208,11 @@ public sealed class TreeHouseConfig
         return true;
     }
 
-    public void SetRawModuleConfig(string moduleName, JToken config)
+    public void SetRawModuleConfig
+    (
+        string moduleName,
+        JToken config
+    )
     {
         if (!moduleConfigs.ContainsKey(moduleName))
         {
@@ -194,9 +220,17 @@ public sealed class TreeHouseConfig
         }
     }
 
-    public bool TryGetModuleConfig(string moduleName, out object? config) =>
+    public bool TryGetModuleConfig
+    (
+        string      moduleName,
+        out object? config
+    ) =>
         moduleConfigs.TryGetValue(moduleName, out config);
 
-    public bool TryGetRawModuleConfig(string moduleName, out JToken? config) =>
+    public bool TryGetRawModuleConfig
+    (
+        string      moduleName,
+        out JToken? config
+    ) =>
         rawModuleConfigs.TryGetValue(moduleName, out config);
 }

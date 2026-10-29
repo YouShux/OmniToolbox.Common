@@ -27,9 +27,11 @@ public sealed partial class CollectionSourceService
 
     private static readonly uint[] LegacyGatheringToolIDs = [2533, 2559];
 
-    private static void AddEternalBondWristletSource(
+    private static void AddEternalBondWristletSource
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        uint itemID)
+        uint                                         itemID
+    )
     {
         var planItemID = itemID switch
         {
@@ -61,9 +63,11 @@ public sealed partial class CollectionSourceService
         });
     }
 
-    private static void AddLegacyGatheringToolSource(
+    private static void AddLegacyGatheringToolSource
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        uint itemID)
+        uint                                         itemID
+    )
     {
         if (itemID is not (2533 or 2559) || !LuminaGetter.TryGetRow<Item>(itemID, out _))
             return;
@@ -75,9 +79,11 @@ public sealed partial class CollectionSourceService
             OmniLoc.Get("Collection.Source.Equipment.LegacyGatheringShopDetail")));
     }
 
-    private static void AddRetiredArdentEquipmentSource(
+    private static void AddRetiredArdentEquipmentSource
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        uint itemID)
+        uint                                         itemID
+    )
     {
         if (!LuminaGetter.TryGetRow<Item>(itemID, out _) ||
             !LuminaGetter.TryGetRow<Item>(31, out var currency))
@@ -90,9 +96,11 @@ public sealed partial class CollectionSourceService
             OmniLoc.Get("Collection.Source.Equipment.RetiredArdent")));
     }
 
-    private static void AddDisguiseEquipmentSources(
+    private static void AddDisguiseEquipmentSources
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        uint questID)
+        uint                                         questID
+    )
     {
         if (!LuminaGetter.TryGetRow<Quest>(questID, out var quest))
             return;
@@ -113,9 +121,11 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private static void AddUnfinishedRelicSources(
+    private static void AddUnfinishedRelicSources
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        uint questID)
+        uint                                         questID
+    )
     {
         if (!LuminaGetter.TryGetRow<Quest>(questID, out var quest))
             return;
@@ -155,8 +165,10 @@ public sealed partial class CollectionSourceService
         });
     }
 
-    private static (uint ItemID, uint ConditionID)[] ReadHistoricalEquipmentSourceRows(
-        CancellationToken cancellationToken)
+    private static (uint ItemID, uint ConditionID)[] ReadHistoricalEquipmentSourceRows
+    (
+        CancellationToken cancellationToken
+    )
     {
         var rows = new List<(uint ItemID, uint ConditionID)>();
         EmbeddedData.ReadCSV("EquipmentSourceSupplement.csv", csv =>
@@ -170,10 +182,12 @@ public sealed partial class CollectionSourceService
         return rows.ToArray();
     }
 
-    private static void AddHistoricalEquipmentSource(
+    private static void AddHistoricalEquipmentSource
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        uint itemID,
-        uint conditionID)
+        uint                                         itemID,
+        uint                                         conditionID
+    )
     {
         if (!LuminaGetter.TryGetRow<Item>(itemID, out var item) || item.Rarity != 7 ||
             !LuminaGetter.TryGetRow<ContentFinderCondition>(conditionID, out var condition) ||

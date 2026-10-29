@@ -1,5 +1,3 @@
-using TreeToolKit;
-using TreeTools.Text;
 using System.Diagnostics;
 using System.Globalization;
 using Dalamud.Game.Text;
@@ -12,6 +10,8 @@ using OmniToolbox.Items;
 using OmniToolbox.UI;
 using OmniToolbox.UI.Controls;
 using OmniToolbox.UI.Theme;
+using TreeToolKit;
+using TreeTools.Text;
 using CharaMakeCustomize = Lumina.Excel.Sheets.CharaMakeCustomize;
 using MapSymbol = Lumina.Excel.Sheets.MapSymbol;
 
@@ -183,29 +183,33 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
     private static readonly long ScanBudgetTicks = Math.Max(1, Stopwatch.Frequency / 1000);
 
-    private readonly IconBrowserConfig config;
-    private readonly Action saveConfig;
-    private readonly Dictionary<int, IconTabCache> tabCaches = [];
-    private readonly Dictionary<int, ISharedImmediateTexture> gameIconTextures = [];
-    private readonly List<int> filteredGameIcons = [];
-    private Dictionary<int, string>? mapSymbolIcons;
-    private List<SeIconEntry>? seIconEntries;
-    private Action<uint>? gameIconApplyTarget;
-    private Action<string>? seIconApplyTarget;
-    private BrowserMode mode;
-    private string gameIconFilter = string.Empty;
-    private string seIconFilter = string.Empty;
-    private Vector2 expandedWindowSize;
-    private int selectedGameIconTab;
-    private bool isCollapsed;
-    private bool restoreExpandedSize;
-    private bool isFocused;
-    private float lastScale;
-    private Vector2 lastViewportSize;
+    private readonly IconBrowserConfig                        config;
+    private readonly Action                                   saveConfig;
+    private readonly Dictionary<int, IconTabCache>            tabCaches           = [];
+    private readonly Dictionary<int, ISharedImmediateTexture> gameIconTextures    = [];
+    private readonly List<int>                                filteredGameIcons   = [];
+    private Dictionary<int, string>?                          mapSymbolIcons;
+    private List<SeIconEntry>?                                seIconEntries;
+    private Action<uint>?                                     gameIconApplyTarget;
+    private Action<string>?                                   seIconApplyTarget;
+    private BrowserMode                                       mode;
+    private string                                            gameIconFilter      = string.Empty;
+    private string                                            seIconFilter        = string.Empty;
+    private Vector2                                           expandedWindowSize;
+    private int                                               selectedGameIconTab;
+    private bool                                              isCollapsed;
+    private bool                                              restoreExpandedSize;
+    private bool                                              isFocused;
+    private float                                             lastScale;
+    private Vector2                                           lastViewportSize;
 
-    public IconBrowser(IconBrowserConfig config, Action saveConfig)
+    public IconBrowser
+    (
+        IconBrowserConfig config,
+        Action            saveConfig
+    )
     {
-        this.config = config;
+        this.config     = config;
         this.saveConfig = saveConfig;
         config.IconSize = Math.Clamp(config.IconSize, 16f, 128f);
     }
@@ -245,15 +249,17 @@ public sealed class IconBrowser : IEscapeClosableWindow
         IsOpen = true;
     }
 
-    public void OpenForSelection(
-        bool seIconMode,
-        Action<uint>? gameIconTarget,
-        Action<string>? seIconTarget)
+    public void OpenForSelection
+    (
+        bool            seIconMode,
+        Action<uint>?   gameIconTarget,
+        Action<string>? seIconTarget
+    )
     {
         gameIconApplyTarget = gameIconTarget;
-        seIconApplyTarget = seIconTarget;
-        mode = seIconMode ? BrowserMode.SeIconChar : BrowserMode.GameIcon;
-        IsOpen = true;
+        seIconApplyTarget   = seIconTarget;
+        mode                = seIconMode ? BrowserMode.SeIconChar : BrowserMode.GameIcon;
+        IsOpen              = true;
     }
 
     public void Draw()
@@ -299,7 +305,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
             restoreExpandedSize = false;
         }
-        lastScale = OmniTheme.ScaleValue;
+        lastScale        = OmniTheme.ScaleValue;
         lastViewportSize = viewportSize;
 
         ImGui.SetNextWindowCollapsed(false, ImGuiCond.Always);
@@ -618,7 +624,11 @@ public sealed class IconBrowser : IEscapeClosableWindow
         return mapSymbolIcons;
     }
 
-    private static void ScanTab(IconTabDefinition tab, IconTabCache cache)
+    private static void ScanTab
+    (
+        IconTabDefinition tab,
+        IconTabCache      cache
+    )
     {
         var remaining = 64;
         var deadline = Stopwatch.GetTimestamp() + ScanBudgetTicks;
@@ -661,12 +671,14 @@ public sealed class IconBrowser : IEscapeClosableWindow
             || DalamudServices.DataManager.FileExists($"ui/icon/{folder:D3}000/en/{icon:D6}_hr1.tex");
     }
 
-    private void DrawIconGrid(
-        int tabIndex,
+    private void DrawIconGrid
+    (
+        int       tabIndex,
         List<int> icons,
-        float iconSize,
-        bool statusIcons,
-        ref int textureRequestBudget)
+        float     iconSize,
+        bool      statusIcons,
+        ref int   textureRequestBudget
+    )
     {
         using var child = ImRaii.Child($"##iconBrowserGrid{tabIndex}");
         if (!child)
@@ -707,7 +719,13 @@ public sealed class IconBrowser : IEscapeClosableWindow
         clipper.Destroy();
     }
 
-    private void DrawGameIcon(int icon, float iconSize, bool statusIcon, ref int textureRequestBudget)
+    private void DrawGameIcon
+    (
+        int     icon,
+        float   iconSize,
+        bool    statusIcon,
+        ref int textureRequestBudget
+    )
     {
         gameIconTextures.TryGetValue(icon, out var sharedTexture);
         if (sharedTexture is null && textureRequestBudget > 0)
@@ -873,7 +891,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
     public void Close()
     {
-        IsOpen = false;
+        IsOpen    = false;
         isFocused = false;
         gameIconTextures.Clear();
         ClearApplyTargets();
@@ -890,7 +908,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
     private void ClearApplyTargets()
     {
         gameIconApplyTarget = null;
-        seIconApplyTarget = null;
+        seIconApplyTarget   = null;
     }
 
     private enum BrowserMode
@@ -899,9 +917,18 @@ public sealed class IconBrowser : IEscapeClosableWindow
         SeIconChar
     }
 
-    private readonly record struct IconRange(int Start, int End);
+    private readonly record struct IconRange
+    (
+        int Start,
+        int End
+    );
 
-    private sealed record IconTabDefinition(string LabelKey, IconRange[] Ranges, bool StatusIcons = false);
+    private sealed record IconTabDefinition
+    (
+        string      LabelKey,
+        IconRange[] Ranges,
+        bool        StatusIcons = false
+    );
 
     private sealed class IconTabCache(int nextIcon)
     {
@@ -914,13 +941,15 @@ public sealed class IconBrowser : IEscapeClosableWindow
         public bool IsComplete { get; set; }
     }
 
-    private sealed record SeIconEntry(
+    private sealed record SeIconEntry
+    (
         string Name,
         string IconText,
-        int Value,
+        int    Value,
         string DecimalValue,
         string HexValue,
-        string SearchText);
+        string SearchText
+    );
 
     #region 常量
 

@@ -1,16 +1,21 @@
-using TreeToolKit;
 using System.Globalization;
 using System.IO;
 using OmniToolbox.UI.Theme;
+using TreeToolKit;
 
 namespace OmniToolbox.UI.Controls;
 
 public static class OmniFontSelector
 {
-    private static object? InstalledSnapshot;
-    private static KeyValuePair<string, string>[] SortedFonts = [];
+    private static object?                        InstalledSnapshot;
+    private static KeyValuePair<string, string>[] SortedFonts       = [];
 
-    public static string GetPreviewText(string path, string defaultLabel, string defaultPath)
+    public static string GetPreviewText
+    (
+        string path,
+        string defaultLabel,
+        string defaultPath
+    )
     {
         foreach (var font in Fonts.GameFonts)
         {
@@ -31,10 +36,25 @@ public static class OmniFontSelector
             : Path.GetFileNameWithoutExtension(path);
     }
 
-    public static bool Draw(string id, ref string path, ref string search, string defaultLabel, string defaultPath) =>
+    public static bool Draw
+    (
+        string     id,
+        ref string path,
+        ref string search,
+        string     defaultLabel,
+        string     defaultPath
+    ) =>
         Draw(id, ref path, ref search, defaultLabel, defaultPath, ImGui.GetContentRegionAvail().X);
 
-    public static bool Draw(string id, ref string path, ref string search, string defaultLabel, string defaultPath, float width)
+    public static bool Draw
+    (
+        string     id,
+        ref string path,
+        ref string search,
+        string     defaultLabel,
+        string     defaultPath,
+        float      width
+    )
     {
         var isDefault = string.IsNullOrWhiteSpace(path) || string.Equals(path, defaultPath, StringComparison.OrdinalIgnoreCase);
         var label = GetPreviewText(path, defaultLabel, defaultPath);
@@ -49,7 +69,7 @@ public static class OmniFontSelector
         var installed = Fonts.GetInstalledFonts();
         if (!ReferenceEquals(InstalledSnapshot, installed))
         {
-            SortedFonts = installed.Concat(Fonts.GameFonts)
+            SortedFonts       = installed.Concat(Fonts.GameFonts)
                 .OrderBy(font => font.Value.Any(c => c is >= '\u3400' and <= '\u9fff') ? 0 : 1)
                 .ThenBy(font => font.Value, StringComparer.Create(CultureInfo.GetCultureInfo("zh-CN"), true))
                 .ThenBy(font => font.Key, StringComparer.Ordinal)
@@ -70,7 +90,7 @@ public static class OmniFontSelector
                 }
                 if (OmniControls.WrappedSelectable(defaultLabel, isDefault))
                 {
-                    path = defaultPath;
+                    path    = defaultPath;
                     changed = true;
                 }
                 foreach (var font in SortedFonts)
@@ -84,7 +104,7 @@ public static class OmniFontSelector
                     }
                     if (OmniControls.WrappedSelectable($"{font.Value}##{font.Key}", path == font.Key))
                     {
-                        path = font.Key;
+                        path    = font.Key;
                         changed = true;
                     }
                     OmniControls.HelpTooltip(font.Key);

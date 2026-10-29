@@ -23,7 +23,11 @@ internal static class CollectibleConfigJSON
         _ = Write(value, new(ReferenceEqualityComparer.Instance), 0);
     }
 
-    internal static JToken Serialize(object value, JsonSerializerSettings? settings = null)
+    internal static JToken Serialize
+    (
+        object                  value,
+        JsonSerializerSettings? settings = null
+    )
     {
         var type = value.GetType();
         if (!UsesCollectibleModuleContract(type))
@@ -37,7 +41,11 @@ internal static class CollectibleConfigJSON
         return Write(value, new(ReferenceEqualityComparer.Instance), 0);
     }
 
-    internal static object? Deserialize(JToken value, Type type)
+    internal static object? Deserialize
+    (
+        JToken value,
+        Type   type
+    )
     {
         if (!UsesCollectibleModuleContract(type))
             return value.ToObject(type);
@@ -55,7 +63,11 @@ internal static class CollectibleConfigJSON
         return type.IsGenericType && type.GenericTypeArguments.Any(UsesCollectibleModuleContract);
     }
 
-    private static void Validate(Type type, HashSet<Type> visited)
+    private static void Validate
+    (
+        Type          type,
+        HashSet<Type> visited
+    )
     {
         type = Nullable.GetUnderlyingType(type) ?? type;
         if (!visited.Add(type))
@@ -106,7 +118,12 @@ internal static class CollectibleConfigJSON
             Validate(member.Type, visited);
     }
 
-    private static JToken Write(object? value, HashSet<object> active, int depth)
+    private static JToken Write
+    (
+        object?         value,
+        HashSet<object> active,
+        int             depth
+    )
     {
         CheckDepth(depth);
         if (value is null)
@@ -164,7 +181,12 @@ internal static class CollectibleConfigJSON
         }
     }
 
-    private static object? Read(JToken token, Type type, int depth)
+    private static object? Read
+    (
+        JToken token,
+        Type   type,
+        int    depth
+    )
     {
         CheckDepth(depth);
         var underlying = Nullable.GetUnderlyingType(type);
@@ -284,8 +306,8 @@ internal static class CollectibleConfigJSON
                 bool writable;
                 if (member is FieldInfo field)
                 {
-                    readable = field.IsPublic || annotated;
-                    writable = !field.IsInitOnly;
+                    readable   = field.IsPublic || annotated;
+                    writable   = !field.IsInitOnly;
                     memberType = field.FieldType;
                 }
                 else
@@ -293,8 +315,8 @@ internal static class CollectibleConfigJSON
                     var property = (PropertyInfo)member;
                     if (property.GetIndexParameters().Length != 0)
                         continue;
-                    readable = property.GetMethod is { } getter && (getter.IsPublic || annotated);
-                    writable = property.SetMethod is { } setter && (setter.IsPublic || annotated);
+                    readable   = property.GetMethod is { } getter && (getter.IsPublic || annotated);
+                    writable   = property.SetMethod is { } setter && (setter.IsPublic || annotated);
                     memberType = property.PropertyType;
                 }
                 if (!readable || optIn && !annotated)
@@ -384,17 +406,26 @@ internal static class CollectibleConfigJSON
                     yield return attribute;
     }
 
-    private static bool TryDictionary(Type type, out Type key, out Type value)
+    private static bool TryDictionary
+    (
+        Type     type,
+        out Type key,
+        out Type value
+    )
     {
         var contract = type.GetInterfaces().Prepend(type).FirstOrDefault(static item => item.IsGenericType &&
             (item.GetGenericTypeDefinition() == typeof(IDictionary<,>) || item.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>)));
         var arguments = contract?.GetGenericArguments();
-        key = arguments?[0] ?? typeof(object);
+        key   = arguments?[0] ?? typeof(object);
         value = arguments?[1] ?? typeof(object);
         return contract is not null;
     }
 
-    private static bool TrySequence(Type type, out Type element)
+    private static bool TrySequence
+    (
+        Type     type,
+        out Type element
+    )
     {
         if (type.IsArray)
         {
@@ -407,7 +438,12 @@ internal static class CollectibleConfigJSON
         return contract is not null;
     }
 
-    private static Type CollectionType(Type type, Type element, Type? key)
+    private static Type CollectionType
+    (
+        Type  type,
+        Type  element,
+        Type? key
+    )
     {
         var concrete = type;
         if (type.IsInterface)
@@ -432,10 +468,18 @@ internal static class CollectibleConfigJSON
         Type.GetTypeCode(type) is TypeCode.Byte or TypeCode.SByte or TypeCode.Int16 or TypeCode.UInt16 or TypeCode.Int32 or
             TypeCode.UInt32 or TypeCode.Int64 or TypeCode.UInt64;
 
-    private static object ReadKey(string text, Type type) => type.IsEnum ? Enum.Parse(type, text, true)
+    private static object ReadKey
+    (
+        string text,
+        Type   type
+    ) => type.IsEnum ? Enum.Parse(type, text, true)
         : type == typeof(Guid) ? Guid.Parse(text) : Convert.ChangeType(text, type, CultureInfo.InvariantCulture);
 
-    private static bool Matches(Member member, string? name) => string.Equals(member.Info.Name, name, StringComparison.OrdinalIgnoreCase) ||
+    private static bool Matches
+    (
+        Member  member,
+        string? name
+    ) => string.Equals(member.Info.Name, name, StringComparison.OrdinalIgnoreCase) ||
         string.Equals(member.Name, name, StringComparison.OrdinalIgnoreCase);
 
     private static object? Default(Type type) => type.IsValueType ? Activator.CreateInstance(type) : null;
@@ -449,14 +493,28 @@ internal static class CollectibleConfigJSON
             throw new NotSupportedException("Collectible module configuration exceeds the maximum JSON depth of 64.");
     }
 
-    private static NotSupportedException Unsupported(Type type, string reason) =>
+    private static NotSupportedException Unsupported
+    (
+        Type   type,
+        string reason
+    ) =>
         new($"Collectible module configuration {type.FullName}: {reason}.");
 
-    private sealed record Member(MemberInfo Info, string Name, Type Type, bool Writable)
+    private sealed record Member
+    (
+        MemberInfo Info,
+        string     Name,
+        Type       Type,
+        bool       Writable
+    )
     {
         internal object? Get(object instance) => Info is FieldInfo field ? field.GetValue(instance) : ((PropertyInfo)Info).GetValue(instance);
 
-        internal void Set(object instance, object? value)
+        internal void Set
+        (
+            object  instance,
+            object? value
+        )
         {
             if (Info is FieldInfo field)
                 field.SetValue(instance, value);

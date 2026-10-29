@@ -9,10 +9,18 @@ internal static class ModuleContract
 {
     internal const int API_VERSION = 1;
 
-    internal static string UpgradeReason(string name, string detail) =>
+    internal static string UpgradeReason
+    (
+        string name,
+        string detail
+    ) =>
         string.Format(OmniLoc.Get("Module.Contract.UpgradeReason"), name, detail);
 
-    internal static void ValidateVersion(string name, int version)
+    internal static void ValidateVersion
+    (
+        string name,
+        int    version
+    )
     {
         if (version > API_VERSION)
             throw new InvalidDataException(string.Format(OmniLoc.Get("Module.Contract.NewerApi"), name, version));

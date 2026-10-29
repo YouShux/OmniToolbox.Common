@@ -5,8 +5,10 @@ namespace OmniToolbox.Collections;
 
 public sealed partial class CollectionSourceService
 {
-    private static FrozenDictionary<uint, IReadOnlyList<CollectionSource>> BuildBlueMageSources(
-        Dictionary<uint, List<BlueSpellSource>> spellRows)
+    private static FrozenDictionary<uint, IReadOnlyList<CollectionSource>> BuildBlueMageSources
+    (
+        Dictionary<uint, List<BlueSpellSource>> spellRows
+    )
     {
         var sources = new Dictionary<uint, HashSet<CollectionSource>>();
         foreach (var (actionID, rows) in spellRows)

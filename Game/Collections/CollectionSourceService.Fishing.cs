@@ -9,9 +9,13 @@ namespace OmniToolbox.Collections;
 
 public sealed partial class CollectionSourceService
 {
-    private static void AddFishingSources(IDictionary<uint, HashSet<CollectionSource>> target,
-        JsonDocument? preparedDocument = null, PreparedSourceText? preparedText = null,
-        CancellationToken cancellationToken = default)
+    private static void AddFishingSources
+    (
+        IDictionary<uint, HashSet<CollectionSource>> target,
+        JsonDocument?                                preparedDocument = null,
+        PreparedSourceText?                          preparedText = null,
+        CancellationToken                            cancellationToken = default
+    )
     {
         using var document = preparedDocument is null ? ReadDocument("FishingSources.json") : null;
         var root = (preparedDocument ?? document ?? throw new InvalidOperationException()).RootElement;
@@ -66,7 +70,11 @@ public sealed partial class CollectionSourceService
                 FormatFishingHour(endHour));
     }
 
-    private static string GetFishingWeather(JsonElement item, IReadOnlyDictionary<uint, string>? preparedNames)
+    private static string GetFishingWeather
+    (
+        JsonElement                        item,
+        IReadOnlyDictionary<uint, string>? preparedNames
+    )
     {
         var weather = GetWeatherNames(item, "w", preparedNames);
         var previousWeather = GetWeatherNames(item, "v", preparedNames);
@@ -82,8 +90,12 @@ public sealed partial class CollectionSourceService
         return weather.Length == 0 ? OmniLoc.Get("Common.None") : weather;
     }
 
-    private static string GetWeatherNames(JsonElement item, string propertyName,
-        IReadOnlyDictionary<uint, string>? preparedNames) =>
+    private static string GetWeatherNames
+    (
+        JsonElement                        item,
+        string                             propertyName,
+        IReadOnlyDictionary<uint, string>? preparedNames
+    ) =>
         item.TryGetProperty(propertyName, out var weatherIds)
             ? string.Join(
                 OmniLoc.Get("Common.ListSeparator"),

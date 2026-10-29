@@ -1,6 +1,10 @@
 namespace OmniToolbox.Common.Module.Runtime;
 
-public readonly record struct ModuleOperationResult(ModuleOperationStatus Status, string Reason = "")
+public readonly record struct ModuleOperationResult
+(
+    ModuleOperationStatus Status,
+    string                Reason = ""
+)
 {
     public bool Succeeded => Status == ModuleOperationStatus.Succeeded;
 

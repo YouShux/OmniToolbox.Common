@@ -14,8 +14,8 @@ namespace OmniToolbox.Notifications;
 
 public static class OmniNotifier
 {
-    private static readonly Lazy<ISharedImmediateTexture?> PluginIcon = new(LoadPluginIcon);
-    private static WindowsPopupNotifier? WindowsNotifier;
+    private static readonly Lazy<ISharedImmediateTexture?> PluginIcon      = new(LoadPluginIcon);
+    private static WindowsPopupNotifier?                   WindowsNotifier;
 
     private static readonly ReadOnlySeString ChatPrefix = new(
         new DalamudSeStringBuilder()
@@ -25,7 +25,11 @@ public static class OmniNotifier
             .Build()
             .Encode());
 
-    public static void Chat(string title, string? details = null)
+    public static void Chat
+    (
+        string  title,
+        string? details = null
+    )
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -70,12 +74,14 @@ public static class OmniNotifier
         NotifyHelper.ToastQuest(content);
     }
 
-    public static void Popup(
-        string title,
-        string content,
+    public static void Popup
+    (
+        string           title,
+        string           content,
         NotificationType type = NotificationType.Info,
-        bool usePluginIcon = true,
-        bool notifyWhenBackground = true)
+        bool             usePluginIcon = true,
+        bool             notifyWhenBackground = true
+    )
     {
         if (string.IsNullOrWhiteSpace(content))
         {

@@ -8,7 +8,7 @@ internal sealed class WindowsPopupNotifier : IDisposable
 {
     private readonly Icon icon;
     private readonly nint windowHandle;
-    private bool disposed;
+    private bool          disposed;
 
     public WindowsPopupNotifier(string iconPath)
     {
@@ -30,11 +30,11 @@ internal sealed class WindowsPopupNotifier : IDisposable
         }
 
         var data = CreateData();
-        data.Flags = NotifyIconFlags.Icon | NotifyIconFlags.ToolTip | NotifyIconFlags.State;
+        data.Flags      = NotifyIconFlags.Icon | NotifyIconFlags.ToolTip | NotifyIconFlags.State;
         data.IconHandle = icon.Handle;
-        data.ToolTip = "Omni Toolbox";
-        data.State = NotifyIconState.Hidden;
-        data.StateMask = NotifyIconState.Hidden;
+        data.ToolTip    = "Omni Toolbox";
+        data.State      = NotifyIconState.Hidden;
+        data.StateMask  = NotifyIconState.Hidden;
 
         if (!ShellNotifyIcon(NotifyIconMessage.Add, ref data))
         {
@@ -44,12 +44,16 @@ internal sealed class WindowsPopupNotifier : IDisposable
                 $"无法初始化 Omni Toolbox Windows 通知图标。Win32Error={error}, WindowHandle=0x{windowHandle:X}。");
         }
 
-        data.Flags = NotifyIconFlags.None;
+        data.Flags            = NotifyIconFlags.None;
         data.VersionOrTimeout = 4;
-        _ = ShellNotifyIcon(NotifyIconMessage.SetVersion, ref data);
+        _                     = ShellNotifyIcon(NotifyIconMessage.SetVersion, ref data);
     }
 
-    public void Show(string title, string content)
+    public void Show
+    (
+        string title,
+        string content
+    )
     {
         if (disposed)
         {
@@ -57,12 +61,12 @@ internal sealed class WindowsPopupNotifier : IDisposable
         }
 
         var data = CreateData();
-        data.Flags = NotifyIconFlags.Info;
-        data.Info = Truncate(content, 255);
-        data.InfoTitle = Truncate(title, 63);
-        data.InfoFlags = NotifyInfoFlags.User | NotifyInfoFlags.LargeIcon;
+        data.Flags             = NotifyIconFlags.Info;
+        data.Info              = Truncate(content, 255);
+        data.InfoTitle         = Truncate(title, 63);
+        data.InfoFlags         = NotifyInfoFlags.User | NotifyInfoFlags.LargeIcon;
         data.BalloonIconHandle = icon.Handle;
-        _ = ShellNotifyIcon(NotifyIconMessage.Modify, ref data);
+        _                      = ShellNotifyIcon(NotifyIconMessage.Modify, ref data);
     }
 
     public void Dispose()
@@ -75,7 +79,7 @@ internal sealed class WindowsPopupNotifier : IDisposable
         disposed = true;
         var data = CreateData();
         data.Flags = NotifyIconFlags.None;
-        _ = ShellNotifyIcon(NotifyIconMessage.Delete, ref data);
+        _          = ShellNotifyIcon(NotifyIconMessage.Delete, ref data);
         icon.Dispose();
     }
 
@@ -89,7 +93,11 @@ internal sealed class WindowsPopupNotifier : IDisposable
         InfoTitle = string.Empty
     };
 
-    private static string Truncate(string value, int maxLength) =>
+    private static string Truncate
+    (
+        string value,
+        int    maxLength
+    ) =>
         value.Length <= maxLength ? value : value[..maxLength];
 
     [DllImport(
@@ -99,7 +107,11 @@ internal sealed class WindowsPopupNotifier : IDisposable
         ExactSpelling = true,
         SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool ShellNotifyIcon(NotifyIconMessage message, ref NotifyIconData data);
+    private static extern bool ShellNotifyIcon
+    (
+        NotifyIconMessage  message,
+        ref NotifyIconData data
+    );
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -108,12 +120,12 @@ internal sealed class WindowsPopupNotifier : IDisposable
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct NotifyIconData
     {
-        public uint Size;
-        public nint WindowHandle;
-        public uint ID;
+        public uint            Size;
+        public nint            WindowHandle;
+        public uint            ID;
         public NotifyIconFlags Flags;
-        public uint CallbackMessage;
-        public nint IconHandle;
+        public uint            CallbackMessage;
+        public nint            IconHandle;
 
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
         public string ToolTip;
@@ -130,8 +142,8 @@ internal sealed class WindowsPopupNotifier : IDisposable
         public string InfoTitle;
 
         public NotifyInfoFlags InfoFlags;
-        public Guid ItemGUID;
-        public nint BalloonIconHandle;
+        public Guid            ItemGUID;
+        public nint            BalloonIconHandle;
     }
 
     private enum NotifyIconMessage : uint

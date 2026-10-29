@@ -7,27 +7,31 @@ namespace OmniToolbox.Common.Module.Runtime;
 
 public sealed class ModuleOperationCoordinator : IAsyncDisposable
 {
-    private static readonly AsyncLocal<ModuleOperationCoordinator?> Current = new();
-    private readonly object syncRoot = new();
-    private readonly Channel<Operation> operations;
-    private readonly CancellationTokenSource stopping = new();
-    private readonly Action<Exception>? reportError;
-    private readonly Task consumer;
-    private Task? stoppingTask;
-    private bool accepting = true;
-    private int pendingCount;
+    private static readonly AsyncLocal<ModuleOperationCoordinator?> Current      = new();
+    private readonly object                                         syncRoot     = new();
+    private readonly Channel<Operation>                             operations;
+    private readonly CancellationTokenSource                        stopping     = new();
+    private readonly Action<Exception>?                             reportError;
+    private readonly Task                                           consumer;
+    private Task?                                                   stoppingTask;
+    private bool                                                    accepting    = true;
+    private int                                                     pendingCount;
 
-    public ModuleOperationCoordinator(int capacity = 128, Action<Exception>? reportError = null)
+    public ModuleOperationCoordinator
+    (
+        int                capacity = 128,
+        Action<Exception>? reportError = null
+    )
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(capacity, 1);
-        operations = Channel.CreateBounded<Operation>(new BoundedChannelOptions(capacity)
+        operations       = Channel.CreateBounded<Operation>(new BoundedChannelOptions(capacity)
         {
             SingleReader = true,
             FullMode = BoundedChannelFullMode.Wait,
             AllowSynchronousContinuations = false
         });
         this.reportError = reportError;
-        consumer = Task.Run(ProcessAsync);
+        consumer         = Task.Run(ProcessAsync);
     }
 
     public int PendingCount => Volatile.Read(ref pendingCount);
@@ -37,9 +41,11 @@ public sealed class ModuleOperationCoordinator : IAsyncDisposable
     internal ValueTask<bool> WaitToWriteAsync(CancellationToken cancellationToken) =>
         operations.Writer.WaitToWriteAsync(cancellationToken);
 
-    public Task<ModuleOperationResult> Enqueue(
+    public Task<ModuleOperationResult> Enqueue
+    (
         Func<CancellationToken, Task<ModuleOperationResult>> operation,
-        CancellationToken cancellationToken = default)
+        CancellationToken                                    cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(operation);
         if (ReferenceEquals(Current.Value, this))
@@ -80,7 +86,7 @@ public sealed class ModuleOperationCoordinator : IAsyncDisposable
 
             accepting = false;
             operations.Writer.TryComplete();
-            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            completion   = new(TaskCreationOptions.RunContinuationsAsynchronously);
             stoppingTask = completion.Task;
         }
 
@@ -192,12 +198,16 @@ public sealed class ModuleOperationCoordinator : IAsyncDisposable
     private sealed class Operation : IDisposable
     {
         private readonly CancellationTokenRegistration cancellationRegistration;
-        private int started;
+        private int                                    started;
 
-        internal Operation(Func<CancellationToken, Task<ModuleOperationResult>> execute, CancellationToken cancellationToken)
+        internal Operation
+        (
+            Func<CancellationToken, Task<ModuleOperationResult>> execute,
+            CancellationToken                                    cancellationToken
+        )
         {
-            Execute = execute;
-            CancellationToken = cancellationToken;
+            Execute                  = execute;
+            CancellationToken        = cancellationToken;
             cancellationRegistration = cancellationToken.Register(() =>
             {
                 if (Interlocked.CompareExchange(ref started, -1, 0) == 0)

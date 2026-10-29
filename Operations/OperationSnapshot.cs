@@ -3,15 +3,17 @@ using System.Text.Json.Nodes;
 
 namespace OmniToolbox.Operations;
 
-public sealed record OperationSnapshot(
-    string OperationID,
-    string Service,
-    string Kind,
-    ulong CharacterContentID,
-    OperationState State,
-    string Error,
-    DateTimeOffset StartedAt,
-    DateTimeOffset? CompletedAt)
+public sealed record OperationSnapshot
+(
+    string          OperationID,
+    string          Service,
+    string          Kind,
+    ulong           CharacterContentID,
+    OperationState  State,
+    string          Error,
+    DateTimeOffset  StartedAt,
+    DateTimeOffset? CompletedAt
+)
 {
     public bool ResultKnown => State is OperationState.Succeeded or OperationState.Failed or OperationState.Cancelled;
 

@@ -12,18 +12,20 @@ public sealed unsafe class ItemTooltipInventoryContext(HookRegistry hookRegistry
         "E8 ?? ?? ?? ?? 84 C0 0F 84 ?? ?? ?? ?? 48 89 9C 24 ?? ?? ?? ?? 4C 89 A4 24");
 
     private Hook<AgentItemDetailOnItemHovered>? hoveredItemHook;
-    private InventoryItem hoveredItem;
-    private int leaseCount;
-    private bool disposed;
+    private InventoryItem                       hoveredItem;
+    private int                                 leaseCount;
+    private bool                                disposed;
 
-    private delegate byte AgentItemDetailOnItemHovered(
+    private delegate byte AgentItemDetailOnItemHovered
+    (
         void* agent,
         void* source,
         void* context,
         void* owner,
-        uint type,
-        uint index,
-        int* itemData);
+        uint  type,
+        uint  index,
+        int*  itemData
+    );
 
     public IDisposable Acquire()
     {
@@ -39,7 +41,11 @@ public sealed unsafe class ItemTooltipInventoryContext(HookRegistry hookRegistry
         return new Lease(this);
     }
 
-    public bool TryGet(uint normalizedItemID, out InventoryItem item)
+    public bool TryGet
+    (
+        uint              normalizedItemID,
+        out InventoryItem item
+    )
     {
         item = hoveredItem;
         return normalizedItemID != 0 && ItemUtil.GetBaseId(item.ItemId).ItemId == normalizedItemID;
@@ -52,19 +58,21 @@ public sealed unsafe class ItemTooltipInventoryContext(HookRegistry hookRegistry
             return;
         }
 
-        disposed = true;
+        disposed   = true;
         leaseCount = 0;
         ReleaseHook();
     }
 
-    private byte OnItemHovered(
+    private byte OnItemHovered
+    (
         void* agent,
         void* source,
         void* context,
         void* owner,
-        uint type,
-        uint index,
-        int* itemData)
+        uint  type,
+        uint  index,
+        int*  itemData
+    )
     {
         var result = hoveredItemHook!.Original(agent, source, context, owner, type, index, itemData);
         hoveredItem = itemData == null ? default : *(InventoryItem*)itemData;
@@ -85,7 +93,7 @@ public sealed unsafe class ItemTooltipInventoryContext(HookRegistry hookRegistry
     {
         hookRegistry.Release(hoveredItemHook);
         hoveredItemHook = null;
-        hoveredItem = default;
+        hoveredItem     = default;
     }
 
     private sealed class Lease(ItemTooltipInventoryContext owner) : IDisposable

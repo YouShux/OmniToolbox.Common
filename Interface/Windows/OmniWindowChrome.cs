@@ -1,6 +1,6 @@
-using TreeToolKit;
 using OmniToolbox.UI.Controls;
 using OmniToolbox.UI.Theme;
+using TreeToolKit;
 
 namespace OmniToolbox.UI;
 
@@ -8,11 +8,13 @@ public static class OmniWindowChrome
 {
     public static bool IsTextInputActive => ImGui.GetIO().WantTextInput;
 
-    public static void UpdateEscapeClose(
-        EscapeCloseController controller,
-        IEscapeClosableWindow first,
+    public static void UpdateEscapeClose
+    (
+        EscapeCloseController  controller,
+        IEscapeClosableWindow  first,
         IEscapeClosableWindow? second = null,
-        IEscapeClosableWindow? third = null)
+        IEscapeClosableWindow? third = null
+    )
     {
         if (IsTextInputActive)
         {
@@ -23,8 +25,12 @@ public static class OmniWindowChrome
         controller.Update(first, second, third);
     }
 
-    public static (Vector2 Position, Vector2 Size) GetFrameBounds(
-        Vector2 windowPosition, Vector2 windowSize, bool isCollapsed)
+    public static (Vector2 Position, Vector2 Size) GetFrameBounds
+    (
+        Vector2 windowPosition,
+        Vector2 windowSize,
+        bool    isCollapsed
+    )
     {
         var position = isCollapsed
             ? windowPosition + new Vector2(OmniTheme.CollapsedHeaderSafeInset(), OmniTheme.CollapsedHeaderTop())
@@ -37,7 +43,11 @@ public static class OmniWindowChrome
         return (position, size);
     }
 
-    public static (Vector2 Position, Vector2 Size) GetContentBounds(Vector2 framePosition, Vector2 frameSize) =>
+    public static (Vector2 Position, Vector2 Size) GetContentBounds
+    (
+        Vector2 framePosition,
+        Vector2 frameSize
+    ) =>
         (framePosition + new Vector2(OmniTheme.WindowInset(), OmniTheme.TitleBarHeight() + OmniTheme.WindowInset()),
          new Vector2(
              MathF.Max(1f, frameSize.X - OmniTheme.WindowInset() * 2f),
@@ -45,7 +55,11 @@ public static class OmniWindowChrome
 
     public static void SetNextWindowPosition(string windowName) => OmniWindowPlacement.SetNextWindowPosition(windowName);
 
-    public static void SetNextWindowPosition(string windowName, Vector2 position) =>
+    public static void SetNextWindowPosition
+    (
+        string  windowName,
+        Vector2 position
+    ) =>
         OmniWindowPlacement.SetNextWindowPosition(windowName, position);
 
     public static unsafe void DragBackground()
@@ -65,7 +79,12 @@ public static class OmniWindowChrome
         window.Flags = flags;
     }
 
-    public static Vector2 DragTitleBar(string id, Vector2 position, Vector2 size)
+    public static Vector2 DragTitleBar
+    (
+        string  id,
+        Vector2 position,
+        Vector2 size
+    )
     {
         ImGui.SetCursorScreenPos(position);
         ImGui.InvisibleButton(id, Vector2.Max(Vector2.One, size));
@@ -80,14 +99,16 @@ public static class OmniWindowChrome
         return position;
     }
 
-    public static OmniWindowChromeResult Draw(
+    public static OmniWindowChromeResult Draw
+    (
         Vector2 framePosition,
         Vector2 frameSize,
-        bool isCollapsed,
-        string title,
-        string collapseID,
-        string closeID,
-        bool drawTitle = true)
+        bool    isCollapsed,
+        string  title,
+        string  collapseID,
+        string  closeID,
+        bool    drawTitle = true
+    )
     {
         var titleBarSize = new Vector2(frameSize.X, OmniTheme.TitleBarHeight());
         framePosition = DragTitleBar($"{collapseID}Drag", framePosition,

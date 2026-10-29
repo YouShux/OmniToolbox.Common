@@ -13,20 +13,24 @@ public sealed unsafe class NonEntityTargetVisibility(HookRegistry hookRegistry) 
         "40 53 48 83 EC 20 F3 0F 10 81 ?? ?? ?? ?? 0F 57 C9 0F 2E C1 48 8B D9 7A 02 74 35");
 
     private Hook<Character.Delegates.GetIsTargetable>? hook;
-    private bool overlayEnabled;
-    private bool showNonEntityTargets;
-    private bool blockOtherTreasureTargets;
+    private bool                                       overlayEnabled;
+    private bool                                       showNonEntityTargets;
+    private bool                                       blockOtherTreasureTargets;
 
     public event Action<nint>? NonEntityTargetDetected;
 
-    public void SetOverlayPolicy(bool enabled, bool showTargets)
+    public void SetOverlayPolicy
+    (
+        bool enabled,
+        bool showTargets
+    )
     {
         if (overlayEnabled == enabled && showNonEntityTargets == (enabled && showTargets))
         {
             return;
         }
 
-        overlayEnabled = enabled;
+        overlayEnabled       = enabled;
         showNonEntityTargets = enabled && showTargets;
         UpdateHook();
     }
@@ -49,9 +53,9 @@ public sealed unsafe class NonEntityTargetVisibility(HookRegistry hookRegistry) 
 
     public void Dispose()
     {
-        NonEntityTargetDetected = null;
-        overlayEnabled = false;
-        showNonEntityTargets = false;
+        NonEntityTargetDetected   = null;
+        overlayEnabled            = false;
+        showNonEntityTargets      = false;
         blockOtherTreasureTargets = false;
         ReleaseHook();
     }

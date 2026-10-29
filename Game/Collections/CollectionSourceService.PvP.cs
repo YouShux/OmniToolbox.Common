@@ -44,9 +44,11 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private static void AddPVPSeriesSources(
+    private static void AddPVPSeriesSources
+    (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        PvPSeries series)
+        PvPSeries                                    series
+    )
     {
         if (series.RowId == 0)
             return;

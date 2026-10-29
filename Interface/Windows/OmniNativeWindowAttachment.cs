@@ -6,16 +6,22 @@ namespace OmniToolbox.UI;
 
 public static unsafe class OmniNativeWindowAttachment
 {
-    public static void SyncBeside(
-        NativeAddon window, AtkUnitBase* addon, AtkUnitBase* sourceAddon,
-        float gap, float verticalOffset, bool preferRight = false)
+    public static void SyncBeside
+    (
+        NativeAddon  window,
+        AtkUnitBase* addon,
+        AtkUnitBase* sourceAddon,
+        float        gap,
+        float        verticalOffset,
+        bool         preferRight = false
+    )
     {
         var stage = AtkStage.Instance();
         if (stage == null || sourceAddon->WindowNode == null || addon->WindowNode == null)
             return;
 
         addon->EnableTitleBarContextMenu = false;
-        addon->DisableUserScaling = false;
+        addon->DisableUserScaling        = false;
         var sourceNode = (AtkResNode*)sourceAddon->WindowNode;
         var targetNode = (AtkResNode*)addon->WindowNode;
         var scale = sourceNode->GetScale();

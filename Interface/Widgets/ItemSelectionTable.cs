@@ -8,10 +8,12 @@ public static class ItemSelectionTable
 {
     private static readonly Dictionary<uint, ItemLayout> Layouts = [];
 
-    public static ItemSelectionTableChange Draw(
-        string id,
+    public static ItemSelectionTableChange Draw
+    (
+        string                               id,
         IReadOnlyList<ItemSelectionTableRow> rows,
-        bool showEnabledColumn = true)
+        bool                                 showEnabledColumn = true
+    )
     {
         var layoutID = ImGui.GetID(id);
         if (!Layouts.TryGetValue(layoutID, out var layout))
@@ -70,10 +72,10 @@ public static class ItemSelectionTable
         ImGui.TableSetupScrollFreeze(0, 1);
         var change = DrawHeader(rows, showEnabledColumn, detailLayout);
         ImGui.TableSetColumnIndex(!detailLayout && showEnabledColumn ? 1 : 0);
-        nameWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+        nameWidth        = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
         rowContentHeight = MathF.Max(iconSize, MathF.Max(OmniTheme.CheckboxSize(), deleteButtonSize.Y));
         rowContentHeight = MathF.Max(rowContentHeight, layout.Measure(nameWidth, iconSize, true));
-        rowHeight = rowContentHeight + cellPadding;
+        rowHeight        = rowContentHeight + cellPadding;
         if (detailLayout)
         {
             foreach (var row in rows)
@@ -107,10 +109,12 @@ public static class ItemSelectionTable
         return change;
     }
 
-    private static ItemSelectionTableChange DrawHeader(
+    private static ItemSelectionTableChange DrawHeader
+    (
         IReadOnlyList<ItemSelectionTableRow> rows,
-        bool showEnabledColumn,
-        bool detailLayout)
+        bool                                 showEnabledColumn,
+        bool                                 detailLayout
+    )
     {
         OmniControls.BeginTableHeaderRow();
         if (showEnabledColumn)
@@ -150,13 +154,15 @@ public static class ItemSelectionTable
         return default;
     }
 
-    private static ItemSelectionTableChange DrawRow(
+    private static ItemSelectionTableChange DrawRow
+    (
         ItemSelectionTableRow row,
-        float rowContentHeight,
-        float iconSize,
-        Vector2 deleteButtonSize,
-        bool showEnabledColumn,
-        bool detailLayout)
+        float                 rowContentHeight,
+        float                 iconSize,
+        Vector2               deleteButtonSize,
+        bool                  showEnabledColumn,
+        bool                  detailLayout
+    )
     {
         using var idScope = ImRaii.PushId((int)row.ItemID);
         var change = default(ItemSelectionTableChange);
@@ -195,14 +201,16 @@ public static class ItemSelectionTable
         return change;
     }
 
-    public static void DrawItemCell(
-        uint itemID,
-        float rowContentHeight,
-        float iconSize,
+    public static void DrawItemCell
+    (
+        uint    itemID,
+        float   rowContentHeight,
+        float   iconSize,
         string? displayName = null,
-        bool showItemIDTooltip = true,
-        bool isCollected = false,
-        bool wrapName = false)
+        bool    showItemIDTooltip = true,
+        bool    isCollected = false,
+        bool    wrapName = false
+    )
     {
         var itemName = string.IsNullOrWhiteSpace(displayName) ? LuminaWrapper.GetItemName(itemID) : displayName;
         if (string.IsNullOrWhiteSpace(itemName))
@@ -253,7 +261,12 @@ public static class ItemSelectionTable
         }
     }
 
-    public static float MeasureItemCellHeight(string name, float width, float iconSize)
+    public static float MeasureItemCellHeight
+    (
+        string name,
+        float  width,
+        float  iconSize
+    )
     {
         var spacing = OmniTheme.Scale(6f);
         var stacked = width < iconSize + spacing + ImGui.GetFontSize() * 2f;
@@ -262,8 +275,8 @@ public static class ItemSelectionTable
     }
     private sealed class ItemLayout
     {
-        private readonly List<uint> itemIDs = [];
-        private readonly List<string> names = [];
+        private readonly List<uint>                                                     itemIDs   = [];
+        private readonly List<string>                                                   names     = [];
         private (float Width, float IconSize, float FontSize, nint Font, float Height)? estimated;
         private (float Width, float IconSize, float FontSize, nint Font, float Height)? actual;
 
@@ -285,7 +298,12 @@ public static class ItemSelectionTable
             }
         }
 
-        public unsafe float Measure(float width, float iconSize, bool useActual)
+        public unsafe float Measure
+        (
+            float width,
+            float iconSize,
+            bool  useActual
+        )
         {
             ref var cached = ref (useActual ? ref actual : ref estimated);
             var font = (nint)ImGui.GetFont().Handle;
