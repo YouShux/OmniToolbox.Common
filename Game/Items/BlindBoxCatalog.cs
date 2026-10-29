@@ -10,6 +10,7 @@ public static class BlindBoxCatalog
         36636,
         22357,
         33441,
+        32161,
         41667,
         KEYBOUND_COFFER_ITEM_ID,
         22508,

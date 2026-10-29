@@ -153,6 +153,7 @@ public static class OmniCommandCatalog
         new("bis", "BIS配装", "", "打开全职业 BIS 配装", "BestInSlotGear", OmniCommandArguments.None),
         new("chatlogreplay", "日志回放", "", "打开聊天日志回放", "ChatFrameOptimization", OmniCommandArguments.None),
         new("glamourmanager", "幻化管理", "", "打开幻化管理", "BetterGlamourManagement", OmniCommandArguments.None),
+        new("cleartryon", "清理试穿", "", "清理试穿残留", "BetterGlamourManagement", OmniCommandArguments.None),
         new("armoirecheck", "收藏柜记录", "", "检查收藏柜收录记录", "ArmoireRecord", OmniCommandArguments.None),
         new("glamourcabinet", "虚空收藏柜", "", "打开收藏柜", "VoidGlamourStation", OmniCommandArguments.None),
         new("macroicon", "宏图标", "<图标ID>", "设置当前选中宏的图标", "BetterUserMacro", OmniCommandArguments.Required),

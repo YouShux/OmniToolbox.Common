@@ -15,7 +15,7 @@ public static unsafe class OmniWindowPlacement
     public static (Vector2 Position, Vector2 Size) GetWorkArea(string? windowName = null)
     {
         windowName ??= ScopedWindowName;
-        var window = windowName is null ? ImGuiP.GetCurrentWindow() : ImGuiP.FindWindowByName(windowName);
+        var window = windowName is null ? ImGuiP.GetCurrentWindowRead() : ImGuiP.FindWindowByName(windowName);
         return GetWorkAreaAt(window.IsNull ? ImGui.GetMainViewport().GetCenter() : window.Pos + window.Size * 0.5f);
     }
 
