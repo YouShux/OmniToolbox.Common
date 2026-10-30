@@ -4,6 +4,10 @@
 
 物品、任务、收藏品、职业、地图等基础数据来自用户安装的《FINAL FANTASY XIV》客户端，通过 Lumina 和 FFXIVClientStructs 读取。相关名称、商标、文本及游戏素材的权利归 SQUARE ENIX CO., LTD. 所有。
 
+### 藏宝图等级简称
+
+藏宝图选择器的 `G1` 至 `G18` 及隐藏地图 `G1` 根据日文客户端 `Item.Name` 中的等级简称显示，通过 [FFCafe XIVAPI v2](https://xivapi-v2.xivcdn.com/api/sheet/Item?language=ja&fields=Name&rows=6688,6689,6690,6691,6692,8156,12241,12242,12243,17835,17836,26744,26745,36611,36612,39591,43556,43557,46185)核对同一物品 ID。特殊地图 `S1` 至 `S5` 按对应藏宝副本显示为 `G10`、`G12`、`G14`、`G15`、`G17`，与用户提供的庄子选择器分组一致；庄子参考来源为 [Join-Taoist-Zhuangzi-Repo](https://github.com/Join-Taoist/Join-Taoist-Zhuangzi-Repo) 的 `0.3.0.7`，仅参考分组关系。未定义 G 编号的地图显示 `·—`。G 编号与 `TreasureHuntRank.RowId` 不同。
+
 ## LuminaSupplemental 补充数据
 
 以下 CSV 原样取自 Critical-Impact 的 [LuminaSupplemental](https://github.com/Critical-Impact/LuminaSupplemental) 项目，由 `LuminaSupplemental.Excel 5.1.4` 包提供，固定提交为 `e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a`：
