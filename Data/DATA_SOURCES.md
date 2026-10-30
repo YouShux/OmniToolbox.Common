@@ -11,7 +11,13 @@
 - `ItemPatch.csv`、`ItemSupplement.csv`、`StoreItem.csv`、`BGMOrchestrion.csv`。
 - `DungeonBoss.csv`、`DungeonChest.csv`、`DungeonBossDrop.csv`、`DungeonBossChest.csv`、`DungeonChestItem.csv`。
 
-更新入口：`tools/update-supplemental-data.ps1`。
+内置快照更新入口：`tools/update-supplemental-data.ps1`。插件启动时还会检查同一上游 `main` 中补充数据目录的最新提交，按同一提交下载上述九份 CSV，校验表头、记录及物品版本区间后，统一用于物品、收录、副本掉落与乐谱索引。沿用上游 GPL v3 许可；Wiki 逐项版本补充仍优先于 CSV。
+
+## 数据更新入口
+
+- 自动更新工作流：本体仓库 `.github/workflows/update-community-data.yml`。
+- 数据包生成：`tools/build-community-data.mjs`。
+- 各数据源的更新脚本见下文。
 
 ## 最终幻想 XIV 中文维基
 
@@ -21,7 +27,7 @@ Omni 对数据进行字段筛选、格式转换、分类、去重和补充。
 
 主要补充来源包括[特殊装备](https://ff14.huijiwiki.com/wiki/特殊装备)、[蛮神发光武器](https://ff14.huijiwiki.com/wiki/蛮神发光武器)、[制作采集特殊工具](https://ff14.huijiwiki.com/wiki/制作采集特殊工具)、[魔光键影宝箱](https://ff14.huijiwiki.com/wiki/物品:魔光键影宝箱)及[魔兽图鉴](https://ff14.huijiwiki.com/wiki/魔兽图鉴)页面。
 
-更新入口：`tools/update-wiki-item-sources.ps1`、`tools/update-collection-resources.mjs`。插件运行时读取本地快照。
+更新入口：`tools/update-wiki-item-sources.ps1`、`tools/update-collection-resources.mjs`。物品版本及来源快照接入上述自动发布管道；其余特定玩法与页面补充按现有代码维护。
 
 ## 其他社区数据
 
@@ -32,7 +38,7 @@ Omni 对数据进行字段筛选、格式转换、分类、去重和补充。
 | `RelicItemIdToAchievement.csv` | FFXIV Collect 的[特殊武器](https://ffxivcollect.com/api/relics)与[成就](https://ffxivcollect.com/api/achievements)公开接口 | `tools/update-collection-resources.mjs` |
 | `EquipmentSourceSupplement.csv` | GarlandTools 的公开物品端点 `https://garlandtools.org/db/doc/item/en/3/{ItemId}.json` | `tools/update-equipment-source-supplement.mjs` |
 
-上述资源运行时使用本地快照。`EquipmentSourceSupplement.meta.json` 保留原始资源 URL 与 SHA-256；旧版副本掉落资料不代表当前仍有相同产出。
+上述资源接入社区数据自动发布管道，运行时使用经校验的下载缓存或内置快照。`EquipmentSourceSupplement.meta.json` 保留原始资源 URL 与 SHA-256；旧版副本掉落资料不代表当前仍有相同产出。鱼糕数据采用本地声明的 protobuf 字段解码，不执行来源站 JavaScript；青魔数据按内容结构定位，不依赖打包变量名。
 
 获取流程补充还参考 [FFXIV Collect](https://ffxivcollect.com/)、[Gamer Escape](https://ffxiv.gamerescape.com/wiki/Researchingway/Purchase_a_Cosmic_Tool_Replica)及 FFXIV Console Games Wiki 的[装备](https://ffxiv.consolegameswiki.com/wiki/Ardent_Accessories)和[任务](https://ffxiv.consolegameswiki.com/wiki/Dressed_to_Deceive)资料。
 
