@@ -7,9 +7,16 @@ namespace OmniToolbox.Data;
 
 internal static class EmbeddedData
 {
-    public static Stream Open(string fileName) =>
-        typeof(EmbeddedData).Assembly.GetManifestResourceStream("OmniToolbox.Data." + fileName)
-        ?? throw new InvalidDataException($"Embedded data resource is missing: {fileName}");
+    internal static IReadOnlyDictionary<string, byte[]>? UpdatedResources { private get; set; }
+
+    public static Stream Open(string fileName)
+    {
+        if (UpdatedResources is { } resources && resources.TryGetValue(fileName, out var content))
+            return new MemoryStream(content, writable: false);
+
+        return typeof(EmbeddedData).Assembly.GetManifestResourceStream("OmniToolbox.Data." + fileName)
+               ?? throw new InvalidDataException($"Embedded data resource is missing: {fileName}");
+    }
 
     public static void ReadCSV
     (

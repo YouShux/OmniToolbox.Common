@@ -13,7 +13,21 @@
 
 上游包附带 GNU GPL v3 许可，完整许可保存在 [LuminaSupplemental.LICENSE.txt](Resources/LuminaSupplemental.LICENSE.txt)。上游数据的原始出处及贡献者见其 [README](https://github.com/Critical-Impact/LuminaSupplemental/blob/e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a/README.md)。Omni 仅分发所用 CSV 与许可文件。
 
-更新入口：`tools/update-supplemental-data.ps1`。
+内置快照更新入口：`tools/update-supplemental-data.ps1`。插件启动时还会检查同一上游 `main` 中补充数据目录的最新提交，按同一提交下载上述九份 CSV，校验表头、记录及物品版本区间后，统一用于物品、收录、副本掉落与乐谱索引。沿用上游 GPL v3 许可；Wiki 逐项版本补充仍优先于 CSV。
+
+运行时缓存位于插件配置目录 `Data/SupplementalData.json`。同一游戏数据版本下，成功检查后 3 天内复用缓存；客户端数据版本变化时立即重新检查。网络阶段总计最多等待 10 秒，失败使用上次有效缓存或内置快照，不写入游戏文件或替换插件程序集。上游尚未提供的版本与来源信息无法自动推断。
+
+## 社区数据自动更新
+
+`WikiItemSources.json`、`FishingSources.json`、`BlueSpells.csv`、`RelicItemIdToAchievement.csv`、`EquipmentSourceSupplement.csv` 及其 `EquipmentSourceSupplement.meta.json` 由本体仓库的 `.github/workflows/update-community-data.yml` 定时维护。工作流在北京时间 20:00 按三天周期运行轻量版本检查；定时入口每天只判断日期，未到检查日时跳过整个数据更新任务，不检出代码或请求数据源，跨月保持三天间隔；只有检测到游戏数据标识变化、需要补齐资料或存在失败来源时，才准备基准数据并启动转换器。相关转换脚本更新后触发重新同步，手动运行可选择强制同步；GitHub 调度可能延迟。Wiki、钓鱼、青魔、特殊武器、历史装备五组分别生成，某一组失败时保留该组上次有效内容，其他成功组仍可发布。失败会保留在工作流报告并使任务显示失败。
+
+维护端使用 `tools/build-community-data.mjs --baseline-directory <Common 的 Data/Resources> --output-directory <仓库外临时目录>`。维护端先请求 FFCafe XIVAPI 的 `/api/version` 与已发布的 `community-data-state.json`，比较实际构建字符串和数据发布标识。该服务合并多个客户端的最新已处理数据，此信号不等同于用户本机国服版本或公开补丁号。稳定且无待处理任务时，只输出检查报告，不下载数据包、不检出基准数据或抓取来源。需要同步时，首次以 Common 内置快照为基准，此后读取上次有效数据包；既有发行无法读取或摘要不符时停止发布，避免降级。内容改变或首次成功初始化时，向公共 `YouShux/OmniToolbox.Common` 仓库的 `community-data` 发行上传 `community-data-<大写 SHA256>.json.gz`，旧摘要对应的数据包保留。小状态文件 `community-data-state.json` 保存游戏数据标识、压缩包 SHA-256、补齐状态与失败来源；数据未变时只发布必要的状态变更。发布时先上传新数据包，再将原状态保存为 `community-data-state.previous.json`，最后替换主状态；主状态暂时缺失时，维护端与客户端读取备用状态及其完整旧包。首次发行以草稿准备完整资源后公开，发布中断时可在后续同步重试。不改源码分支、子模块指针或插件版本号。压缩包解压后为 JSON，保留六个固定文件及其 SHA-256；只有生成时间变化时不重复发布数据包。检测到新游戏数据标识后，同步一次并在后续三天检查补齐一次，随后继续轻量探测；失败来源每三天单独重试，已成功来源不因其他来源失败而反复抓取。
+
+部署时，将工作流提交到本体仓库默认分支，并在该仓库一次性配置 `OMNI_DATA_PUBLISH_TOKEN` Secret，发布凭据需要公共 Common 仓库 Contents 写权限，建议使用仅授权该仓库的专用 Token。Wiki 优先匿名访问；受站点保护时使用维护端 `FIRECRAWL_API_KEY` Secret，后备抓取消耗该账号额度。密钥只进入对应维护步骤，不写入数据包或客户端。普通用户无需配置密钥或运行生成脚本。
+
+插件通过 `GameDataCache` 在构建索引前下载公开数据包，限制压缩响应及解压后体积，再校验固定文件集合、大小、哈希、格式、ID 和关联关系；缓存保存在插件配置目录 `Data/CommunityData.json`。社区包与 LuminaSupplemental 分别缓存并同时检查，各网络阶段限时 10 秒；同一客户端数据版本下，成功检查后 3 天内复用缓存，客户端数据版本变化时立即检查。社区数据先读取小状态文件，仅压缩包 SHA-256 变化时下载数据包并核对压缩包摘要；LuminaSupplemental 仅数据目录提交变化时下载补充表。断网、包损坏或格式不兼容时保留有效缓存或使用内置快照。新资料在维护端成功发布后的下一次有效启动检查生效，不在绘制期间替换正在使用的索引。
+
+现有数据源中的新增、修订记录可自动同步；网站尚未收录的内容、网页或表结构变更、新来源类型及新增玩法逻辑仍可能需要人工核实或代码适配，不能从版本号推断。历史装备仅刷新已经核实的物品集合，保留历史关联标记，不自动推断当前掉落。
 
 ## 最终幻想 XIV 中文维基
 
@@ -23,7 +37,7 @@
 
 主要补充来源包括[特殊装备](https://ff14.huijiwiki.com/wiki/特殊装备)、[蛮神发光武器](https://ff14.huijiwiki.com/wiki/蛮神发光武器)、[制作采集特殊工具](https://ff14.huijiwiki.com/wiki/制作采集特殊工具)、[魔光键影宝箱](https://ff14.huijiwiki.com/wiki/物品:魔光键影宝箱)及[魔兽图鉴](https://ff14.huijiwiki.com/wiki/魔兽图鉴)页面。
 
-更新入口：`tools/update-wiki-item-sources.ps1`、`tools/update-collection-resources.mjs`。插件运行时读取本地快照。
+更新入口：`tools/update-wiki-item-sources.ps1`、`tools/update-collection-resources.mjs`。物品版本及来源快照接入上述自动发布管道；其余特定玩法与页面补充按现有代码维护。
 
 ## 其他社区数据
 
@@ -34,7 +48,7 @@
 | `RelicItemIdToAchievement.csv` | FFXIV Collect 的[特殊武器](https://ffxivcollect.com/api/relics)与[成就](https://ffxivcollect.com/api/achievements)公开接口 | `tools/update-collection-resources.mjs` |
 | `EquipmentSourceSupplement.csv` | GarlandTools 的公开物品端点 `https://garlandtools.org/db/doc/item/en/3/{ItemId}.json` | `tools/update-equipment-source-supplement.mjs` |
 
-上述资源运行时使用本地快照。`EquipmentSourceSupplement.meta.json` 保留原始资源 URL 与 SHA-256；旧版副本掉落资料不代表当前仍有相同产出。
+上述资源接入社区数据自动发布管道，运行时使用经校验的下载缓存或内置快照。`EquipmentSourceSupplement.meta.json` 保留原始资源 URL 与 SHA-256；旧版副本掉落资料不代表当前仍有相同产出。鱼糕数据采用本地声明的 protobuf 字段解码，不执行来源站 JavaScript；青魔数据按内容结构定位，不依赖打包变量名。
 
 获取流程补充还参考 [FFXIV Collect](https://ffxivcollect.com/)、[Gamer Escape](https://ffxiv.gamerescape.com/wiki/Researchingway/Purchase_a_Cosmic_Tool_Replica)及 FFXIV Console Games Wiki 的[装备](https://ffxiv.consolegameswiki.com/wiki/Ardent_Accessories)和[任务](https://ffxiv.consolegameswiki.com/wiki/Dressed_to_Deceive)资料。
 
