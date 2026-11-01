@@ -12,5 +12,7 @@ public enum ModuleCategory
     Debug,
     Local,
     Online,
-    Enabled
+    Enabled,
+    Popular = 11,
+    New = 12
 }

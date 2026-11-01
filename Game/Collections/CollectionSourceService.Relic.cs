@@ -1,11 +1,32 @@
 using Lumina.Excel.Sheets;
 using OmenTools.Interop.Game.Lumina;
+using OmniToolbox.Data;
 using OmniToolbox.UI;
 
 namespace OmniToolbox.Collections;
 
 public sealed partial class CollectionSourceService
 {
+    private static void AddRelicMaterialSources(IDictionary<uint, HashSet<CollectionSource>> itemRows)
+    {
+        EmbeddedData.ReadCSV("RelicMaterialSources.csv", csv =>
+        {
+            var itemID = csv.GetField<uint>("ItemId");
+            var category = csv.GetField<CollectionSourceCategory>("Category");
+            var sourceID = csv.GetField<uint>("SourceId");
+            var description = csv.GetField("Name") ?? string.Empty;
+            var detail = csv.GetField("Detail") ?? string.Empty;
+            if (itemRows.TryGetValue(itemID, out var sources))
+            {
+                sources.RemoveWhere(source =>
+                    source.Category == category && source.SourceID == sourceID &&
+                    (sourceID != 0 || source.Description == description));
+            }
+
+            AddSource(itemRows, itemID, new(category, sourceID, description, detail));
+        });
+    }
+
     private static void AddRelicSources
     (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,

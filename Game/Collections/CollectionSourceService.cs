@@ -68,6 +68,7 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
             pair => (IReadOnlyList<uint>)Array.AsReadOnly(pair.Value.Order().ToArray()));
         var itemRows = wikiSources.ItemSources;
         AddFishingSources(itemRows, fishingDocument, preparedText, cancellationToken);
+        AddRelicMaterialSources(itemRows);
 
         var relicAchievements = new Dictionary<uint, uint>();
         EmbeddedData.ReadCSV("RelicItemIdToAchievement.csv", csv =>

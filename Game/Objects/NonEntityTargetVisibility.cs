@@ -16,6 +16,7 @@ public sealed unsafe class NonEntityTargetVisibility(HookRegistry hookRegistry) 
     private bool                                       overlayEnabled;
     private bool                                       showNonEntityTargets;
     private bool                                       blockOtherTreasureTargets;
+    private bool                                       blockOtherTreasureAutomationTargets;
 
     public event Action<nint>? NonEntityTargetDetected;
 
@@ -46,6 +47,15 @@ public sealed unsafe class NonEntityTargetVisibility(HookRegistry hookRegistry) 
         UpdateHook();
     }
 
+    public void SetTreasureMapAutomationPolicy(bool blockOthers)
+    {
+        if (blockOtherTreasureAutomationTargets == blockOthers)
+            return;
+
+        blockOtherTreasureAutomationTargets = blockOthers;
+        UpdateHook();
+    }
+
     public static bool IsNonEntityTreasureTarget(Character* target) =>
         target != null &&
         (int)target->ObjectKind == (int)ObjectKind.BattleNpc &&
@@ -53,16 +63,17 @@ public sealed unsafe class NonEntityTargetVisibility(HookRegistry hookRegistry) 
 
     public void Dispose()
     {
-        NonEntityTargetDetected   = null;
-        overlayEnabled            = false;
-        showNonEntityTargets      = false;
-        blockOtherTreasureTargets = false;
+        NonEntityTargetDetected            = null;
+        overlayEnabled                     = false;
+        showNonEntityTargets               = false;
+        blockOtherTreasureTargets          = false;
+        blockOtherTreasureAutomationTargets = false;
         ReleaseHook();
     }
 
     private void UpdateHook()
     {
-        if (overlayEnabled || blockOtherTreasureTargets)
+        if (overlayEnabled || blockOtherTreasureTargets || blockOtherTreasureAutomationTargets)
         {
             hook ??= hookRegistry.Register<Character.Delegates.GetIsTargetable>(
                 GetIsTargetableSignature,
@@ -87,7 +98,7 @@ public sealed unsafe class NonEntityTargetVisibility(HookRegistry hookRegistry) 
     private bool IsTargetableDetour(Character* target)
     {
         var original = hook!.Original(target);
-        if (blockOtherTreasureTargets && IsOtherTreasureTarget(target))
+        if ((blockOtherTreasureTargets || blockOtherTreasureAutomationTargets) && IsOtherTreasureTarget(target))
         {
             return false;
         }

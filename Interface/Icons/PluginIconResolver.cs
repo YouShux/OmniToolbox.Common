@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Internal.Types.Manifest;
 using Microsoft.VisualBasic.FileIO;
 using OmenTools;
+using OmenTools.OmenService;
 using OmniToolbox.Host;
 using TreeTools.Lifecycle;
 
@@ -19,6 +21,10 @@ internal static class PluginIconResolver
 {
     private static readonly object?                                      ImageCache          =
         DalamudServices.GetInternalService("Dalamud.Interface.Internal.Windows.PluginImageCache");
+    private static readonly object?                                      PluginManager       =
+        DalamudServices.GetInternalService("Dalamud.Plugin.Internal.PluginManager");
+    private static readonly PropertyInfo?                                AvailablePluginsProperty = PluginManager?.GetType()
+        .GetProperty("AvailablePlugins", INSTANCE_MEMBER_FLAGS);
     private static readonly FieldInfo?                                   LocalPluginField    = typeof(IExposedPlugin).Assembly
         .GetType("Dalamud.Plugin.ExposedPlugin")?
         .GetField("<plugin>P", INSTANCE_MEMBER_FLAGS);
@@ -31,17 +37,34 @@ internal static class PluginIconResolver
     private static readonly Dictionary<string, string?>                  LocalIconPaths      =
         new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, CachedIcon>               CachedIcons         = new(StringComparer.Ordinal);
+    private static readonly Dictionary<(string Source, string InternalName), string> RemoteIconURLs = [];
     private static readonly string                                       CacheDirectory      = Path.Combine(
         DalamudServices.PluginInterface.GetPluginConfigDirectory(), "TreeHouse", "MultiToolbar", "Cache", "PluginIcons");
     private static readonly FeatureLifetime                              CacheLifetime       = new();
     private static Guid?                                                 PNGContainerGUID;
     private static bool                                                  CacheMigrated;
+    private static int                                                   RemoteIconsDirty = 1;
 
     static PluginIconResolver()
     {
         CacheLifetime.Add(CachedIcons.Clear);
         CacheLifetime.Add(LocalTextures.Clear);
         CacheLifetime.Add(LocalIconPaths.Clear);
+        CacheLifetime.Add(RemoteIconURLs.Clear);
+        if (AvailablePluginsProperty is not null &&
+            PluginManager?.GetType().GetEvent("OnAvailablePluginsChanged", INSTANCE_MEMBER_FLAGS) is { } changedEvent)
+        {
+            Action handler = () => Interlocked.Exchange(ref RemoteIconsDirty, 1);
+            try
+            {
+                changedEvent.AddEventHandler(PluginManager, handler);
+                CacheLifetime.OnStopping(() => changedEvent.RemoveEventHandler(PluginManager, handler));
+            }
+            catch (Exception exception)
+            {
+                DalamudServices.PluginLog.Warning(exception, "Unable to subscribe to plugin repository changes");
+            }
+        }
     }
 
     internal static bool IsUsableTexture([NotNullWhen(true)] IDalamudTextureWrap? texture) =>
@@ -87,7 +110,8 @@ internal static class PluginIconResolver
             }
         }
 
-        var cacheKey = $"{plugin.InternalName}\0{plugin.Version}\0{plugin.Manifest.IconUrl}";
+        var iconURL = GetIconURL(plugin);
+        var cacheKey = $"{plugin.InternalName}\0{plugin.Version}\0{iconURL}";
         if (!CachedIcons.TryGetValue(cacheKey, out var cachedIcon))
         {
             var prefix = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(plugin.InternalName))) + "-";
@@ -130,8 +154,12 @@ internal static class PluginIconResolver
             cachedIcon.Texture = null;
         }
 
-        var localPlugin = GetLocalPlugin(plugin);
-        if (localPlugin is not null && TryGetIconMethod is not null)
+        IDalamudTextureWrap? resolvedIcon = null;
+        if (string.IsNullOrWhiteSpace(plugin.Manifest.IconUrl) && iconURL is not null)
+        {
+            ImageHelper.Instance().TryGetImage(iconURL, out resolvedIcon);
+        }
+        else if (GetLocalPlugin(plugin) is { } localPlugin && TryGetIconMethod is not null)
         {
             try
             {
@@ -140,13 +168,7 @@ internal static class PluginIconResolver
                     arguments[3] is IDalamudTextureWrap texture &&
                     IsUsableTexture(texture))
                 {
-                    if (cachedIcon.SaveTask is null && Environment.TickCount64 >= cachedIcon.RetryAfter)
-                    {
-                        cachedIcon.RetryAfter = Environment.TickCount64 + 60_000;
-                        cachedIcon.SaveTask   = SaveIconAsync(texture, cachedIcon.Path, CacheLifetime.CancellationToken);
-                        CacheLifetime.Track(cachedIcon.SaveTask);
-                    }
-                    return texture;
+                    resolvedIcon = texture;
                 }
             }
             catch
@@ -154,10 +176,61 @@ internal static class PluginIconResolver
             }
         }
 
-        return null;
+        if (!IsUsableTexture(resolvedIcon))
+            return null;
+
+        if (cachedIcon.SaveTask is null && Environment.TickCount64 >= cachedIcon.RetryAfter)
+        {
+            cachedIcon.RetryAfter = Environment.TickCount64 + 60_000;
+            cachedIcon.SaveTask   = SaveIconAsync(resolvedIcon, cachedIcon.Path, CacheLifetime.CancellationToken);
+            CacheLifetime.Track(cachedIcon.SaveTask);
+        }
+        return resolvedIcon;
     }
 
     internal static ValueTask DisposeAsync() => CacheLifetime.DisposeAsync();
+
+    private static string? GetIconURL(IExposedPlugin plugin)
+    {
+        if (!string.IsNullOrWhiteSpace(plugin.Manifest.IconUrl))
+            return plugin.Manifest.IconUrl;
+        if (plugin.IsDev)
+            return null;
+
+        if (Interlocked.Exchange(ref RemoteIconsDirty, 0) != 0)
+        {
+            RemoteIconURLs.Clear();
+            try
+            {
+                if (AvailablePluginsProperty?.GetValue(PluginManager) is IEnumerable<IPluginManifest> manifests)
+                {
+                    foreach (var manifest in manifests)
+                    {
+                        if (!Uri.TryCreate(manifest.IconUrl, UriKind.Absolute, out var uri) ||
+                            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                            continue;
+
+                        var repository = manifest.GetType().GetProperty("SourceRepo", INSTANCE_MEMBER_FLAGS)?.GetValue(manifest);
+                        if (repository?.GetType().GetProperty("IsThirdParty", INSTANCE_MEMBER_FLAGS)?.GetValue(repository) is not bool isThirdParty)
+                            continue;
+
+                        var source = isThirdParty
+                            ? repository.GetType().GetProperty("PluginMasterUrl", INSTANCE_MEMBER_FLAGS)?.GetValue(repository) as string
+                            : string.Empty;
+                        if (source is not null)
+                            RemoteIconURLs.TryAdd((source, manifest.InternalName), uri.AbsoluteUri);
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                DalamudServices.PluginLog.Warning(exception, "Unable to read plugin repository icons");
+            }
+        }
+
+        var installedSource = plugin.IsThirdParty ? plugin.Manifest.InstalledFromUrl : string.Empty;
+        return RemoteIconURLs.GetValueOrDefault((installedSource, plugin.InternalName));
+    }
 
     private static async Task<bool> SaveIconAsync
     (
@@ -300,14 +373,10 @@ internal static class PluginIconResolver
     private static string? FindLocalIconPath(IExposedPlugin plugin)
     {
         var directories = new List<string>();
-        if (GetLocalPlugin(plugin) is { } localPlugin)
+        if (GetLocalPlugin(plugin) is { } localPlugin &&
+            localPlugin.GetType().GetProperty("DllFile", INSTANCE_MEMBER_FLAGS)?.GetValue(localPlugin) is FileInfo { DirectoryName: { } pluginDirectory })
         {
-            var assembly = localPlugin.GetType().GetProperty("PluginAssembly", INSTANCE_MEMBER_FLAGS)?.GetValue(localPlugin) as Assembly ??
-                           localPlugin.GetType().GetField("pluginAssembly", INSTANCE_MEMBER_FLAGS)?.GetValue(localPlugin) as Assembly;
-            if (!string.IsNullOrWhiteSpace(assembly?.Location))
-            {
-                directories.Add(Path.GetDirectoryName(assembly.Location)!);
-            }
+            directories.Add(pluginDirectory);
         }
 
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);

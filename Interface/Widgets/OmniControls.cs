@@ -1080,7 +1080,7 @@ public static partial class OmniControls
         using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(ImGuiStyleVar.PopupRounding, frame.Radius)
-            .Push(ImGuiStyleVar.PopupBorderSize, OmniTheme.BorderThickness())
+            .Push(ImGuiStyleVar.PopupBorderSize, 0f)
             .Push(ImGuiStyleVar.WindowPadding,
                 new Vector2(MathF.Ceiling(popupPadding.X), MathF.Ceiling(popupPadding.Y)))
             .Push(
@@ -1093,27 +1093,13 @@ public static partial class OmniControls
             .Push(ImGuiCol.Button, Vector4.Zero)
             .Push(ImGuiCol.ButtonHovered, Vector4.Zero)
             .Push(ImGuiCol.ButtonActive, Vector4.Zero)
-            .Push(ImGuiCol.PopupBg, OmniTheme.IsGlass ? Vector4.Zero : tokens.Background with
-            {
-                W = 1f
-            })
+            .Push(ImGuiCol.PopupBg, Vector4.Zero)
             .Push(ImGuiCol.Border, tokens.Border)
             .Push(ImGuiCol.BorderShadow, Vector4.Zero);
         var combo = ImRaii.Combo(id, preview, flags);
         EndNativeControl(frame, combo.Success);
-        if (combo.Success && OmniTheme.IsGlass)
-        {
-            var drawList = ImGui.GetWindowDrawList();
-            var position = ImGui.GetWindowPos();
-            var size = ImGui.GetWindowSize();
-            var scrollbarSize = ImGui.GetStyle().ScrollbarSize;
-            var clipEnd = position + size - new Vector2(
-                ImGui.GetScrollMaxY() > 0f ? scrollbarSize : 0f,
-                ImGui.GetScrollMaxX() > 0f ? scrollbarSize : 0f);
-            drawList.PushClipRect(position, clipEnd, false);
-            DrawGlassSurface(drawList, position, size, tokens.Background, frame.Radius);
-            drawList.PopClipRect();
-        }
+        if (combo.Success)
+            DrawPopupBackground();
         return combo;
     }
 
@@ -1932,7 +1918,10 @@ public static partial class OmniControls
         };
         ImGui.PushStyleColor(ImGuiCol.WindowBg, background);
         ImGui.PushStyleColor(ImGuiCol.PopupBg, background);
-        ImGui.PushStyleColor(ImGuiCol.Border, OmniTheme.IsGlass ? Vector4.Zero : tokens.Border);
+        ImGui.PushStyleColor(ImGuiCol.Border, OmniTheme.IsGlass ? Vector4.Zero : tokens.Border with
+        {
+            W = 1f
+        });
         ImGui.PushStyleColor(ImGuiCol.Text, tokens.Text);
         ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 1f);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, OmniTheme.Scale(new Vector2(10f, 7f)));
@@ -1952,7 +1941,11 @@ public static partial class OmniControls
         {
             var tokens = OmniTheme.Tokens with
             {
-                Background = OmniTheme.TooltipBackground
+                Background = OmniTheme.TooltipBackground,
+                Border = OmniTheme.Tokens.Border with
+                {
+                    W = 1f
+                }
             };
             using var colors = new OmniTheme.ColorScope(tokens, OmniTheme.ControlAccent);
             var drawList = ImGui.GetWindowDrawList();
