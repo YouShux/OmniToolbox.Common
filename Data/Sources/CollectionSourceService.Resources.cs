@@ -29,7 +29,8 @@ public sealed partial class CollectionSourceService
         (
             JsonDocument?                      preparedDocument = null,
             IReadOnlyDictionary<uint, string>? preparedQuestNames = null,
-            CancellationToken                  cancellationToken = default
+            CancellationToken                  cancellationToken = default,
+            IReadOnlyDictionary<uint, string>? preparedItemNames = null
         )
     {
         using var document = preparedDocument is null ? ReadDocument("WikiItemSources.json") : null;
@@ -37,16 +38,6 @@ public sealed partial class CollectionSourceService
         if (root.GetProperty("schemaVersion").GetInt32() != 2)
         {
             throw new InvalidDataException("Unsupported WikiItemSources schema version.");
-        }
-
-        var territoryIdsByMapID = new Dictionary<uint, uint>();
-        foreach (var territory in LuminaGetter.Get<TerritoryType>())
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (territory.Map.RowId != 0)
-            {
-                territoryIdsByMapID.TryAdd(territory.Map.RowId, territory.RowId);
-            }
         }
 
         var sourceRows = root.GetProperty("sources");
@@ -58,23 +49,35 @@ public sealed partial class CollectionSourceService
         {
             cancellationToken.ThrowIfCancellationRequested();
             var category = source.GetProperty("c").GetInt32();
-            if (!Enum.IsDefined(typeof(CollectionSourceCategory), category))
+            if (!Enum.IsDefined((CollectionSourceCategory)category))
             {
                 throw new InvalidDataException($"Unknown Wiki item source category: {category}.");
             }
 
             CollectionSourceLocation? location = null;
             if (source.TryGetProperty("m", out var mapIdElement) &&
-                territoryIdsByMapID.TryGetValue(mapIdElement.GetUInt32(), out var territoryId))
+                LuminaGetter.TryGetRow<Map>(mapIdElement.GetUInt32(), out var map) &&
+                map.TerritoryType.RowId != 0)
             {
                 location = new(
-                    territoryId,
+                    map.TerritoryType.RowId,
                     source.GetProperty("x").GetSingle(),
-                    source.GetProperty("y").GetSingle());
+                    source.GetProperty("y").GetSingle())
+                {
+                    MapID = map.RowId
+                };
             }
 
             var sourceID = source.GetProperty("i").GetUInt32();
+            if ((CollectionSourceCategory)category == CollectionSourceCategory.Duty && sourceID != 0)
+            {
+                sourceID = LuminaGetter.TryGetRow<InstanceContent>(sourceID, out var content)
+                    ? content.ContentFinderCondition.RowId
+                    : 0;
+            }
             var description = source.GetProperty("n").GetString() ?? string.Empty;
+            if ((CollectionSourceCategory)category == CollectionSourceCategory.Other && description == "幻卡对战")
+                category = (int)CollectionSourceCategory.NPCBattle;
             if ((CollectionSourceCategory)category == CollectionSourceCategory.Quest &&
                 sourceID != 0 &&
                 TryGetQuestName(sourceID, preparedQuestNames, out var questName))
@@ -83,12 +86,16 @@ public sealed partial class CollectionSourceService
             }
 
             var detail = source.GetProperty("d").GetString() ?? string.Empty;
+            var sourceDetail = detail;
+            IReadOnlyList<uint> requiredQuests = [];
+            var requiredQuestDetail = string.Empty;
             if (source.TryGetProperty("q", out var questIDs))
             {
+                requiredQuests = questIDs.EnumerateArray().Select(questID => questID.GetUInt32()).ToArray();
                 var questNames = new List<string>();
-                foreach (var questID in questIDs.EnumerateArray())
+                foreach (var questID in requiredQuests)
                 {
-                    if (TryGetQuestName(questID.GetUInt32(), preparedQuestNames, out var requiredQuestName))
+                    if (TryGetQuestName(questID, preparedQuestNames, out var requiredQuestName))
                     {
                         if (requiredQuestName.Length != 0)
                         {
@@ -99,9 +106,10 @@ public sealed partial class CollectionSourceService
 
                 if (questNames.Count != 0)
                 {
-                    detail += string.Format(
+                    requiredQuestDetail = string.Format(
                         OmniLoc.Get("Collection.Source.RequiredQuests"),
                         string.Join(OmniLoc.Get("Common.ListSeparator"), questNames));
+                    detail += requiredQuestDetail;
                 }
             }
 
@@ -123,6 +131,9 @@ public sealed partial class CollectionSourceService
                 location)
             {
                 CostItemIDs = costs,
+                RequiredQuestIDs = requiredQuests,
+                RequiredQuestDetail = requiredQuestDetail,
+                SourceDetail = sourceDetail,
                 IsGilShop = source.TryGetProperty("g", out var gilShop) && gilShop.GetBoolean()
             };
         }
@@ -160,11 +171,16 @@ public sealed partial class CollectionSourceService
             var containerSource = new CollectionSource(
                 CollectionSourceCategory.Container,
                 blindBoxItemID,
-                LuminaWrapper.GetItemName(blindBoxItemID),
-                string.Empty);
+                preparedItemNames is null
+                    ? LuminaWrapper.GetItemName(blindBoxItemID)
+                    : preparedItemNames.GetValueOrDefault(blindBoxItemID, string.Empty),
+                string.Empty)
+            {
+                IsIdentityFallback = true
+            };
             foreach (var rewardItemID in rewardItemIDs)
             {
-                AddSourceIfMissing(itemSources, rewardItemID, containerSource);
+                AddSource(itemSources, rewardItemID, containerSource);
                 dropPool.Add(rewardItemID);
             }
         }
@@ -213,8 +229,8 @@ public sealed partial class CollectionSourceService
     {
         try
         {
-            var itemIDs = new List<uint>();
-            EmbeddedData.ReadCSV("StoreItem.csv", csv => itemIDs.Add(csv.GetField<uint>("ItemId")));
+            var itemIDs = new HashSet<uint>();
+            EmbeddedData.ReadRows("StoreItem.csv", csv => itemIDs.Add(csv.GetField<uint>("ItemId")));
             foreach (var itemID in itemIDs)
             {
                 AddMogStationSource(target, itemID);

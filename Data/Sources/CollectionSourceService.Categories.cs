@@ -106,7 +106,7 @@ public sealed partial class CollectionSourceService
             Volatile.Write(
                 ref openingStageRestrictedItemIds,
                 ExpandOpeningStageRestrictedItems(
-                    Volatile.Read(ref openingStageRestrictedItemIds),
+                    Volatile.Read(ref openingStageRestrictedItemIds).ToHashSet(),
                     dependencies));
             Interlocked.Increment(ref revision);
         }
@@ -210,31 +210,6 @@ public sealed partial class CollectionSourceService
         }
     }
 
-    private static Dictionary<uint, HashSet<uint>> BuildWikiShopDependencies
-    (
-        IReadOnlyDictionary<uint, HashSet<CollectionSource>> itemRows
-    )
-    {
-        var dependencies = new Dictionary<uint, HashSet<uint>>();
-        foreach (var (itemId, sources) in itemRows)
-        {
-            foreach (var source in sources)
-            {
-                if (source.Category != CollectionSourceCategory.Shop)
-                {
-                    continue;
-                }
-
-                foreach (var costItemID in source.CostItemIDs)
-                {
-                    AddDependency(dependencies, itemId, costItemID);
-                }
-            }
-        }
-
-        return dependencies;
-    }
-
     private static FrozenDictionary<uint, IReadOnlyList<uint>> BuildExchangeTargetsByCostItemID
     (
         IReadOnlyDictionary<uint, HashSet<uint>> dependencies
@@ -252,31 +227,6 @@ public sealed partial class CollectionSourceService
         return targetsByCostItemID.ToFrozenDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<uint>)Array.AsReadOnly(pair.Value.Order().ToArray()));
-    }
-
-    private static void AddWikiGilCategories
-    (
-        IDictionary<uint, HashSet<CollectionSourceCategory>> categories,
-        IReadOnlyDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, Item>                      itemsByID
-    )
-    {
-        foreach (var (itemId, sources) in itemRows)
-        {
-            if (!itemsByID.TryGetValue(itemId, out var item) || item.PriceMid == 0)
-            {
-                continue;
-            }
-
-            foreach (var source in sources)
-            {
-                if (source.Category == CollectionSourceCategory.Shop && source.IsGilShop)
-                {
-                    AddCategory(categories, itemId, CollectionSourceCategory.Gil);
-                    break;
-                }
-            }
-        }
     }
 
     internal static bool TryGetWikiShopRequirements
@@ -300,23 +250,44 @@ public sealed partial class CollectionSourceService
         return requirements.Length != 0;
     }
 
-    private static Dictionary<uint, HashSet<CollectionSourceCategory>> BuildCategorySeeds
+    private static (
+        Dictionary<uint, HashSet<CollectionSourceCategory>> Categories,
+        Dictionary<uint, HashSet<uint>> ShopDependencies,
+        HashSet<uint> RestrictedItems,
+        List<uint> GilShopItemIDs) BuildCategorySeeds
     (
         IReadOnlyDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, ContentFinderCondition>    contentFinderConditions
+        IReadOnlyDictionary<uint, Item>                      itemsByID,
+        IReadOnlyDictionary<uint, ContentFinderCondition>    contentFinderConditions,
+        CancellationToken                                   cancellationToken
     )
     {
         var categories = new Dictionary<uint, HashSet<CollectionSourceCategory>>(itemRows.Count);
+        var dependencies = new Dictionary<uint, HashSet<uint>>();
+        var restrictedItems = new HashSet<uint>();
+        var gilShopItemIDs = new List<uint>();
         foreach (var (itemId, sources) in itemRows)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            var isGilShop = false;
             foreach (var source in sources)
             {
-                AddCategory(
-                    categories,
-                    itemId,
-                    source.Category == CollectionSourceCategory.Duty
-                        ? GetDutyCategory(source.SourceID, contentFinderConditions)
-                        : source.Category);
+                var category = source.Category;
+                if (category == CollectionSourceCategory.Duty &&
+                    contentFinderConditions.TryGetValue(source.SourceID, out var condition))
+                {
+                    category = condition.ContentType.RowId switch
+                    {
+                        6 => CollectionSourceCategory.PvP,
+                        9 => CollectionSourceCategory.TreasureHunts,
+                        13 => CollectionSourceCategory.BeastTribes,
+                        21 => CollectionSourceCategory.DeepDungeon,
+                        _ => CollectionSourceCategory.Duty
+                    };
+                    if (condition.HighEndDuty && condition.ContentType.RowId == 5)
+                        restrictedItems.Add(itemId);
+                }
+                AddCategory(categories, itemId, category);
                 if (source.Category == CollectionSourceCategory.Achievement &&
                     source.SourceID != 0 &&
                     LuminaGetter.TryGetRow<Achievement>(source.SourceID, out var achievement) &&
@@ -324,59 +295,26 @@ public sealed partial class CollectionSourceService
                 {
                     AddCategory(categories, itemId, CollectionSourceCategory.PvP);
                 }
+                if (source.Category == CollectionSourceCategory.Shop)
+                {
+                    isGilShop |= source.IsGilShop;
+                    foreach (var costItemID in source.CostItemIDs)
+                        AddDependency(dependencies, itemId, costItemID);
+                }
             }
+            if (isGilShop && itemsByID.TryGetValue(itemId, out var item) && item.PriceMid != 0)
+                gilShopItemIDs.Add(itemId);
         }
 
-        return categories;
-    }
-
-    private static CollectionSourceCategory GetDutyCategory
-    (
-        uint                                              contentID,
-        IReadOnlyDictionary<uint, ContentFinderCondition> contentFinderConditions
-    )
-    {
-        if (!contentFinderConditions.TryGetValue(contentID, out var condition))
-        {
-            return CollectionSourceCategory.Duty;
-        }
-
-        return condition.ContentType.RowId switch
-        {
-            6 => CollectionSourceCategory.PvP,
-            9 => CollectionSourceCategory.TreasureHunts,
-            13 => CollectionSourceCategory.BeastTribes,
-            21 => CollectionSourceCategory.DeepDungeon,
-            _ => CollectionSourceCategory.Duty
-        };
-    }
-
-    private static FrozenSet<uint> BuildOpeningStageRestrictedItems
-    (
-        IReadOnlyDictionary<uint, HashSet<CollectionSource>> itemRows,
-        IReadOnlyDictionary<uint, HashSet<uint>>             dependencies,
-        IReadOnlyDictionary<uint, ContentFinderCondition>    contentFinderConditions
-    )
-    {
-        var restrictedItems = itemRows
-            .Where(pair => pair.Value.Any(source =>
-                source.Category == CollectionSourceCategory.Duty &&
-                contentFinderConditions.TryGetValue(source.SourceID, out var condition) &&
-                condition.HighEndDuty &&
-                condition.ContentType.RowId == 5))
-            .Select(static pair => pair.Key)
-            .ToHashSet();
-
-        return ExpandOpeningStageRestrictedItems(restrictedItems, dependencies);
+        return (categories, dependencies, restrictedItems, gilShopItemIDs);
     }
 
     private static FrozenSet<uint> ExpandOpeningStageRestrictedItems
     (
-        IEnumerable<uint>                        seeds,
+        HashSet<uint>                            restrictedItems,
         IReadOnlyDictionary<uint, HashSet<uint>> dependencies
     )
     {
-        var restrictedItems = seeds.ToHashSet();
         for (var depth = 0; depth < 10; depth++)
         {
             var changed = false;

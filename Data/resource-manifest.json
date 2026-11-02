@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "resources": [
+    {
+      "name": "ItemPatch.csv",
+      "path": "Resources/ClientSupplemental/ItemPatch.csv",
+      "group": "Supplemental",
+      "source": "https://github.com/Critical-Impact/LuminaSupplemental",
+      "version": "5.1.4 / e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a",
+      "update": "tools/game-data/update-supplemental-data.ps1"
+    },
+    {
+      "name": "ItemSupplement.csv",
+      "path": "Resources/ClientSupplemental/ItemSupplement.csv",
+      "group": "Supplemental",
+      "source": "https://github.com/Critical-Impact/LuminaSupplemental",
+      "version": "5.1.4 / e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a",
+      "update": "tools/game-data/update-supplemental-data.ps1"
+    },
+    {
+      "name": "StoreItem.csv",
+      "path": "Resources/ClientSupplemental/StoreItem.csv",
+      "group": "Supplemental",
+      "source": "https://github.com/Critical-Impact/LuminaSupplemental",
+      "version": "5.1.4 / e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a",
+      "update": "tools/game-data/update-supplemental-data.ps1"
+    },
+    {
+      "name": "BGMOrchestrion.csv",
+      "path": "Resources/ClientSupplemental/BGMOrchestrion.csv",
+      "group": "Supplemental",
+      "source": "https://github.com/Critical-Impact/LuminaSupplemental",
+      "version": "5.1.4 / e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a",
+      "update": "tools/game-data/update-supplemental-data.ps1"
+    },
+    {
+      "name": "DungeonBoss.csv",
+      "path": "Resources/ClientSupplemental/DungeonBoss.csv",
+      "group": "Supplemental",
+      "source": "https://github.com/Critical-Impact/LuminaSupplemental",
+      "version": "5.1.4 / e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a",
+      "update": "tools/game-data/update-supplemental-data.ps1"
+    },
+    {
+      "name": "DungeonChest.csv",
+      "path": "Resources/ClientSupplemental/DungeonChest.csv",
+      "group": "Supplemental",
+      "source": "https://github.com/Critical-Impact/LuminaSupplemental",
+      "version": "5.1.4 / e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a",
+      "update": "tools/game-data/update-supplemental-data.ps1"
+    },
+    {
+      "name": "DungeonBossDrop.csv",
+      "path": "Resources/ClientSupplemental/DungeonBossDrop.csv",
+      "group": "Supplemental",
+      "source": "https://github.com/Critical-Impact/LuminaSupplemental",
+      "version": "5.1.4 / e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a",
+      "update": "tools/game-data/update-supplemental-data.ps1"
+    },
+    {
+      "name": "DungeonBossChest.csv",
+      "path": "Resources/ClientSupplemental/DungeonBossChest.csv",
+      "group": "Supplemental",
+      "source": "https://github.com/Critical-Impact/LuminaSupplemental",
+      "version": "5.1.4 / e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a",
+      "update": "tools/game-data/update-supplemental-data.ps1"
+    },
+    {
+      "name": "DungeonChestItem.csv",
+      "path": "Resources/ClientSupplemental/DungeonChestItem.csv",
+      "group": "Supplemental",
+      "source": "https://github.com/Critical-Impact/LuminaSupplemental",
+      "version": "5.1.4 / e9bf1495bf8588d2cf21441ef03f0d9dfe0f790a",
+      "update": "tools/game-data/update-supplemental-data.ps1"
+    },
+    {
+      "name": "WikiItemSources.json",
+      "path": "Resources/Collections/WikiItemSources.json",
+      "group": "Community",
+      "source": "https://ff14.huijiwiki.com/",
+      "version": "schema 2; per-file generatedAtUtc",
+      "update": "tools/game-data/update-wiki-item-sources.ps1"
+    },
+    {
+      "name": "FishingSources.json",
+      "path": "Resources/Collections/FishingSources.json",
+      "group": "Community",
+      "source": "https://fish.ffmomola.com/",
+      "version": "schema 1; per-file sourceVersion",
+      "update": "tools/game-data/update-fishing-sources.mjs"
+    },
+    {
+      "name": "BlueSpells.csv",
+      "path": "Resources/Collections/BlueSpells.csv",
+      "group": "Community",
+      "source": "https://bluemagic.badend.cn/",
+      "version": "source snapshot has no revision; unverified",
+      "update": "tools/game-data/update-collection-resources.mjs --only blue"
+    },
+    {
+      "name": "RelicItemIdToAchievement.csv",
+      "path": "Resources/Collections/RelicItemIdToAchievement.csv",
+      "group": "Community",
+      "source": "https://ffxivcollect.com/api/relics",
+      "version": "source snapshot has no revision; unverified",
+      "update": "tools/game-data/update-collection-resources.mjs --only relics"
+    },
+    {
+      "name": "EquipmentSourceSupplement.csv",
+      "path": "Resources/Collections/EquipmentSourceSupplement.csv",
+      "group": "Community",
+      "source": "https://garlandtools.org/db/doc/item/en/3/{ItemId}.json",
+      "version": "per-file provenance metadata; currentDropsVerified=false",
+      "update": "tools/game-data/update-equipment-source-supplement.mjs"
+    },
+    {
+      "name": "EquipmentSourceSupplement.meta.json",
+      "path": "Resources/Collections/EquipmentSourceSupplement.meta.json",
+      "group": "Community",
+      "source": "https://garlandtools.org/db/doc/item/en/3/{ItemId}.json",
+      "version": "schema 1; per-record source SHA256",
+      "update": "tools/game-data/update-equipment-source-supplement.mjs"
+    },
+    {
+      "name": "RelicMaterialSources.csv",
+      "path": "Resources/Collections/RelicMaterialSources.csv",
+      "group": "Collection",
+      "source": "https://ff14.huijiwiki.com/; DATA_SOURCES.md",
+      "version": "manually maintained; source revision absent",
+      "update": "manual source review"
+    }
+  ]
+}

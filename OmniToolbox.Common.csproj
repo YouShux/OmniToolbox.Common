@@ -41,9 +41,11 @@
     <EmbeddedResource Include="Data\DATA_SOURCES.md"
                       Link="Data\DATA_SOURCES.md"
                       LogicalName="OmniToolbox.Data.DATA_SOURCES.md" />
-    <EmbeddedResource Include="Data\Resources\*.*"
+    <EmbeddedResource Include="Data\Resources\**\*.csv;Data\Resources\**\*.json;Data\Resources\**\*.txt"
                       Link="Data\%(Filename)%(Extension)"
                       LogicalName="OmniToolbox.Data.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Data\resource-manifest.json"
+                      LogicalName="OmniToolbox.Data.resource-manifest.json" />
     <EmbeddedResource Include="Data\Resources\UI\边框.png"
                       Link="Resources\边框.png"
                       LogicalName="OmniToolbox.Resources.边框.png" />

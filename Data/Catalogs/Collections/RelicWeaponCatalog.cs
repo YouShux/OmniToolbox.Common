@@ -70,7 +70,7 @@ internal static class RelicWeaponCatalog
         [9549, 9550, 9551, 9552, 9553, 9555, 9556, 9557, 9558, 9554, 10452, 10514, 10576, 20382, 20383, 0, 0, 0, 0, 0, 0],
         [15584, 15585, 15586, 15587, 15588, 15592, 15593, 15594, 15595, 15589, 15590, 15591, 15596, 20432, 20433, 0, 0, 0, 0, 0, 0],
         [15570, 15571, 15572, 15573, 15574, 15578, 15579, 15580, 15581, 15575, 15576, 15577, 15582, 20428, 20429, 0, 0, 0, 0, 0, 0],
-        [15598, 15599, 15600, 15601, 15602, 15606, 15607, 15608, 15609, 15603, 15604, 15605, 15610, 20436, 20437, 37289, 37290, 0, 37291, 0, 0],
+        [15598, 15599, 15600, 15601, 15602, 15606, 15607, 15608, 15609, 15603, 15604, 15605, 15610, 20436, 20437, 37289, 37290, 37292, 37291, 0, 0],
         [17604, 17605, 17606, 17607, 17608, 17612, 17613, 17614, 17615, 17609, 17610, 17611, 17616, 20440, 20441, 0, 0, 0, 0, 0, 0],
         [24320, 24321, 24322, 24323, 24324, 24328, 24329, 24330, 24331, 24325, 24326, 24327, 24332, 24333, 24334, 0, 0, 0, 0, 0, 0],
         [25022, 25023, 25024, 25025, 25026, 25030, 25031, 25032, 25033, 25027, 25028, 25029, 25034, 25035, 25036, 0, 0, 0, 0, 0, 0],
@@ -86,7 +86,7 @@ internal static class RelicWeaponCatalog
         [39549, 39550, 39551, 39552, 39553, 39557, 39558, 39559, 39560, 39554, 39555, 39556, 39561, 39562, 39563, 39564, 39565, 0, 0, 0, 0],
         [41600, 41601, 41602, 41603, 41604, 41608, 41609, 41610, 41611, 41605, 41606, 41607, 41612, 41613, 41614, 41615, 41616, 0, 0, 0, 0],
         [44976, 44977, 44978, 44979, 44980, 44984, 44985, 44986, 44987, 44981, 44982, 44983, 44988, 44989, 44990, 44991, 44992, 0, 0, 0, 0],
-        [48173, 48174, 48175, 48176, 48177, 48181, 48182, 48183, 48184, 48178, 48179, 48180, 48185, 48186, 48187, 48188, 48189, 0, 48190, 0, 0]
+        [48173, 48174, 48175, 48176, 48177, 48181, 48182, 48183, 48184, 48178, 48179, 48180, 48185, 48186, 48187, 48188, 48189, 48191, 48190, 0, 0]
     ];
 
     private static readonly uint[][] YokaiItemIDs =
@@ -100,8 +100,8 @@ internal static class RelicWeaponCatalog
 
     private static readonly uint[][] SkysteelItemIDs =
     [
-        SkysteelRange(29612, 11), SkysteelRange(29623, 11), SkysteelRange(29634, 13),
-        SkysteelRange(30282, 13), SkysteelRange(30293, 13), SkysteelRange(31714, 13)
+        SkysteelRange(29612, 11), SkysteelRange(29623, 11), SkysteelRange(29634, 11),
+        SkysteelRange(30282, 11), SkysteelRange(30293, 11), SkysteelRange(31714, 11)
     ];
 
     private static readonly uint[][] SplendorousItemIDs =
@@ -128,8 +128,8 @@ internal static class RelicWeaponCatalog
     private static readonly uint[][] ElegantItemIDs =
     [
         [
-            41679, 41680, 41681, 41682, 41683, 41689, 41687,
-            41688, 41690, 41684, 41685, 41686, 41691, 41692,
+            41679, 41680, 41681, 41682, 41683, 41687, 41688,
+            41689, 41690, 41684, 41685, 41686, 41691, 41692,
             41693, 41694, 41695, 41697, 41696, 44243, 44244, 41700
         ]
     ];
@@ -302,7 +302,19 @@ internal static class RelicWeaponCatalog
 
     public static readonly RelicWeaponSeries[] Series = BuildSeries();
 
-    public static readonly FrozenDictionary<uint, uint> ReplicaItemIds = BuildReplicaItemIds();
+    public static readonly FrozenDictionary<uint, uint[]> ReplicaItemGroups = BuildReplicaItemIds();
+
+    public static readonly FrozenDictionary<uint, uint> ReplicaItemIds =
+        ReplicaItemGroups.ToFrozenDictionary(pair => pair.Key, pair => pair.Value[0]);
+
+    public static readonly FrozenDictionary<uint, uint[]> AdditionalItemIds = new Dictionary<uint, uint[]>
+    {
+        [14888] = [7818, 7823],
+        [15913] = [8369],
+        [15914] = [8387],
+        [15915] = [8361],
+        [15916] = [8378]
+    }.ToFrozenDictionary();
 
     public static readonly FrozenSet<uint> AllKnownItemIds = BuildAllKnownItemIds();
 
@@ -407,7 +419,8 @@ internal static class RelicWeaponCatalog
             StageItemIds = BozjaItemIDs,
             ShieldItemIds = BozjaShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Legacy,
-            Materials = RelicMaterialCatalog.Bozja
+            Materials = RelicMaterialCatalog.Bozja,
+            ExportReplicas = true
         },
         new()
         {
@@ -430,7 +443,8 @@ internal static class RelicWeaponCatalog
             StageItemIds = AnimaItemIDs,
             ShieldItemIds = AnimaShieldItemIDs,
             JobOrder = RelicWeaponJobOrder.Legacy,
-            Materials = RelicMaterialCatalog.Anima
+            Materials = RelicMaterialCatalog.Anima,
+            ExportReplicas = true
         },
         new()
         {
@@ -607,13 +621,35 @@ internal static class RelicWeaponCatalog
         }
     ];
 
-    private static FrozenDictionary<uint, uint> BuildReplicaItemIds()
+    private static FrozenDictionary<uint, uint[]> BuildReplicaItemIds()
     {
-        var result = new Dictionary<uint, uint>();
-        AddRangeMap(result, 38400, 39329, 19);
-        AddRangeMap(result, 39144, 40323, 19);
-        AddRangeMap(result, 39920, 40952, 19);
-        AddRangeMap(result, 40932, 40992, 19);
+        var result = new Dictionary<uint, uint[]>();
+        AddRangeMap(result, 38400, 39329, 20);
+        AddRangeMap(result, 39144, 40323, 20);
+        AddRangeMap(result, 39920, 40952, 20);
+        AddRangeMap(result, 39920, 40972, 20);
+        AddRangeMap(result, 40932, 40992, 20);
+
+        AddRangeMap(result, 30228, 31631, 18);
+        AddRangeMap(result, 30785, 32687, 18);
+        AddRangeMap(result, 32651, 32705, 18);
+        AddRangeMap(result, 32669, 33715, 1);
+        AddRangeMap(result, 32686, 33716, 1);
+        AddRangeMap(result, 32670, 33717, 16);
+        AddRangeMap(result, 33462, 33733, 1);
+        AddRangeMap(result, 33479, 33734, 1);
+        AddRangeMap(result, 33463, 33735, 16);
+        AddRangeMap(result, 33462, 33820, 1);
+        AddRangeMap(result, 33479, 33821, 1);
+        AddRangeMap(result, 33463, 33822, 16);
+
+        AddRangeMap(result, 13597, 13776, 14);
+        AddRangeMap(result, 13223, 15115, 14);
+        AddRangeMap(result, 14870, 15893, 14);
+        AddRangeMap(result, 15223, 16912, 14);
+        AddRangeMap(result, 15237, 16972, 14);
+        AddRangeMap(result, 15251, 16986, 14);
+        AddRangeMap(result, 16050, 20998, 14);
 
         int[] zodiacReplicaJobOffsets = [0, 1, 2, 3, 4, 6, 7, 8, 9, 5];
         for (var stageIndex = 0; stageIndex < ZodiacItemIDs.Length; stageIndex++)
@@ -622,27 +658,36 @@ internal static class RelicWeaponCatalog
             {
                 result.Add(
                     ZodiacItemIDs[stageIndex][jobIndex],
-                    12116u + (uint)(zodiacReplicaJobOffsets[jobIndex] * ZodiacItemIDs.Length + stageIndex));
+                    [12116u + (uint)(zodiacReplicaJobOffsets[jobIndex] * ZodiacItemIDs.Length + stageIndex)]);
             }
+
+            if (ZodiacShieldItemIDs[stageIndex] != 0)
+                result.Add(ZodiacShieldItemIDs[stageIndex], [12205u + (uint)stageIndex]);
         }
 
         AddRangeMap(result, 29634, 30304, 11);
         AddRangeMap(result, 30293, 31725, 11);
         AddRangeMap(result, 31714, 36795, 11);
-        AddRangeMap(result, 21990, 23126, 15);
-        AddRangeMap(result, 22957, 24125, 15);
-        AddRangeMap(result, 24071, 24832, 15);
-        AddRangeMap(result, 24675, 28307, 15);
-        AddRangeMap(result, 24691, 28323, 15);
+        AddRangeMap(result, 21990, 23126, 16);
+        AddRangeMap(result, 22957, 24125, 16);
+        AddRangeMap(result, 24071, 24832, 16);
+        AddRangeMap(result, 24675, 28307, 16);
+        AddRangeMap(result, 24691, 28323, 16);
         AddRangeMap(result, 38737, 39754, 11);
         AddRangeMap(result, 39732, 41202, 11);
         AddRangeMap(result, 39743, 41213, 11);
         AddRangeMap(result, 41180, 41224, 11);
         AddRangeMap(result, 41191, 41235, 11);
-        AddRangeMap(result, 47869, 49099, 21);
-        AddRangeMap(result, 47006, 50060, 21);
-        AddRangeMap(result, 50978, 51066, 21);
-        AddRangeMap(result, 51000, 51088, 21);
+        AddRangeMap(result, 45679, 49088, 11);
+        AddRangeMap(result, 49053, 49159, 11);
+        AddRangeMap(result, 49148, 51789, 11);
+        AddRangeMap(result, 51778, 51800, 11);
+        AddRangeMap(result, 47869, 49099, 22);
+        AddRangeMap(result, 47006, 50060, 22);
+        AddRangeMap(result, 50032, 51044, 22);
+        AddRangeMap(result, 50032, 51022, 22);
+        AddRangeMap(result, 50978, 51066, 22);
+        AddRangeMap(result, 51000, 51088, 22);
         return result.ToFrozenDictionary();
     }
 
@@ -664,22 +709,29 @@ internal static class RelicWeaponCatalog
             }
         }
 
-        result.UnionWith(ReplicaItemIds.Values);
+        foreach (var itemIDs in ReplicaItemGroups.Values)
+            result.UnionWith(itemIDs);
+        foreach (var itemIDs in AdditionalItemIds.Values)
+            result.UnionWith(itemIDs);
         result.Remove(0);
         return result.ToFrozenSet();
     }
 
     private static void AddRangeMap
     (
-        IDictionary<uint, uint> target,
-        uint                    sourceStart,
-        uint                    replicaStart,
-        int                     count
+        IDictionary<uint, uint[]> target,
+        uint                      sourceStart,
+        uint                      replicaStart,
+        int                       count
     )
     {
         for (var offset = 0; offset < count; offset++)
         {
-            target.Add(sourceStart + (uint)offset, replicaStart + (uint)offset);
+            var sourceItemID = sourceStart + (uint)offset;
+            var replicaItemID = replicaStart + (uint)offset;
+            target[sourceItemID] = target.TryGetValue(sourceItemID, out var replicas)
+                ? [.. replicas, replicaItemID]
+                : [replicaItemID];
         }
     }
 

@@ -17,5 +17,13 @@ public readonly record struct CollectionSource
 
     internal IReadOnlyList<uint> CostItemIDs { get; init; } = [];
 
+    internal IReadOnlyList<uint> RequiredQuestIDs { get; init; } = [];
+
+    internal string RequiredQuestDetail { get; init; } = string.Empty;
+
+    internal string SourceDetail { get; init; } = string.Empty;
+
+    internal bool IsIdentityFallback { get; init; }
+
     internal bool IsGilShop { get; init; }
 }

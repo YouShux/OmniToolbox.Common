@@ -1755,10 +1755,12 @@ public static partial class OmniControls
         var border = OmniTheme.BorderThickness() + OmniTheme.Scale(1f) * hoverProgress;
         var glowExtent = OmniTheme.Scale(6f) * hoverProgress;
         var shadowOffset = OmniTheme.Scale(MathF.Max(0f, tokens.ShadowOffset));
-        drawList.PushClipRect(
-            pos - new Vector2(border + glowExtent),
-            pos + size + new Vector2(border + MathF.Max(glowExtent, shadowOffset)),
-            true);
+        var clipMin = pos - new Vector2(border + glowExtent);
+        var clipMax = pos + size + new Vector2(border + MathF.Max(glowExtent, shadowOffset));
+        if (IsRectClipped(drawList, clipMin, clipMax))
+            return;
+
+        drawList.PushClipRect(clipMin, clipMax, true);
         DrawControlShadow(drawList, pos, size, radius);
         if (hoverProgress > 0.01f)
         {
@@ -2302,6 +2304,14 @@ public static partial class OmniControls
         DrawControlHighlight(frame.DrawList, frame.Pos, frame.Size, frame.Radius);
     }
 
+    private static bool IsRectClipped(ImDrawListPtr drawList, Vector2 min, Vector2 max)
+    {
+        var clipMin = drawList.GetClipRectMin();
+        var clipMax = drawList.GetClipRectMax();
+        return clipMax.X <= clipMin.X || clipMax.Y <= clipMin.Y ||
+               max.X < clipMin.X || max.Y < clipMin.Y || min.X > clipMax.X || min.Y > clipMax.Y;
+    }
+
     private static void DrawControlShadow
     (
         ImDrawListPtr drawList,
@@ -2318,6 +2328,11 @@ public static partial class OmniControls
         }
 
         var offset = OmniTheme.Scale(MathF.Max(0f, tokens.ShadowOffset));
+        var extent = OmniTheme.IsGlass ? OmniTheme.Scale(5.75f) + 1f : 1f;
+        var shadowMin = pos + (OmniTheme.IsGlass ? new Vector2(0f, offset) : new Vector2(offset));
+        if (IsRectClipped(drawList, shadowMin - new Vector2(extent), shadowMin + size + new Vector2(extent)))
+            return;
+
         if (OmniTheme.IsGlass)
         {
             for (var band = 4; band >= 1; band--)
@@ -2362,10 +2377,18 @@ public static partial class OmniControls
             size.Y * 0.38f);
         var bandHeight = height / BORDER_HIGHLIGHT_BANDS;
         var max = pos + size;
+        if (IsRectClipped(drawList, pos, new Vector2(max.X, pos.Y + height)))
+            return;
+
+        var clipMin = drawList.GetClipRectMin();
+        var clipMax = drawList.GetClipRectMax();
         for (var i = 0; i < BORDER_HIGHLIGHT_BANDS; i++)
         {
             var y0 = pos.Y + i * bandHeight;
             var y1 = i == BORDER_HIGHLIGHT_BANDS - 1 ? pos.Y + height : y0 + bandHeight;
+            if (y1 < clipMin.Y || y0 > clipMax.Y)
+                continue;
+
             drawList.PushClipRect(new Vector2(pos.X, y0), new Vector2(max.X, y1), true);
             drawList.AddRectFilled(
                 pos,
@@ -2393,6 +2416,9 @@ public static partial class OmniControls
         {
             return;
         }
+
+        if (IsRectClipped(drawList, pos - Vector2.One, pos + size + Vector2.One))
+            return;
 
         var half = thickness * 0.5f;
         drawList.AddRect(

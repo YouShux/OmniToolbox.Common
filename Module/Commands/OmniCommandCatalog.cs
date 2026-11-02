@@ -168,6 +168,8 @@ public static class OmniCommandCatalog
         new("inn", "旅馆", "", "进入附近旅馆", "InnEntry", OmniCommandArguments.None),
         new("bis", "BIS配装", "", "打开全职业 BIS 配装", "BestInSlotGear", OmniCommandArguments.None),
         new("chatlogreplay", "日志回放", "", "打开聊天日志回放", "ChatFrameOptimization", OmniCommandArguments.None),
+        new("lootrollhistory", "战利品记录", "", "切换显示战利品记录窗口", "LootRollHistory", OmniCommandArguments.None),
+        new("mitigationmonitor", "减伤监控", "", "切换显示减伤监控窗口", "MitigationMonitor", OmniCommandArguments.None),
         new("glamourmanager", "幻化管理", "", "打开幻化管理", "BetterGlamourManagement", OmniCommandArguments.None),
         new("cleartryon", "清理试穿", "", "清理试穿残留", "BetterGlamourManagement", OmniCommandArguments.None),
         new("armoirecheck", "收藏柜记录", "", "检查收藏柜收录记录", "ArmoireRecord", OmniCommandArguments.None),

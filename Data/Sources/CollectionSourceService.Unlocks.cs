@@ -15,22 +15,22 @@ public sealed partial class CollectionSourceService
 
     private static void AddPromotionalUnlockSources(IDictionary<uint, HashSet<CollectionSource>> itemRows)
     {
-        AddSourceIfMissing(itemRows, 41498, new(
+        AddSource(itemRows, 41498, new(
             CollectionSourceCategory.Event,
             0,
             OmniLoc.Get("Collection.Source.Unlock.Alrsvid"),
             OmniLoc.Get("Collection.Source.Unlock.AlrsvidDetail")));
-        AddSourceIfMissing(itemRows, 52654, new(
+        AddSource(itemRows, 52654, new(
             CollectionSourceCategory.Other,
             0,
             OmniLoc.Get("Collection.Source.Unlock.MusicalPaca"),
             OmniLoc.Get("Collection.Source.Unlock.MusicalPacaDetail")));
-        AddSourceIfMissing(itemRows, 52638, new(
+        AddSource(itemRows, 52638, new(
             CollectionSourceCategory.Other,
             0,
             OmniLoc.Get("Collection.Source.Unlock.LollyCat"),
             OmniLoc.Get("Collection.Source.Unlock.LollyCatDetail")));
-        AddSourceIfMissing(itemRows, 50021, new(
+        AddSource(itemRows, 50021, new(
             CollectionSourceCategory.Event,
             0,
             OmniLoc.Get("Collection.Source.Unlock.LaudedFramersKit"),

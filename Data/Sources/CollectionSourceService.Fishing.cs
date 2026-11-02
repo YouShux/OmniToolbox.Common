@@ -2,6 +2,8 @@ using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
+using Lumina.Excel.Sheets;
+using OmenTools.Interop.Game.Helpers;
 using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.UI;
 
@@ -24,11 +26,28 @@ public sealed partial class CollectionSourceService
             throw new InvalidDataException("Unsupported FishingSources schema version.");
         }
 
-        var placeNameIds = root.GetProperty("spots")
-            .EnumerateArray()
-            .ToDictionary(
-                spot => spot.GetProperty("i").GetUInt32(),
-                spot => spot.GetProperty("p").GetUInt32());
+        var spots = new Dictionary<uint, (uint PlaceNameID, CollectionSourceLocation? Location)>();
+        foreach (var spot in root.GetProperty("spots").EnumerateArray())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var spotID = spot.GetProperty("i").GetUInt32();
+            var placeNameID = spot.GetProperty("p").GetUInt32();
+            CollectionSourceLocation? location = null;
+            if (LuminaGetter.TryGetRow<FishingSpot>(spotID, out var fishingSpot) &&
+                fishingSpot.PlaceName.RowId == placeNameID &&
+                fishingSpot.TerritoryType.ValueNullable is { } territory &&
+                territory.Map.ValueNullable is { } map)
+            {
+                var mapPosition = PositionHelper.TextureToMap(fishingSpot.X, fishingSpot.Z, map.SizeFactor);
+                location = new(territory.RowId, mapPosition.X, mapPosition.Y)
+                {
+                    MapID = map.RowId
+                };
+            }
+
+            spots.Add(spotID, (placeNameID, location));
+        }
+
         foreach (var item in root.GetProperty("items").EnumerateArray())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -42,6 +61,7 @@ public sealed partial class CollectionSourceService
             foreach (var spotIdElement in item.GetProperty("s").EnumerateArray())
             {
                 var spotID = spotIdElement.GetUInt32();
+                var spot = spots[spotID];
                 AddSource(target, itemID, new(
                     CollectionSourceCategory.Other,
                     spotID,
@@ -49,10 +69,11 @@ public sealed partial class CollectionSourceService
                         CultureInfo.CurrentCulture,
                         OmniLoc.Get("Collection.Source.Fishing"),
                         preparedText is null
-                            ? LuminaWrapper.GetPlaceName(placeNameIds[spotID])
-                            : preparedText.PlaceNames.GetValueOrDefault(placeNameIds[spotID], string.Empty),
+                            ? LuminaWrapper.GetPlaceName(spot.PlaceNameID)
+                            : preparedText.PlaceNames.GetValueOrDefault(spot.PlaceNameID, string.Empty),
                         detailSuffix),
-                    string.Empty));
+                    string.Empty,
+                    spot.Location));
             }
         }
     }

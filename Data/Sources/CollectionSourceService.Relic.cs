@@ -9,7 +9,7 @@ public sealed partial class CollectionSourceService
 {
     private static void AddRelicMaterialSources(IDictionary<uint, HashSet<CollectionSource>> itemRows)
     {
-        EmbeddedData.ReadCSV("RelicMaterialSources.csv", csv =>
+        EmbeddedData.ReadRows("RelicMaterialSources.csv", csv =>
         {
             var itemID = csv.GetField<uint>("ItemId");
             var category = csv.GetField<CollectionSourceCategory>("Category");
@@ -18,9 +18,21 @@ public sealed partial class CollectionSourceService
             var detail = csv.GetField("Detail") ?? string.Empty;
             if (itemRows.TryGetValue(itemID, out var sources))
             {
-                sources.RemoveWhere(source =>
+                var previousSources = sources.Where(source =>
                     source.Category == category && source.SourceID == sourceID &&
-                    (sourceID != 0 || source.Description == description));
+                    (sourceID != 0 || source.Description == description)).ToArray();
+                foreach (var source in previousSources)
+                {
+                    sources.Remove(source);
+                    sources.Add(source with
+                    {
+                        Description = description,
+                        Detail = detail + source.RequiredQuestDetail
+                    });
+                }
+
+                if (previousSources.Length != 0)
+                    return;
             }
 
             AddSource(itemRows, itemID, new(category, sourceID, description, detail));
@@ -30,7 +42,8 @@ public sealed partial class CollectionSourceService
     private static void AddRelicSources
     (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
-        RelicItem                                    relic
+        RelicItem                                    relic,
+        PreparedSourceText?                          preparedText = null
     )
     {
         var (questID, detailKey) = relic.RowId switch
@@ -57,8 +70,8 @@ public sealed partial class CollectionSourceService
         var location = relic.RowId == 7
             ? new CollectionSourceLocation(138, 34.4f, 31.9f)
             : new CollectionSourceLocation(154, 29.5f, 19.6f);
-        var questName = quest.Name.ExtractText();
-        var npcName = npc.Singular.ExtractText();
+        var questName = CaptureQuestName(quest, preparedText);
+        var npcName = CaptureNPCName(npc, preparedText);
         var itemIDs = GetRelicItemIDs(relic);
         var previousItemIDs = GetRelicItemIDs(previous);
         for (var index = 0; index < itemIDs.Length; index++)
@@ -69,15 +82,17 @@ public sealed partial class CollectionSourceService
                 continue;
             }
 
-            AddSourceIfMissing(itemRows, itemIDs[index], new(
+            var itemID = itemIDs[index];
+            var previousItemName = CaptureItemName(previousItem, preparedText);
+            BuildSource(preparedText, () => AddSource(itemRows, itemID, new(
                 CollectionSourceCategory.Quest,
                 questID,
-                questName,
-                string.Format(OmniLoc.Get(detailKey), npcName, previousItem.Name.ExtractText()),
+                questName.Text,
+                string.Format(OmniLoc.Get(detailKey), npcName.Text, previousItemName.Text),
                 location)
             {
                 MapTerritoryID = location.TerritoryID
-            });
+            }));
         }
     }
 

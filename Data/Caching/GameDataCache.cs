@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
@@ -14,52 +13,99 @@ using TreeTools.IO;
 
 namespace OmniToolbox.Data;
 
-internal static partial class GameDataCache
+internal sealed partial class GameDataCache : IDisposable
 {
-    private static readonly string[] FileNames =
-    [
-        "ItemPatch.csv", "ItemSupplement.csv", "StoreItem.csv", "BGMOrchestrion.csv",
-        "DungeonBoss.csv", "DungeonChest.csv", "DungeonBossDrop.csv",
-        "DungeonBossChest.csv", "DungeonChestItem.csv"
-    ];
+    private static readonly string[] FileNames = GameDataManifest.GetNames("Supplemental");
+    private readonly SemaphoreSlim loadingLock = new(1, 1);
+    private Snapshot? supplementalSnapshot;
+    private Snapshot? communitySnapshot;
+    private IReadOnlyDictionary<string, byte[]> supplementalResources = new Dictionary<string, byte[]>();
+    private IReadOnlyDictionary<string, byte[]> communityResources = new Dictionary<string, byte[]>();
+    private (long Length, DateTime Modified)? supplementalStamp;
+    private (long Length, DateTime Modified)? communityStamp;
+    private bool supplementalLoaded;
+    private bool communityLoaded;
 
-    internal static async Task<IReadOnlyDictionary<string, byte[]>> LoadAsync
+    internal GameDataSnapshot Data { get; } = new();
+
+    internal Task<IReadOnlyDictionary<string, byte[]>> LoadCachedAsync
     (
         string            configDirectory,
         string            gameVersion,
         CancellationToken cancellationToken
-    )
-    {
-        var results = await Task.WhenAll(
-            LoadSupplementalAsync(configDirectory, gameVersion, cancellationToken),
-            LoadCommunityAsync(configDirectory, gameVersion, cancellationToken)).ConfigureAwait(false);
-        return results.SelectMany(resources => resources).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-    }
+    ) => LoadAsync(configDirectory, gameVersion, false, cancellationToken);
 
-    private static async Task<IReadOnlyDictionary<string, byte[]>> LoadSupplementalAsync
+    internal Task<IReadOnlyDictionary<string, byte[]>> LoadAsync
     (
         string            configDirectory,
         string            gameVersion,
+        CancellationToken cancellationToken
+    ) => LoadAsync(configDirectory, gameVersion, true, cancellationToken);
+
+    private async Task<IReadOnlyDictionary<string, byte[]>> LoadAsync
+    (
+        string            configDirectory,
+        string            gameVersion,
+        bool              updateOnline,
+        CancellationToken cancellationToken
+    )
+    {
+        await loadingLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var results = await Task.WhenAll(
+                LoadSupplementalAsync(configDirectory, gameVersion, updateOnline, cancellationToken),
+                LoadCommunityAsync(configDirectory, gameVersion, updateOnline, cancellationToken)).ConfigureAwait(false);
+            var resources = results.SelectMany(group => group).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+            if (!updateOnline)
+                Data.Select(resources);
+            return resources;
+        }
+        finally
+        {
+            if (updateOnline)
+                Data.ReleaseDocuments();
+            loadingLock.Release();
+        }
+    }
+
+    private async Task<IReadOnlyDictionary<string, byte[]>> LoadSupplementalAsync
+    (
+        string            configDirectory,
+        string            gameVersion,
+        bool              updateOnline,
         CancellationToken cancellationToken
     )
     {
         var (embedded, embeddedHash) = await ReadEmbeddedAsync(FileNames, cancellationToken).ConfigureAwait(false);
         var path = Path.Combine(configDirectory, "Data", "SupplementalData.json");
-        Snapshot? snapshot = null;
-        IReadOnlyDictionary<string, byte[]> resources = new Dictionary<string, byte[]>();
+        var snapshot = supplementalSnapshot;
+        var resources = supplementalResources;
         try
         {
-            if (File.Exists(path))
+            var stamp = GetStamp(path);
+            if (!supplementalLoaded || stamp != supplementalStamp)
             {
-                if (new FileInfo(path).Length > MAX_RESOURCE_BYTES * FileNames.Length)
-                    throw new InvalidDataException("Supplemental data cache is too large.");
-
-                var json = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
-                var cached = JsonSerializer.Deserialize<Snapshot>(json);
-                if (cached is { SchemaVersion: 1 } && cached.EmbeddedHash == embeddedHash && IsRevision(cached.Revision))
+                snapshot = null;
+                resources = new Dictionary<string, byte[]>();
+                supplementalLoaded = true;
+                supplementalStamp = stamp;
+                if (stamp.HasValue)
                 {
-                    resources = ValidateSupplementalFiles(cached.Files, embedded, cancellationToken);
-                    snapshot = cached;
+                    var cacheLength = new FileInfo(path).Length;
+                    if (cacheLength > MAX_RESOURCE_BYTES * FileNames.Length)
+                        throw new InvalidDataException("Supplemental data cache is too large.");
+
+                    var json = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
+                    StartupTiming.Count("SupplementalData.json", "read", bytes: cacheLength);
+                    StartupTiming.Count("SupplementalData.json", "parse");
+                    var cached = JsonSerializer.Deserialize<Snapshot>(json);
+                    if (cached is { SchemaVersion: 1 } && cached.EmbeddedHash == embeddedHash &&
+                        cached.GameVersion == gameVersion && IsRevision(cached.Revision))
+                    {
+                        resources = ValidateSupplementalFiles(cached.Files, embedded, cancellationToken);
+                        snapshot = cached;
+                    }
                 }
             }
         }
@@ -67,6 +113,12 @@ internal static partial class GameDataCache
         {
             DalamudServices.PluginLog.Warning(exception, "Unable to read supplemental data cache; using bundled data.");
         }
+
+        supplementalSnapshot = snapshot;
+        supplementalResources = resources;
+
+        if (!updateOnline)
+            return resources;
 
         var now = DateTimeOffset.UtcNow;
         if (snapshot is not null && snapshot.GameVersion == gameVersion &&
@@ -115,10 +167,13 @@ internal static partial class GameDataCache
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        supplementalSnapshot = snapshot;
+        supplementalResources = resources;
         try
         {
             await AtomicFile.WriteAllTextAsync(path, JsonSerializer.Serialize(snapshot), new UTF8Encoding(false),
                 cancellationToken).ConfigureAwait(false);
+            supplementalStamp = GetStamp(path);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -128,25 +183,31 @@ internal static partial class GameDataCache
         return resources;
     }
 
-    private static async Task<(Dictionary<string, string> Files, string Hash)> ReadEmbeddedAsync
+    private Task<(Dictionary<string, string> Files, string Hash)> ReadEmbeddedAsync
     (
         IEnumerable<string> fileNames,
         CancellationToken   cancellationToken
     )
     {
+        var names = fileNames.ToArray();
+        var group = string.Join('|', names);
+        if (Data.TryGetBundle(group, out var bundle))
+            return Task.FromResult(bundle);
         var files = new Dictionary<string, string>(StringComparer.Ordinal);
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        foreach (var fileName in fileNames)
+        foreach (var fileName in names)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            using var reader = new StreamReader(EmbeddedData.Open(fileName));
-            var content = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-            files.Add(fileName, content);
+            var input = Data.ReadEmbedded(fileName);
+            StartupTiming.Count(fileName, "hash");
+            files.Add(fileName, input.Content);
             hash.AppendData(Encoding.UTF8.GetBytes(fileName));
-            hash.AppendData(Encoding.UTF8.GetBytes(content));
+            hash.AppendData(input.Bytes);
         }
 
-        return (files, Convert.ToHexString(hash.GetHashAndReset()));
+        var result = (files, Convert.ToHexString(hash.GetHashAndReset()));
+        Data.SetBundle(group, files, result.Item2);
+        return Task.FromResult(result);
     }
 
     private static async Task<string> DownloadAsync
@@ -209,7 +270,7 @@ internal static partial class GameDataCache
         return destination.ToArray();
     }
 
-    private static IReadOnlyDictionary<string, byte[]> ValidateSupplementalFiles
+    private IReadOnlyDictionary<string, byte[]> ValidateSupplementalFiles
     (
         Dictionary<string, string>?         files,
         IReadOnlyDictionary<string, string> embedded,
@@ -228,13 +289,15 @@ internal static partial class GameDataCache
                 throw new InvalidDataException($"Missing or oversized supplemental data: {fileName}");
 
             ValidateCSV(fileName, content, embedded[fileName], cancellationToken);
-            resources.Add(fileName, Encoding.UTF8.GetBytes(content));
+            var input = Data.GetInput(fileName, content);
+            files[fileName] = input.Content;
+            resources.Add(fileName, input.Bytes);
         }
 
         return resources;
     }
 
-    private static int ValidateCSV
+    private int ValidateCSV
     (
         string            fileName,
         string            content,
@@ -242,28 +305,30 @@ internal static partial class GameDataCache
         CancellationToken cancellationToken
     )
     {
-        using var expected = new CsvReader(new StringReader(embedded), CultureInfo.InvariantCulture);
-        expected.Read();
-        expected.ReadHeader();
-        using var csv = new CsvReader(new StringReader(content), CultureInfo.InvariantCulture);
-        csv.Read();
-        csv.ReadHeader();
-        if (expected.HeaderRecord is not { } header || csv.HeaderRecord is not { } actualHeader ||
-            !header.SequenceEqual(actualHeader, StringComparer.Ordinal))
+        var input = Data.GetInput(fileName, content);
+        if (Data.IsValidated(input))
+            return input.RowCount;
+        var table = input.GetCSV(cancellationToken);
+        if (input.IsEmbedded)
+        {
+            StartupTiming.Count(fileName, "embedded-equality-reuse");
+            Data.MarkValidated(input);
+            return table.Rows.Count;
+        }
+        StartupTiming.Count(fileName, "validate");
+        if (!Data.GetInput(fileName, embedded).Header.SequenceEqual(table.Header, StringComparer.Ordinal))
             throw new InvalidDataException($"Unsupported data columns: {fileName}");
 
-        var idColumns = header.Where(column => column.EndsWith("Id", StringComparison.Ordinal) ||
+        var idColumns = table.Header.Where(column => column.EndsWith("Id", StringComparison.Ordinal) ||
                                                column.EndsWith("ID", StringComparison.Ordinal) ||
                                                column is "FightNo" or "ItemSupplementSource").ToArray();
         var rows = 0;
         var patchItems = new HashSet<uint>();
         var relicItems = new HashSet<uint>();
         var equipmentRelations = new HashSet<(uint ItemID, uint ConditionID)>();
-        while (csv.Read())
+        foreach (var csv in table.Rows)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (csv.Parser.Count != header.Length)
-                throw new InvalidDataException($"Invalid data row: {fileName}");
             foreach (var column in idColumns)
                 _ = csv.GetField<uint>(column);
 
@@ -281,12 +346,17 @@ internal static partial class GameDataCache
             }
             else if (fileName == "BlueSpells.csv")
             {
-                if (csv.GetField<uint>("ActionId") == 0 || string.IsNullOrWhiteSpace(csv.GetField<string>("SourceType")))
+                if (csv.GetField<uint>("ActionId") == 0 || csv.GetField<string>("SourceType") is not
+                    ("carnivale" or "dungeon" or "fate" or "guildhests" or "hunt" or "jobquest" or
+                     "levequests" or "map" or "raid" or "special" or "trail" or "treasure"))
                     throw new InvalidDataException("Invalid blue magic source.");
                 var x = csv.GetField<float?>("X");
                 var y = csv.GetField<float?>("Y");
-                if (x.HasValue && !float.IsFinite(x.Value) || y.HasValue && !float.IsFinite(y.Value))
+                if (x.HasValue != y.HasValue ||
+                    x.HasValue && !float.IsFinite(x.Value) || y.HasValue && !float.IsFinite(y.Value))
                     throw new InvalidDataException("Invalid blue magic coordinates.");
+                if (x.HasValue && csv.GetField<uint>("TerritoryID") == 0 && csv.GetField<uint>("DutyID") == 0)
+                    throw new InvalidDataException("Blue magic coordinates require a territory or duty ID.");
                 _ = csv.GetField<uint?>("Level");
             }
             else if (fileName == "RelicItemIdToAchievement.csv")
@@ -308,7 +378,20 @@ internal static partial class GameDataCache
 
         if (rows == 0)
             throw new InvalidDataException($"Empty data: {fileName}");
+        Data.MarkValidated(input);
         return rows;
+    }
+
+    public void Dispose()
+    {
+        Data.Dispose();
+        loadingLock.Dispose();
+    }
+
+    private static (long Length, DateTime Modified)? GetStamp(string path)
+    {
+        var file = new FileInfo(path);
+        return file.Exists ? (file.Length, file.LastWriteTimeUtc) : null;
     }
 
     private static bool IsRevision(string? revision) => revision is { Length: 40 } && revision.All(Uri.IsHexDigit);

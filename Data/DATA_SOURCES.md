@@ -15,15 +15,20 @@
 - `ItemPatch.csv`、`ItemSupplement.csv`、`StoreItem.csv`、`BGMOrchestrion.csv`。
 - `DungeonBoss.csv`、`DungeonChest.csv`、`DungeonBossDrop.csv`、`DungeonBossChest.csv`、`DungeonChestItem.csv`。
 
-更新入口：`tools/update-supplemental-data.ps1`。
+更新入口：`tools/game-data/update-supplemental-data.ps1`。
 
 ## 数据更新入口
 
+正式资源位置、分组、来源版本与更新入口登记在 `resource-manifest.json`。客户端补充表位于 `Resources/ClientSupplemental`，收录资源位于 `Resources/Collections`；逻辑文件名与远端数据包保持一致。
+
 - 自动更新工作流：本体仓库 `.github/workflows/update-community-data.yml`。
-- 数据包生成：`tools/build-community-data.mjs`。
+- 数据包生成：`tools/game-data/build-community-data.mjs`。
+- 离线核验：`tools/audit-game-data.ps1`，读取本地客户端和仓库静态资源，支持 `-Source` 分源与 `-Resume` 续跑；材料关系核验使用 `tools/game-data/audit-catalog-data.py`。报告和客户端快照输出至仓库外，逐项保留证据范围与未核实项。
 - 各数据源的更新脚本见下文。
 
 ## 最终幻想 XIV 中文维基
+
+`tools/game-data/update-wiki-item-sources.ps1 -SaveSnapshotDirectory <仓库外目录>` 保存完整原始分页；`-SnapshotDirectory` 可离线重新生成。生成文件可传给 `tools/audit-game-data.ps1 -WikiReferencePath` 做逐项一致性比对。Wiki 副本编号属于 `InstanceContent`，读取时转换为任务搜索器编号；住宅地图 `-1` 和工房地图 `-2` 表示未指定实例，商城的 64 位业务编号属于外部编号体系，均不作为客户端行 ID 使用。原始编号保留在下载快照中。
 
 `WikiItemSources.json` 及部分特殊装备、收藏品和容器奖励补充，来源于[最终幻想 XIV 中文维基](https://ff14.huijiwiki.com/)贡献者维护的数据。批量接口为 `https://ff14.huijiwiki.com/api/rest_v1/namespace/data`。
 
@@ -33,16 +38,20 @@ Omni 对数据进行字段筛选、格式转换、分类、去重和补充。
 
 `RelicMaterialSources.csv` 补充特殊武器材料的任务条件、掉落与检品途径，参考[义军武器](https://ff14.huijiwiki.com/wiki/义军武器)、[幻境武器](https://ff14.huijiwiki.com/wiki/幻境武器)、[天钢工具](https://ff14.huijiwiki.com/wiki/天钢工具)、[天上福地云冠群岛](https://ff14.huijiwiki.com/wiki/天上福地云冠群岛)及对应物品、任务页面。
 
-更新入口：`tools/update-wiki-item-sources.ps1`、`tools/update-collection-resources.mjs`。
+更新入口：`tools/game-data/update-wiki-item-sources.ps1`、`tools/game-data/update-collection-resources.mjs`。
 
 ## 其他社区数据
 
+特殊武器的系列、阶段及职业映射维护于 `Data/Catalogs/Collections/RelicWeaponCatalog.cs`。物品 ID、图标和可用职业以客户端 `Item`、`ClassJobCategory` 为准，制作武器结合 `Recipe.ItemResult` 与材料关系核对；不同的单手、双手武器分别记录。复制品按原品逐一关联，覆盖同阶段的普通、哑光版本及骑士盾；持有数量取原品与关联复制品的最大值。复制品名称、职业和模型字段用于离线核对，运行时按物品 ID 读取映射。
+
+目录交叉核对来源为 [SQUARE ENIX 艾欧泽亚数据库](https://na.finalfantasyxiv.com/lodestone/playguide/db/)、[FFCafe XIVAPI v2](https://xivapi-v2.xivcdn.com/api)、[FFXIV Collect 特殊武器接口](https://ffxivcollect.com/api/relics)及 [FFXIV Console Games Wiki 蛮神发光武器目录](https://ffxiv.consolegameswiki.com/wiki/Extreme_Trial_Glamour_Weapons)。官方物品与配方示例为[圆桌之夺命镰](https://na.finalfantasyxiv.com/lodestone/playguide/db/item/3c40c47c825/)及其[制作配方](https://na.finalfantasyxiv.com/lodestone/playguide/db/recipe/b087b5c9b9d/)。更新目录时按实际客户端版本核对条目及职业，并结合配方检查后补职业与同系列武器变体；成就关联数据使用下表的独立更新入口。
+
 | 数据 | 来源 | 更新入口 |
 | --- | --- | --- |
-| `FishingSources.json` | [鱼糕](https://fish.ffmomola.com)公开前端数据 | `tools/update-fishing-sources.mjs` |
-| `BlueSpells.csv` | [青魔法来源查询](https://bluemagic.badend.cn/)公开技能及获取途径；攻略文本保留来源站原文 | `tools/update-collection-resources.mjs` |
-| `RelicItemIdToAchievement.csv` | FFXIV Collect 的[特殊武器](https://ffxivcollect.com/api/relics)与[成就](https://ffxivcollect.com/api/achievements)公开接口 | `tools/update-collection-resources.mjs` |
-| `EquipmentSourceSupplement.csv` | GarlandTools 的公开物品端点 `https://garlandtools.org/db/doc/item/en/3/{ItemId}.json` | `tools/update-equipment-source-supplement.mjs` |
+| `FishingSources.json` | [鱼糕](https://fish.ffmomola.com)公开前端数据 | `tools/game-data/update-fishing-sources.mjs` |
+| `BlueSpells.csv` | [青魔法来源查询](https://bluemagic.badend.cn/)公开技能及获取途径；攻略文本保留来源站原文 | `tools/game-data/update-collection-resources.mjs` |
+| `RelicItemIdToAchievement.csv` | FFXIV Collect 的[特殊武器](https://ffxivcollect.com/api/relics)与[成就](https://ffxivcollect.com/api/achievements)公开接口 | `tools/game-data/update-collection-resources.mjs` |
+| `EquipmentSourceSupplement.csv` | GarlandTools 的公开物品端点 `https://garlandtools.org/db/doc/item/en/3/{ItemId}.json` | `tools/game-data/update-equipment-source-supplement.mjs` |
 
 `EquipmentSourceSupplement.meta.json` 保存资源原始 URL 与 SHA-256。
 

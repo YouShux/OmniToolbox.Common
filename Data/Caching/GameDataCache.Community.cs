@@ -13,36 +13,46 @@ using TreeTools.IO;
 
 namespace OmniToolbox.Data;
 
-internal static partial class GameDataCache
+internal sealed partial class GameDataCache
 {
-    private static readonly string[] CommunityFileNames =
-    [
-        "WikiItemSources.json", "FishingSources.json", "BlueSpells.csv", "RelicItemIdToAchievement.csv",
-        "EquipmentSourceSupplement.csv", "EquipmentSourceSupplement.meta.json"
-    ];
+    private static readonly string[] CommunityFileNames = GameDataManifest.GetNames("Community");
 
-    private static async Task<IReadOnlyDictionary<string, byte[]>> LoadCommunityAsync
+    private async Task<IReadOnlyDictionary<string, byte[]>> LoadCommunityAsync
     (
         string            configDirectory,
         string            gameVersion,
+        bool              updateOnline,
         CancellationToken cancellationToken
     )
     {
         var (embedded, embeddedHash) = await ReadEmbeddedAsync(CommunityFileNames, cancellationToken).ConfigureAwait(false);
         var path = Path.Combine(configDirectory, "Data", "CommunityData.json");
-        Snapshot? snapshot = null;
-        IReadOnlyDictionary<string, byte[]> resources = new Dictionary<string, byte[]>();
+        var snapshot = communitySnapshot;
+        var resources = communityResources;
         try
         {
-            if (File.Exists(path))
+            var stamp = GetStamp(path);
+            if (!communityLoaded || stamp != communityStamp)
             {
-                if (new FileInfo(path).Length > MAX_COMMUNITY_BYTES)
-                    throw new InvalidDataException("Community data cache is too large.");
-                var cached = JsonSerializer.Deserialize<Snapshot>(await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false));
-                if (cached is { SchemaVersion: 1 } && cached.EmbeddedHash == embeddedHash)
+                snapshot = null;
+                resources = new Dictionary<string, byte[]>();
+                communityLoaded = true;
+                communityStamp = stamp;
+                if (stamp.HasValue)
                 {
-                    resources = ValidateCommunityFiles(cached.Files, embedded, cancellationToken);
-                    snapshot = cached;
+                    var cacheLength = new FileInfo(path).Length;
+                    if (cacheLength > MAX_COMMUNITY_BYTES)
+                        throw new InvalidDataException("Community data cache is too large.");
+                    var json = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
+                    StartupTiming.Count("CommunityData.json", "read", bytes: cacheLength);
+                    StartupTiming.Count("CommunityData.json", "parse");
+                    var cached = JsonSerializer.Deserialize<Snapshot>(json);
+                    if (cached is { SchemaVersion: 1 } && cached.EmbeddedHash == embeddedHash && cached.GameVersion == gameVersion &&
+                        cached.Revision is { Length: 64 } && cached.Revision.All(Uri.IsHexDigit))
+                    {
+                        resources = ValidateCommunityFiles(cached.Files, embedded, cancellationToken);
+                        snapshot = cached;
+                    }
                 }
             }
         }
@@ -51,6 +61,12 @@ internal static partial class GameDataCache
         {
             DalamudServices.PluginLog.Warning(exception, "Unable to read community data cache; using bundled data.");
         }
+
+        communitySnapshot = snapshot;
+        communityResources = resources;
+
+        if (!updateOnline)
+            return resources;
 
         var now = DateTimeOffset.UtcNow;
         if (snapshot is not null && snapshot.Revision is { Length: 64 } && snapshot.Revision.All(Uri.IsHexDigit) &&
@@ -112,10 +128,13 @@ internal static partial class GameDataCache
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        communitySnapshot = snapshot;
+        communityResources = resources;
         try
         {
             await AtomicFile.WriteAllTextAsync(path, JsonSerializer.Serialize(snapshot), new UTF8Encoding(false),
                 cancellationToken).ConfigureAwait(false);
+            communityStamp = GetStamp(path);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

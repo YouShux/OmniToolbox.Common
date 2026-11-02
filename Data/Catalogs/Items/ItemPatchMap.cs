@@ -8,10 +8,12 @@ public sealed class ItemPatchMap
 {
     private readonly IReadOnlyDictionary<uint, decimal> patches;
 
-    public ItemPatchMap()
+    public ItemPatchMap() : this(null) { }
+
+    internal ItemPatchMap(GameDataSnapshot? snapshot)
     {
         var ranges = new List<(uint StartID, uint EndID, decimal Patch)>();
-        EmbeddedData.ReadCSV("ItemPatch.csv", csv => ranges.Add((
+        EmbeddedData.ReadRows("ItemPatch.csv", csv => ranges.Add((
             csv.GetField<uint>("StartItemId"),
             csv.GetField<uint>("EndItemId"),
             csv.GetField<decimal>("PatchNo"))));
@@ -23,8 +25,12 @@ public sealed class ItemPatchMap
                 loadedPatches.Add(itemID, patch);
             }
         }
-        using var stream = EmbeddedData.Open("WikiItemSources.json");
-        using var document = JsonDocument.Parse(stream);
+        using var stream = snapshot is null ? EmbeddedData.Open("WikiItemSources.json") : null;
+        using var ownedDocument = stream is null ? null : JsonDocument.Parse(stream);
+        if (ownedDocument is not null)
+            StartupTiming.Count("WikiItemSources.json", "parse");
+        var document = snapshot?.GetSelected("WikiItemSources.json").Document ?? ownedDocument
+            ?? throw new InvalidOperationException("Wiki item versions are unavailable.");
         foreach (var row in document.RootElement.GetProperty("patches").EnumerateArray())
         {
             var patch = row.GetProperty("p").GetDecimal();

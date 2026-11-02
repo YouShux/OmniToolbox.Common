@@ -28,5 +28,6 @@ public enum CollectionSourceCategory
     RestorationZone = 21,
     FieldOperations = 22,
     IslandSanctuary = 23,
-    NoSource = 24
+    NoSource = 24,
+    NPCBattle = 25
 }

@@ -141,10 +141,10 @@ internal static class PluginIconResolver
             if (cachedIcon.Texture is { } cachedTexture &&
                 cachedTexture.TryGetWrap(out var diskIcon, out _) && IsUsableTexture(diskIcon))
             {
-                if (!cachedIcon.OldCacheRecycled)
+                if (!cachedIcon.OldCacheRecycleQueued)
                 {
-                    RecycleOldCache(cachedIcon.Path, cachedIcon.Prefix);
-                    cachedIcon.OldCacheRecycled = true;
+                    QueueOldCacheRecycling(cachedIcon.Prefix);
+                    cachedIcon.OldCacheRecycleQueued = true;
                 }
                 return diskIcon;
             }
@@ -287,35 +287,48 @@ internal static class PluginIconResolver
                 if (!File.Exists(newPath))
                     File.Move(oldPath, newPath);
             }
-            RecycleOldCache(null, string.Empty);
+            QueueOldCacheRecycling(string.Empty);
         }
         catch (Exception)
         {
         }
     }
 
-    private static void RecycleOldCache
-    (
-        string? currentPath,
-        string  prefix
-    )
+    private static void QueueOldCacheRecycling(string prefix)
     {
-        try
+        var queuedAt = DateTime.UtcNow;
+        var retainedPaths = CachedIcons.Values
+            .Where(icon => icon.Prefix == prefix)
+            .Select(icon => icon.Path)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        CacheLifetime.RunBackground(cancellationToken =>
         {
-            foreach (var path in Directory.EnumerateFiles(CacheDirectory, prefix + "*.png"))
+            if (cancellationToken.IsCancellationRequested)
+                return Task.CompletedTask;
+
+            try
             {
-                if (path.Equals(currentPath, StringComparison.OrdinalIgnoreCase))
-                    continue;
-                var name = Path.GetFileNameWithoutExtension(path);
-                var hash = name[prefix.Length..];
-                if (hash.Length != 64 || !hash.All(char.IsAsciiHexDigit))
-                    continue;
-                FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                foreach (var path in Directory.EnumerateFiles(CacheDirectory, prefix + "*.png"))
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        return Task.CompletedTask;
+
+                    if (retainedPaths.Contains(path))
+                        continue;
+                    var name = Path.GetFileNameWithoutExtension(path);
+                    var hash = name[prefix.Length..];
+                    if (hash.Length != 64 || !hash.All(char.IsAsciiHexDigit) || File.GetLastWriteTimeUtc(path) >= queuedAt)
+                        continue;
+                    FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                }
             }
-        }
-        catch (Exception)
-        {
-        }
+            catch (Exception)
+            {
+            }
+
+            return Task.CompletedTask;
+        });
     }
 
     private static IDalamudTextureWrap? GetDefaultIcon() => DefaultIconProperty?.GetValue(ImageCache) is IDalamudTextureWrap texture &&
@@ -440,7 +453,7 @@ internal static class PluginIconResolver
         public string Path { get; } = path;
         public string Prefix { get; } = prefix;
         public bool                     FileChecked;
-        public bool                     OldCacheRecycled;
+        public bool                     OldCacheRecycleQueued;
         public ISharedImmediateTexture? Texture;
         public Task<bool>?              SaveTask;
         public long                     RetryAfter;

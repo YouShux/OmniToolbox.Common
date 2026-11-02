@@ -79,7 +79,9 @@ public static class OmniTheme
 
     public static float DalamudScaleValue => Math.Clamp(ImGuiHelpers.GlobalScale, 0.5f, 3f);
 
-    public static float ScaleValue => scopedScale ??
+    public static float ScaleValue => scopedScale ?? ConfiguredScaleValue;
+
+    internal static float ConfiguredScaleValue =>
         Math.Clamp(FontManager.Instance().Config.FontSize, MinimumFontSize, MaximumFontSize) /
         REFERENCE_FONT_SIZE *
         DalamudScaleValue;
