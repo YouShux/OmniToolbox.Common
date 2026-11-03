@@ -1,11 +1,9 @@
 using System.Collections.Frozen;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Lumina.Excel.Sheets;
 using Lumina.Text.ReadOnly;
 using OmenTools.Interop.Game.Lumina;
-using OmniToolbox.Data;
 using TreeTools.Threading;
 
 namespace OmniToolbox.Items;
@@ -62,35 +60,10 @@ internal sealed class GameItemSnapshot
             var captured = new (uint ID, ReadOnlySeString Text)[rows.Length];
             var index = 0;
             // 字符串 getter 可能解析 RSV，只在框架线程读取；后台仅解码已取得的只读值。
-            var captureStarted = Stopwatch.GetTimestamp();
-            var captureWork = 0L;
-            try
+            await FrameworkWorkScheduler.RunAsync(rows, row =>
             {
-                var captureTask = () => FrameworkWorkScheduler.RunAsync(rows, row =>
-                {
-                    var started = Stopwatch.GetTimestamp();
-                    try
-                    {
-                        captured[index++] = (row.RowId, description ? row.Description : row.Name);
-                    }
-                    finally
-                    {
-                        Interlocked.Add(ref captureWork, Stopwatch.GetTimestamp() - started);
-                    }
-                }, cancellationToken);
-                if (StartupTiming.Current is { } timing)
-                    await timing.RunAsync(description ? "item-description-capture" : "item-name-capture", captureTask).ConfigureAwait(false);
-                else
-                    await captureTask().ConfigureAwait(false);
-            }
-            finally
-            {
-                var elapsed = Stopwatch.GetTimestamp() - captureStarted;
-                var resource = description ? "item-description" : "item-name";
-                StartupTiming.Count(resource, "processing-us", (long)(captureWork * 1_000_000d / Stopwatch.Frequency));
-                StartupTiming.Count(resource, "waiting-us", (long)(Math.Max(0, elapsed - captureWork) * 1_000_000d / Stopwatch.Frequency));
-                StartupTiming.Count(resource, "captures", index);
-            }
+                captured[index++] = (row.RowId, description ? row.Description : row.Name);
+            }, cancellationToken).ConfigureAwait(false);
             await Task.Run(() =>
             {
                 if (description)

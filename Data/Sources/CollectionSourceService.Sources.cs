@@ -76,15 +76,12 @@ public sealed partial class CollectionSourceService
     private static List<(uint ItemID, uint SourceItemID, uint SourceType)> ReadContainerSourceRows()
     {
         var rows = new List<(uint ItemID, uint SourceItemID, uint SourceType)>();
-        EmbeddedData.ReadRows("ItemSupplement.csv", csv =>
+        foreach (var row in EmbeddedData.GetItemCatalog().ItemSupplements)
         {
-            var itemID = csv.GetField<uint>("ItemId");
-            var sourceItemID = csv.GetField<uint>("SourceItemId");
-            var sourceType = csv.GetField<uint>("ItemSupplementSource");
-            if (itemID != 0 && sourceItemID != 0 &&
-                sourceType is >= 2 and <= 19)
-                rows.Add((itemID, sourceItemID, sourceType));
-        });
+            if (row.ItemID != 0 && row.SourceItemID != 0 &&
+                row.Source is >= 2 and <= 19)
+                rows.Add((row.ItemID, row.SourceItemID, row.Source));
+        }
         return rows;
     }
 
@@ -181,7 +178,19 @@ public sealed partial class CollectionSourceService
             return;
         }
 
-        var isNPC = resident.AcquisitionType.RowId is 6 or 10;
+        var acquisitionType = resident.AcquisitionType.RowId;
+        var category = acquisitionType switch
+        {
+            2 or 3 or 12 or 14 => CollectionSourceCategory.Duty,
+            4 or 5 => CollectionSourceCategory.Fate,
+            6 => CollectionSourceCategory.NPCBattle,
+            8 or 9 => CollectionSourceCategory.Container,
+            10 => CollectionSourceCategory.Shop,
+            11 => CollectionSourceCategory.Achievement,
+            13 => CollectionSourceCategory.Event,
+            _ => CollectionSourceCategory.Other
+        };
+        var isNPC = acquisitionType is 6 or 10;
         CapturedSourceText? npcName = null;
         if (isNPC &&
             LuminaGetter.TryGetRow<ENpcResident>(resident.Acquisition.RowId, out var npc))
@@ -219,11 +228,13 @@ public sealed partial class CollectionSourceService
             }
         }
 
-        var isDuty = !isNPC &&
-            LuminaGetter.TryGetRow<ContentFinderCondition>(resident.Acquisition.RowId, out _);
-        var category = isNPC ? CollectionSourceCategory.NPCBattle : CollectionSourceCategory.Other;
-        if (isDuty)
-            category = CollectionSourceCategory.Duty;
+        var mapTerritoryID = acquisitionType switch
+        {
+            4 when LuminaGetter.TryGetRow<ContentFinderCondition>(resident.Location.RowId, out var condition) =>
+                condition.TerritoryType.RowId,
+            5 => resident.Location.RowId,
+            _ => 0U
+        };
         BuildSource(preparedText, () =>
         {
             var name = npcName?.Text ?? string.Empty;
@@ -232,13 +243,14 @@ public sealed partial class CollectionSourceService
                 return;
             AddSource(itemRows, item.RowId, new(
                 category,
-                resident.Acquisition.RowId != 0 ? resident.Acquisition.RowId : cardID,
+                resident.Acquisition.RowId,
                 description,
                 string.Empty,
                 location)
             {
                 RequiredQuestIDs = resident.Quest.RowId == 0 ? [] : [resident.Quest.RowId],
-                IsIdentityFallback = isNPC || isDuty
+                MapTerritoryID = mapTerritoryID,
+                IsIdentityFallback = true
             });
         });
     }
@@ -348,7 +360,11 @@ public sealed partial class CollectionSourceService
             target.Add(id, sources);
         }
 
-        if (source.IsIdentityFallback)
+        var canCoverIdentity = source.SourceID != 0 && source.Category is
+            CollectionSourceCategory.Container or CollectionSourceCategory.Duty or
+            CollectionSourceCategory.Quest or CollectionSourceCategory.NPCBattle or
+            CollectionSourceCategory.Achievement or CollectionSourceCategory.Shop;
+        if (canCoverIdentity && source.IsIdentityFallback)
         {
             foreach (var existing in sources)
             {
@@ -360,11 +376,10 @@ public sealed partial class CollectionSourceService
                     sources.Remove(existing);
                     sources.Add(existing with { Description = source.Description });
                 }
-                StartupTiming.Count("collection-source-relations", "covered-fallback");
                 return;
             }
         }
-        else
+        else if (canCoverIdentity)
         {
             List<CollectionSource>? covered = null;
             foreach (var existing in sources)
@@ -379,23 +394,24 @@ public sealed partial class CollectionSourceService
                     sources.Remove(existing);
                     if (source.Category == CollectionSourceCategory.NPCBattle && source.Description == "幻卡对战")
                         source = source with { Description = existing.Description };
-                    StartupTiming.Count("collection-source-relations", "covered-fallback");
                 }
             }
         }
 
-        if (!sources.Add(source))
-            StartupTiming.Count("collection-source-relations", "exact-duplicate");
+        sources.Add(source);
     }
 
     private static bool CoversIdentityFallback(CollectionSource source, CollectionSource fallback) =>
         source.Category == fallback.Category && source.SourceID != 0 && source.SourceID == fallback.SourceID &&
-        source.Category is CollectionSourceCategory.Container or CollectionSourceCategory.Duty or CollectionSourceCategory.Quest or CollectionSourceCategory.NPCBattle &&
+        source.Category is CollectionSourceCategory.Container or CollectionSourceCategory.Duty or
+            CollectionSourceCategory.Quest or CollectionSourceCategory.NPCBattle or
+            CollectionSourceCategory.Achievement or CollectionSourceCategory.Shop &&
         source.TargetItemID == fallback.TargetItemID && fallback.Detail.Length == 0 &&
         fallback.CostItemIDs.Count == 0 && (!fallback.IsGilShop || source.IsGilShop) &&
         fallback.RequiredQuestIDs.All(source.RequiredQuestIDs.Contains) &&
         (fallback.MapTerritoryID == 0 || source.MapTerritoryID == fallback.MapTerritoryID) &&
-        (!fallback.Location.HasValue || source.Location == fallback.Location);
+        (!fallback.Location.HasValue || source.Location == fallback.Location ||
+         source.Category == CollectionSourceCategory.Shop && source.Location?.TerritoryID == fallback.Location.Value.TerritoryID);
 
     private sealed class SourceRelationshipComparer : IEqualityComparer<CollectionSource>
     {
@@ -428,8 +444,18 @@ public sealed partial class CollectionSourceService
             return hash.ToHashCode();
         }
 
-        private static bool IDSetEquals(IReadOnlyList<uint> left, IReadOnlyList<uint> right) =>
-            ReferenceEquals(left, right) || left.All(right.Contains) && right.All(left.Contains);
+        private static bool IDSetEquals(IReadOnlyList<uint> left, IReadOnlyList<uint> right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+            for (var index = 0; index < left.Count; index++)
+                if (!right.Contains(left[index]))
+                    return false;
+            for (var index = 0; index < right.Count; index++)
+                if (!left.Contains(right[index]))
+                    return false;
+            return true;
+        }
 
         private static int IDSetHash(IReadOnlyList<uint> ids)
         {
@@ -456,9 +482,25 @@ public sealed partial class CollectionSourceService
             pair => (IReadOnlyList<CollectionSource>)(pair.Value.Count <= 1
                 ? pair.Value.ToArray()
                 : pair.Value
-                    .OrderBy(value => value.Category)
-                    .ThenBy(value => value.Description, StringComparer.Ordinal)
-                    .ThenBy(value => value.SourceID)
-                    .ThenBy(value => value.Detail, StringComparer.Ordinal)
+                    .OrderBy(value => new SourceSortKey(value.Category, value.Description, value.SourceID, value.Detail))
                     .ToArray()));
+
+    private readonly record struct SourceSortKey
+    (
+        CollectionSourceCategory Category,
+        string                   Description,
+        uint                     SourceID,
+        string                   Detail
+    ) : IComparable<SourceSortKey>
+    {
+        public int CompareTo(SourceSortKey other)
+        {
+            var order = ((int)Category).CompareTo((int)other.Category);
+            if (order != 0) return order;
+            order = StringComparer.Ordinal.Compare(Description, other.Description);
+            if (order != 0) return order;
+            order = SourceID.CompareTo(other.SourceID);
+            return order != 0 ? order : StringComparer.Ordinal.Compare(Detail, other.Detail);
+        }
+    }
 }

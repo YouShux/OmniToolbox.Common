@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace OmniToolbox.Data;
 
-internal sealed class GameDataSnapshot : IDisposable
+internal sealed partial class GameDataSnapshot : IDisposable
 {
     private readonly object sync = new();
     private readonly Dictionary<string, List<Input>> inputs = new(StringComparer.Ordinal);
@@ -14,6 +14,7 @@ internal sealed class GameDataSnapshot : IDisposable
     private readonly Dictionary<string, (Dictionary<string, string> Files, string Hash)> bundles = new(StringComparer.Ordinal);
     private readonly HashSet<Input> validated = [];
     private readonly HashSet<(Input CSV, Input Metadata)> validatedEquipment = [];
+    private readonly Dictionary<string, Func<string>> sourceFallbacks = new(StringComparer.Ordinal);
     private bool disposed;
 
     internal Input GetInput(string name, string content)
@@ -39,6 +40,12 @@ internal sealed class GameDataSnapshot : IDisposable
             ObjectDisposedException.ThrowIf(disposed, this);
             if (selected.TryGetValue(name, out var input))
                 return input;
+            if (sourceFallbacks.TryGetValue(name, out var readSource))
+            {
+                input = GetInput(name, readSource());
+                selected.Add(name, input);
+                return input;
+            }
             input = ReadEmbedded(name);
             selected.Add(name, input);
             return input;
@@ -57,7 +64,6 @@ internal sealed class GameDataSnapshot : IDisposable
             using var reader = new StreamReader(stream);
             input = GetInput(name, reader.ReadToEnd());
             input.IsEmbedded = true;
-            StartupTiming.Count(name, "read", bytes: input.Bytes.Length);
             embedded.Add(name, input);
             return input;
         }
@@ -127,6 +133,35 @@ internal sealed class GameDataSnapshot : IDisposable
                 if (inputs.TryGetValue(name, out var versions))
                     foreach (var input in versions)
                         input.ReleaseCSV();
+            foreach (var name in sourceFallbacks.Keys.Where(name => runtimePackages.Keys.Any(
+                         kind => RuntimeIndex.Packages[kind].Inputs.Contains(name, StringComparer.Ordinal))).ToArray())
+            {
+                selected.Remove(name);
+                embedded.Remove(name);
+                if (inputs.TryGetValue(name, out var versions))
+                    foreach (var input in versions)
+                        validated.Remove(input);
+                inputs.Remove(name);
+            }
+        }
+    }
+
+    internal void ReleaseUnusedInputs()
+    {
+        lock (sync)
+        {
+            foreach (var (name, versions) in inputs)
+            {
+                selected.TryGetValue(name, out var selectedInput);
+                embedded.TryGetValue(name, out var embeddedInput);
+                versions.RemoveAll(input =>
+                {
+                    if (ReferenceEquals(input, selectedInput) || ReferenceEquals(input, embeddedInput))
+                        return false;
+                    validated.Remove(input);
+                    return true;
+                });
+            }
         }
     }
 
@@ -144,6 +179,12 @@ internal sealed class GameDataSnapshot : IDisposable
             bundles.Clear();
             validated.Clear();
             validatedEquipment.Clear();
+            sourceFallbacks.Clear();
+            runtimePackages.Clear();
+            itemCatalog = null;
+            wikiItems = null;
+            dungeonSources = null;
+            runtimeIndex = null;
         }
     }
 
@@ -154,12 +195,35 @@ internal sealed class GameDataSnapshot : IDisposable
         private GameDataCSV? csv;
         private string[]? header;
         private DateTimeOffset? generatedAtUTC;
+        private string? hash;
         private int rowCount;
 
         internal string Content { get; } = content;
         internal bool IsEmbedded { get; set; }
         internal byte[] Bytes { get; } = Encoding.UTF8.GetBytes(content);
         internal int RowCount => rowCount;
+        internal string SHA256
+        {
+            get
+            {
+                lock (sync)
+                {
+                    if (hash is not null)
+                        return hash;
+                    hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Bytes));
+                    return hash;
+                }
+            }
+        }
+
+        internal void RestoreValidationMetadata(int rows, string[]? columns)
+        {
+            lock (sync)
+            {
+                rowCount = rows;
+                header = columns;
+            }
+        }
 
         internal DateTimeOffset GeneratedAtUTC
         {
@@ -169,7 +233,6 @@ internal sealed class GameDataSnapshot : IDisposable
                 {
                     if (generatedAtUTC is { } captured)
                         return captured;
-                    StartupTiming.Count(name, "metadata-read");
                     var reader = new Utf8JsonReader(Bytes);
                     while (reader.Read())
                     {
@@ -193,7 +256,6 @@ internal sealed class GameDataSnapshot : IDisposable
                 {
                     if (document is null)
                     {
-                        StartupTiming.Count(name, "parse");
                         document = JsonDocument.Parse(Bytes);
                     }
                     return document;
@@ -207,11 +269,9 @@ internal sealed class GameDataSnapshot : IDisposable
             {
                 if (csv is null)
                 {
-                    StartupTiming.Count(name, "parse");
                     csv = GameDataCSV.Parse(Content, cancellationToken);
                     rowCount = csv.Rows.Count;
                     header = csv.Header;
-                    StartupTiming.Count(name, "rows", csv.Rows.Count);
                 }
                 return csv;
             }
@@ -225,7 +285,6 @@ internal sealed class GameDataSnapshot : IDisposable
                 {
                     if (header is null)
                     {
-                        StartupTiming.Count(name, "header-parse");
                         header = GameDataCSV.ReadHeader(Content);
                     }
                     return header;

@@ -53,18 +53,22 @@ internal sealed partial class GameDataCache : IDisposable
         await loadingLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var results = await Task.WhenAll(
-                LoadSupplementalAsync(configDirectory, gameVersion, updateOnline, cancellationToken),
-                LoadCommunityAsync(configDirectory, gameVersion, updateOnline, cancellationToken)).ConfigureAwait(false);
-            var resources = results.SelectMany(group => group).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
             if (!updateOnline)
-                Data.Select(resources);
+                return await LoadRuntimeCachedAsync(configDirectory, gameVersion, cancellationToken).ConfigureAwait(false);
+            var results = await Task.WhenAll(
+                RefreshRuntimeGroupAsync("Supplemental", configDirectory, gameVersion, cancellationToken),
+                RefreshRuntimeGroupAsync("Community", configDirectory, gameVersion, cancellationToken)).ConfigureAwait(false);
+            var resources = results.SelectMany(group => group).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
             return resources;
         }
         finally
         {
             if (updateOnline)
+            {
                 Data.ReleaseDocuments();
+                Data.ReleaseUnusedInputs();
+                preparedRuntimePackages.Clear();
+            }
             loadingLock.Release();
         }
     }
@@ -97,9 +101,7 @@ internal sealed partial class GameDataCache : IDisposable
                         throw new InvalidDataException("Supplemental data cache is too large.");
 
                     var json = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
-                    StartupTiming.Count("SupplementalData.json", "read", bytes: cacheLength);
-                    StartupTiming.Count("SupplementalData.json", "parse");
-                    var cached = JsonSerializer.Deserialize<Snapshot>(json);
+                    var cached = JsonSerializer.Deserialize<Snapshot>(json, OmniToolbox.IO.OmniJson.SystemTextOptions);
                     if (cached is { SchemaVersion: 1 } && cached.EmbeddedHash == embeddedHash &&
                         cached.GameVersion == gameVersion && IsRevision(cached.Revision))
                     {
@@ -109,7 +111,7 @@ internal sealed partial class GameDataCache : IDisposable
                 }
             }
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or CsvHelperException)
+        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or CsvHelperException)
         {
             DalamudServices.PluginLog.Warning(exception, "Unable to read supplemental data cache; using bundled data.");
         }
@@ -158,7 +160,7 @@ internal sealed partial class GameDataCache : IDisposable
             snapshot.GameVersion = gameVersion;
             snapshot.CheckedAt = now;
         }
-        catch (Exception exception) when (exception is HttpRequestException or IOException or JsonException or DecoderFallbackException or
+        catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidDataException or JsonException or DecoderFallbackException or
                                            CsvHelperException or KeyNotFoundException or InvalidOperationException ||
                                            exception is OperationCanceledException && !cancellationToken.IsCancellationRequested)
         {
@@ -171,7 +173,7 @@ internal sealed partial class GameDataCache : IDisposable
         supplementalResources = resources;
         try
         {
-            await AtomicFile.WriteAllTextAsync(path, JsonSerializer.Serialize(snapshot), new UTF8Encoding(false),
+            await AtomicFile.WriteAllTextAsync(path, JsonSerializer.Serialize(snapshot, OmniToolbox.IO.OmniJson.SystemTextOptions), new UTF8Encoding(false),
                 cancellationToken).ConfigureAwait(false);
             supplementalStamp = GetStamp(path);
         }
@@ -194,18 +196,20 @@ internal sealed partial class GameDataCache : IDisposable
         if (Data.TryGetBundle(group, out var bundle))
             return Task.FromResult(bundle);
         var files = new Dictionary<string, string>(StringComparer.Ordinal);
-        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (var fileName in names)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (IsPackedResource(fileName))
+            {
+                files.Add(fileName, string.Empty);
+                continue;
+            }
             var input = Data.ReadEmbedded(fileName);
-            StartupTiming.Count(fileName, "hash");
             files.Add(fileName, input.Content);
-            hash.AppendData(Encoding.UTF8.GetBytes(fileName));
-            hash.AppendData(input.Bytes);
         }
 
-        var result = (files, Convert.ToHexString(hash.GetHashAndReset()));
+        var resourceGroup = names.SequenceEqual(FileNames, StringComparer.Ordinal) ? "Supplemental" : "Community";
+        var result = (files, Data.RuntimeIndex.Groups[resourceGroup]);
         Data.SetBundle(group, files, result.Item2);
         return Task.FromResult(result);
     }
@@ -294,6 +298,8 @@ internal sealed partial class GameDataCache : IDisposable
             resources.Add(fileName, input.Bytes);
         }
 
+        _ = PrepareRuntimePackage("item-catalog", files, cancellationToken);
+        _ = PrepareRuntimePackage("dungeon-sources", files, cancellationToken);
         return resources;
     }
 
@@ -306,17 +312,16 @@ internal sealed partial class GameDataCache : IDisposable
     )
     {
         var input = Data.GetInput(fileName, content);
+        ReuseRuntimeValidation(fileName, input);
         if (Data.IsValidated(input))
             return input.RowCount;
         var table = input.GetCSV(cancellationToken);
         if (input.IsEmbedded)
         {
-            StartupTiming.Count(fileName, "embedded-equality-reuse");
             Data.MarkValidated(input);
             return table.Rows.Count;
         }
-        StartupTiming.Count(fileName, "validate");
-        if (!Data.GetInput(fileName, embedded).Header.SequenceEqual(table.Header, StringComparer.Ordinal))
+        if (!(Data.RuntimeIndex.Resources[fileName].Header ?? []).SequenceEqual(table.Header, StringComparer.Ordinal))
             throw new InvalidDataException($"Unsupported data columns: {fileName}");
 
         var idColumns = table.Header.Where(column => column.EndsWith("Id", StringComparison.Ordinal) ||

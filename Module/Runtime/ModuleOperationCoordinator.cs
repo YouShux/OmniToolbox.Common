@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using OmniToolbox.UI;
 
 namespace OmniToolbox.Common.Module.Runtime;
 
@@ -49,7 +50,7 @@ public sealed class ModuleOperationCoordinator : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(operation);
         if (ReferenceEquals(Current.Value, this))
-            return Task.FromResult(ModuleOperationResult.Failure("A lifecycle callback or managed task cannot await another operation in the same module coordinator."));
+            return Task.FromResult(ModuleOperationResult.Failure(OmniLoc.Get("Module.Operation.Reentrant")));
         if (cancellationToken.IsCancellationRequested)
             return Task.FromResult(ModuleOperationResult.Cancelled);
 
@@ -143,7 +144,7 @@ public sealed class ModuleOperationCoordinator : IAsyncDisposable
                 catch (Exception exception)
                 {
                     Report(exception);
-                    request.Completion.TrySetResult(ModuleOperationResult.Failure(exception.Message));
+                    request.Completion.TrySetResult(ModuleOperationResult.Failure(OmniLoc.Get("Module.Operation.Failed")));
                 }
                 finally
                 {

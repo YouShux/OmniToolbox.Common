@@ -56,10 +56,14 @@ internal sealed class GameDataCSV(string[] header, IReadOnlyList<GameDataCSV.Row
     internal readonly struct Row(IReadOnlyDictionary<string, int> indexes, string[] values)
     {
         internal string GetField(string name) => values[indexes[name]];
+        internal string GetField(int index) => values[index];
 
-        internal T? GetField<T>(string name)
+        internal T? GetField<T>(string name) => ConvertField<T>(GetField(name), name);
+
+        internal T? GetField<T>(int index) => ConvertField<T>(values[index], index.ToString(CultureInfo.InvariantCulture));
+
+        private static T? ConvertField<T>(string text, string name)
         {
-            var text = GetField(name);
             var nullableType = Nullable.GetUnderlyingType(typeof(T));
             if (nullableType is not null && string.IsNullOrWhiteSpace(text))
                 return default;

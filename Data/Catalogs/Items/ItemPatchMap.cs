@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using OmniToolbox.Data;
 
 namespace OmniToolbox.Items;
@@ -12,31 +11,21 @@ public sealed class ItemPatchMap
 
     internal ItemPatchMap(GameDataSnapshot? snapshot)
     {
-        var ranges = new List<(uint StartID, uint EndID, decimal Patch)>();
-        EmbeddedData.ReadRows("ItemPatch.csv", csv => ranges.Add((
-            csv.GetField<uint>("StartItemId"),
-            csv.GetField<uint>("EndItemId"),
-            csv.GetField<decimal>("PatchNo"))));
+        var catalog = snapshot?.GetItemCatalog() ?? EmbeddedData.GetItemCatalog();
         var loadedPatches = new Dictionary<uint, decimal>();
-        foreach (var (startID, endID, patch) in ranges)
+        foreach (var range in catalog.PatchRanges)
         {
-            for (var itemID = startID; itemID <= endID; itemID++)
+            for (var itemID = range.StartItemID; itemID <= range.EndItemID; itemID++)
             {
-                loadedPatches.Add(itemID, patch);
+                loadedPatches.Add(itemID, range.Patch);
             }
         }
-        using var stream = snapshot is null ? EmbeddedData.Open("WikiItemSources.json") : null;
-        using var ownedDocument = stream is null ? null : JsonDocument.Parse(stream);
-        if (ownedDocument is not null)
-            StartupTiming.Count("WikiItemSources.json", "parse");
-        var document = snapshot?.GetSelected("WikiItemSources.json").Document ?? ownedDocument
-            ?? throw new InvalidOperationException("Wiki item versions are unavailable.");
-        foreach (var row in document.RootElement.GetProperty("patches").EnumerateArray())
+        var wikiItems = snapshot?.GetWikiItems() ?? EmbeddedData.GetWikiItems();
+        foreach (var row in wikiItems.Patches)
         {
-            var patch = row.GetProperty("p").GetDecimal();
-            if (patch > 0)
+            if (row.Patch > 0)
             {
-                loadedPatches[row.GetProperty("i").GetUInt32()] = patch;
+                loadedPatches[row.ItemID] = row.Patch;
             }
         }
 

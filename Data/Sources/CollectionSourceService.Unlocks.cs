@@ -75,11 +75,12 @@ public sealed partial class CollectionSourceService
     }
 
     /// <remarks>必须在 Framework 线程调用，以读取客户端文本。</remarks>
-    public IReadOnlyList<CollectionSource> GetEmoteSources(uint emoteID)
-    {
-        if (!LuminaGetter.TryGetRow<Emote>(emoteID, out var emote))
-            return [];
+    public IReadOnlyList<CollectionSource> GetEmoteSources(uint emoteID) =>
+        LuminaGetter.TryGetRow<Emote>(emoteID, out var emote) ? GetEmoteSources(emote) : [];
 
+    /// <remarks>必须在 Framework 线程调用，以读取客户端文本。</remarks>
+    internal IReadOnlyList<CollectionSource> GetEmoteSources(Emote emote)
+    {
         switch (emote.UnlockLink)
         {
             case 229:

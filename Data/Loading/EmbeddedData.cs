@@ -11,23 +11,57 @@ internal static class EmbeddedData
     internal static IReadOnlyDictionary<string, byte[]>? UpdatedResources { private get; set; }
     internal static GameDataSnapshot? Snapshot { private get; set; }
 
+    internal static ItemCatalogData GetItemCatalog(CancellationToken cancellationToken = default)
+    {
+        if (Snapshot is { } snapshot)
+            return snapshot.GetItemCatalog(cancellationToken);
+        using var owned = CreateRuntimeSnapshot();
+        return owned.GetItemCatalog(cancellationToken);
+    }
+
+    internal static WikiItemData GetWikiItems(CancellationToken cancellationToken = default)
+    {
+        if (Snapshot is { } snapshot)
+            return snapshot.GetWikiItems(cancellationToken);
+        using var owned = CreateRuntimeSnapshot();
+        return owned.GetWikiItems(cancellationToken);
+    }
+
+    internal static DungeonSourceData GetDungeonSources(CancellationToken cancellationToken = default)
+    {
+        if (Snapshot is { } snapshot)
+            return snapshot.GetDungeonSources(cancellationToken);
+        using var owned = CreateRuntimeSnapshot();
+        return owned.GetDungeonSources(cancellationToken);
+    }
+
+    private static GameDataSnapshot CreateRuntimeSnapshot()
+    {
+        var snapshot = new GameDataSnapshot();
+        if (UpdatedResources is { } resources)
+        {
+            var selected = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+            foreach (var (name, bytes) in resources)
+                selected.Add(name, snapshot.GetInput(name, System.Text.Encoding.UTF8.GetString(bytes)).Bytes);
+            snapshot.Select(selected);
+        }
+        return snapshot;
+    }
+
     public static Stream Open(string fileName)
     {
         if (Snapshot is { } snapshot)
         {
             var input = snapshot.GetSelected(fileName);
-            StartupTiming.Count(fileName, "view-open", bytes: input.Bytes.Length);
             return new MemoryStream(input.Bytes, writable: false);
         }
         if (UpdatedResources is { } resources && resources.TryGetValue(fileName, out var content))
         {
-            StartupTiming.Count(fileName, "read", bytes: content.Length);
             return new MemoryStream(content, writable: false);
         }
 
         var stream = typeof(EmbeddedData).Assembly.GetManifestResourceStream("OmniToolbox.Data." + fileName)
                ?? throw new InvalidDataException($"Embedded data resource is missing: {fileName}");
-        StartupTiming.Count(fileName, "read", bytes: stream.Length);
         return stream;
     }
 
@@ -40,7 +74,6 @@ internal static class EmbeddedData
         {
             using var stream = Open(fileName);
             using var reader = new StreamReader(stream);
-            StartupTiming.Count(fileName, "parse");
             table = GameDataCSV.Parse(reader.ReadToEnd(), cancellationToken);
         }
         foreach (var row in table.Rows)
@@ -62,7 +95,6 @@ internal static class EmbeddedData
         Action<CsvReader> readRow
     )
     {
-        StartupTiming.Count(fileName, "parse");
         using var reader = new StreamReader(Open(fileName));
         using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
         {
@@ -78,10 +110,8 @@ internal static class EmbeddedData
         }
 
         csv.ReadHeader();
-        var rows = 0L;
         while (csv.Read())
         {
-            rows++;
             try
             {
                 readRow(csv);
@@ -90,6 +120,5 @@ internal static class EmbeddedData
             {
             }
         }
-        StartupTiming.Count(fileName, "rows", rows);
     }
 }

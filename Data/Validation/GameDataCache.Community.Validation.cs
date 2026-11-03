@@ -32,6 +32,7 @@ internal sealed partial class GameDataCache
                     throw new InvalidDataException($"Missing or oversized community data: {fileName}");
 
                 var input = Data.GetInput(fileName, content);
+                ReuseRuntimeValidation(fileName, input);
                 files[fileName] = input.Content;
                 if (fileName.EndsWith(".csv", StringComparison.Ordinal))
                 {
@@ -42,16 +43,15 @@ internal sealed partial class GameDataCache
                 {
                     if (Data.IsValidated(input) || input.IsEmbedded)
                     {
-                        if (input.IsEmbedded)
-                            StartupTiming.Count(fileName, "embedded-equality-reuse");
                         resources.Add(fileName, input.Bytes);
                         continue;
                     }
-                    StartupTiming.Count(fileName, "validate");
                     var document = input.Document;
                     if (fileName is "WikiItemSources.json" or "FishingSources.json")
                     {
-                        if (input.GeneratedAtUTC < Data.GetInput(fileName, embedded[fileName]).GeneratedAtUTC)
+                        if (input.GeneratedAtUTC < DateTimeOffset.Parse(Data.RuntimeIndex.Resources[fileName].GeneratedAtUTC
+                                ?? throw new InvalidDataException($"Missing bundled data timestamp: {fileName}"),
+                                System.Globalization.CultureInfo.InvariantCulture))
                             throw new InvalidDataException($"Community data snapshot predates bundled data: {fileName}");
                     }
                     if (fileName == "WikiItemSources.json") ValidateWikiCommunityData(document.RootElement, cancellationToken);
@@ -64,6 +64,7 @@ internal sealed partial class GameDataCache
 
             ValidateHistoricalEquipmentCommunityData(files["EquipmentSourceSupplement.csv"],
                 files["EquipmentSourceSupplement.meta.json"], equipmentRows, cancellationToken);
+            _ = PrepareRuntimePackage("item-sources", files, cancellationToken);
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException or KeyNotFoundException or FormatException)
         {

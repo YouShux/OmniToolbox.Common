@@ -74,7 +74,8 @@ public sealed partial class CollectionSourceService
     (
         IDictionary<uint, HashSet<CollectionSource>> itemRows,
         PvPSeries                                    series,
-        PreparedSourceText?                          preparedText = null
+        PreparedSourceText?                          preparedText = null,
+        bool                                        buildImmediately = false
     )
     {
         if (series.RowId == 0)
@@ -95,11 +96,15 @@ public sealed partial class CollectionSourceService
 
                 var name = CaptureItemName(item, preparedText);
                 var rewardLevel = level;
-                BuildSource(preparedText, () => AddSource(itemRows, itemID, new(
+                Action build = () => AddSource(itemRows, itemID, new(
                     CollectionSourceCategory.PvP,
                     0,
                     name.Text,
-                    string.Format(OmniLoc.Get("Collection.Source.PvP.SeriesReward"), series.RowId, rewardLevel))));
+                    string.Format(OmniLoc.Get("Collection.Source.PvP.SeriesReward"), series.RowId, rewardLevel)));
+                if (buildImmediately)
+                    build();
+                else
+                    BuildSource(preparedText, build);
             }
         }
     }

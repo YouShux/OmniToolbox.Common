@@ -44,9 +44,7 @@ internal sealed partial class GameDataCache
                     if (cacheLength > MAX_COMMUNITY_BYTES)
                         throw new InvalidDataException("Community data cache is too large.");
                     var json = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
-                    StartupTiming.Count("CommunityData.json", "read", bytes: cacheLength);
-                    StartupTiming.Count("CommunityData.json", "parse");
-                    var cached = JsonSerializer.Deserialize<Snapshot>(json);
+                    var cached = JsonSerializer.Deserialize<Snapshot>(json, OmniToolbox.IO.OmniJson.SystemTextOptions);
                     if (cached is { SchemaVersion: 1 } && cached.EmbeddedHash == embeddedHash && cached.GameVersion == gameVersion &&
                         cached.Revision is { Length: 64 } && cached.Revision.All(Uri.IsHexDigit))
                     {
@@ -56,7 +54,7 @@ internal sealed partial class GameDataCache
                 }
             }
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or CsvHelperException or
+        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or CsvHelperException or
                                            KeyNotFoundException or InvalidOperationException or FormatException or OverflowException)
         {
             DalamudServices.PluginLog.Warning(exception, "Unable to read community data cache; using bundled data.");
@@ -119,7 +117,7 @@ internal sealed partial class GameDataCache
             snapshot.GameVersion = gameVersion;
             snapshot.CheckedAt = now;
         }
-        catch (Exception exception) when (exception is HttpRequestException or IOException or JsonException or CsvHelperException or
+        catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidDataException or JsonException or CsvHelperException or
                                            KeyNotFoundException or InvalidOperationException or FormatException or OverflowException or DecoderFallbackException ||
                                            exception is OperationCanceledException && !cancellationToken.IsCancellationRequested)
         {
@@ -132,7 +130,7 @@ internal sealed partial class GameDataCache
         communityResources = resources;
         try
         {
-            await AtomicFile.WriteAllTextAsync(path, JsonSerializer.Serialize(snapshot), new UTF8Encoding(false),
+            await AtomicFile.WriteAllTextAsync(path, JsonSerializer.Serialize(snapshot, OmniToolbox.IO.OmniJson.SystemTextOptions), new UTF8Encoding(false),
                 cancellationToken).ConfigureAwait(false);
             communityStamp = GetStamp(path);
         }

@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using System.IO;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Lumina.Excel.Sheets;
@@ -27,55 +26,78 @@ public sealed partial class CollectionSourceService
         Dictionary<uint, HashSet<CollectionSource>> ItemSources,
         Dictionary<uint, HashSet<uint>> BlindBoxDropPools) ReadWikiItemSources
         (
-            JsonDocument?                      preparedDocument = null,
+            WikiItemData?                     preparedItems = null,
             IReadOnlyDictionary<uint, string>? preparedQuestNames = null,
-            CancellationToken                  cancellationToken = default,
+            CancellationToken                 cancellationToken = default,
             IReadOnlyDictionary<uint, string>? preparedItemNames = null
         )
     {
-        using var document = preparedDocument is null ? ReadDocument("WikiItemSources.json") : null;
-        var root = (preparedDocument ?? document ?? throw new InvalidOperationException()).RootElement;
-        if (root.GetProperty("schemaVersion").GetInt32() != 2)
+        var wikiItems = preparedItems ?? EmbeddedData.GetWikiItems(cancellationToken);
+        if (wikiItems.SchemaVersion != 2)
         {
             throw new InvalidDataException("Unsupported WikiItemSources schema version.");
         }
 
-        var sourceRows = root.GetProperty("sources");
-        var sources = new CollectionSource[sourceRows.GetArrayLength()];
-        // 相同材料列表共享实例，保持来源记录的去重语义。
+        var sourceRows = wikiItems.Sources;
+        var sources = new CollectionSource[sourceRows.Length];
         var costsByIDs = new Dictionary<string, IReadOnlyList<uint>>(StringComparer.Ordinal);
+        var mapsByID = new Dictionary<uint, (uint TerritoryID, uint MapID)>();
+        var dutiesByID = new Dictionary<uint, uint>();
         var sourceIndex = 0;
-        foreach (var source in sourceRows.EnumerateArray())
+        foreach (var source in sourceRows)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var category = source.GetProperty("c").GetInt32();
+            var category = source.Category;
             if (!Enum.IsDefined((CollectionSourceCategory)category))
             {
                 throw new InvalidDataException($"Unknown Wiki item source category: {category}.");
             }
 
-            CollectionSourceLocation? location = null;
-            if (source.TryGetProperty("m", out var mapIdElement) &&
-                LuminaGetter.TryGetRow<Map>(mapIdElement.GetUInt32(), out var map) &&
-                map.TerritoryType.RowId != 0)
+            var description = source.Name ?? string.Empty;
+            category = description switch
             {
-                location = new(
-                    map.TerritoryType.RowId,
-                    source.GetProperty("x").GetSingle(),
-                    source.GetProperty("y").GetSingle())
+                "其他：理符" or "其他：通过理符获得" => (int)CollectionSourceCategory.Other,
+                "其他：蜃景幻界新月岛" => (int)CollectionSourceCategory.FieldOperations,
+                "其他：女王古殿" or "其他：零式女王古殿" => (int)CollectionSourceCategory.Duty,
+                "其他：群狼盛宴" => (int)CollectionSourceCategory.PvP,
+                "其他：莫古莫古★大收集" => (int)CollectionSourceCategory.Event,
+                _ when category == (int)CollectionSourceCategory.CompanySeals &&
+                       (description == "部队战绩兑换" || description.StartsWith("部队战绩兑换：", StringComparison.Ordinal)) =>
+                    (int)CollectionSourceCategory.Shop,
+                _ => category
+            };
+
+            CollectionSourceLocation? location = null;
+            if (source.MapID is { } mapID && source.X is { } x && source.Y is { } y)
+            {
+                if (!mapsByID.TryGetValue(mapID, out var mapIdentity))
                 {
-                    MapID = map.RowId
-                };
+                    mapIdentity = LuminaGetter.TryGetRow<Map>(mapID, out var map)
+                        ? (map.TerritoryType.RowId, map.RowId)
+                        : default;
+                    mapsByID.Add(mapID, mapIdentity);
+                }
+                if (mapIdentity.TerritoryID != 0)
+                {
+                    location = new(mapIdentity.TerritoryID, (float)x, (float)y)
+                    {
+                        MapID = mapIdentity.MapID
+                    };
+                }
             }
 
-            var sourceID = source.GetProperty("i").GetUInt32();
+            var sourceID = source.SourceID;
             if ((CollectionSourceCategory)category == CollectionSourceCategory.Duty && sourceID != 0)
             {
-                sourceID = LuminaGetter.TryGetRow<InstanceContent>(sourceID, out var content)
-                    ? content.ContentFinderCondition.RowId
-                    : 0;
+                if (!dutiesByID.TryGetValue(sourceID, out var conditionID))
+                {
+                    conditionID = LuminaGetter.TryGetRow<InstanceContent>(sourceID, out var content)
+                        ? content.ContentFinderCondition.RowId
+                        : 0;
+                    dutiesByID.Add(sourceID, conditionID);
+                }
+                sourceID = conditionID;
             }
-            var description = source.GetProperty("n").GetString() ?? string.Empty;
             if ((CollectionSourceCategory)category == CollectionSourceCategory.Other && description == "幻卡对战")
                 category = (int)CollectionSourceCategory.NPCBattle;
             if ((CollectionSourceCategory)category == CollectionSourceCategory.Quest &&
@@ -85,13 +107,13 @@ public sealed partial class CollectionSourceService
                 description = questName;
             }
 
-            var detail = source.GetProperty("d").GetString() ?? string.Empty;
+            var detail = source.Detail ?? string.Empty;
             var sourceDetail = detail;
             IReadOnlyList<uint> requiredQuests = [];
             var requiredQuestDetail = string.Empty;
-            if (source.TryGetProperty("q", out var questIDs))
+            if (source.RequiredQuestIDs is { } questIDs)
             {
-                requiredQuests = questIDs.EnumerateArray().Select(questID => questID.GetUInt32()).ToArray();
+                requiredQuests = questIDs;
                 var questNames = new List<string>();
                 foreach (var questID in requiredQuests)
                 {
@@ -114,12 +136,14 @@ public sealed partial class CollectionSourceService
             }
 
             IReadOnlyList<uint> costs = [];
-            if (source.TryGetProperty("r", out var costItemIDs))
+            if (source.CostItemIDs is { } costItemIDs)
             {
-                var key = costItemIDs.GetRawText();
-                if (!costsByIDs.TryGetValue(key, out costs!))
+                var key = string.Join(',', costItemIDs);
+                if (costsByIDs.TryGetValue(key, out var sharedCosts))
+                    costs = sharedCosts;
+                else
                 {
-                    costsByIDs[key] = costs = costItemIDs.EnumerateArray().Select(itemID => itemID.GetUInt32()).ToArray();
+                    costsByIDs[key] = costs = costItemIDs;
                 }
             }
 
@@ -134,21 +158,20 @@ public sealed partial class CollectionSourceService
                 RequiredQuestIDs = requiredQuests,
                 RequiredQuestDetail = requiredQuestDetail,
                 SourceDetail = sourceDetail,
-                IsGilShop = source.TryGetProperty("g", out var gilShop) && gilShop.GetBoolean()
+                IsGilShop = source.IsGilShop == true
             };
         }
 
-        var itemSources = new Dictionary<uint, HashSet<CollectionSource>>();
+        var itemSources = new Dictionary<uint, HashSet<CollectionSource>>(wikiItems.Items.Length);
         var blindBoxDropPools = BlindBoxCatalog.OrderedBlindBoxItemIds.ToDictionary(
             itemID => itemID,
             static _ => new HashSet<uint>());
-        foreach (var item in root.GetProperty("items").EnumerateArray())
+        foreach (var item in wikiItems.Items)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var itemID = item.GetProperty("i").GetUInt32();
-            foreach (var source in item.GetProperty("s").EnumerateArray())
+            var itemID = item.ItemID;
+            foreach (var index in item.SourceIndices)
             {
-                var index = source.GetInt32();
                 if (index < 0 || index >= sources.Length)
                 {
                     throw new InvalidDataException($"Invalid Wiki item source index: {index}.");
@@ -194,10 +217,7 @@ public sealed partial class CollectionSourceService
         }
 
         return (
-            root.GetProperty("unobtainable")
-                .EnumerateArray()
-                .Select(itemID => itemID.GetUInt32())
-                .ToFrozenSet(),
+            wikiItems.UnobtainableItemIDs.ToFrozenSet(),
             itemSources,
             blindBoxDropPools);
     }
@@ -227,13 +247,15 @@ public sealed partial class CollectionSourceService
 
     private static void AddCurrentMogStationSources(IDictionary<uint, HashSet<CollectionSource>> target)
     {
+        var processedItemIDs = new HashSet<uint>();
         try
         {
             var itemIDs = new HashSet<uint>();
             EmbeddedData.ReadRows("StoreItem.csv", csv => itemIDs.Add(csv.GetField<uint>("ItemId")));
             foreach (var itemID in itemIDs)
             {
-                AddMogStationSource(target, itemID);
+                if (processedItemIDs.Add(itemID))
+                    AddMogStationSource(target, itemID);
             }
         }
         catch (Exception)
@@ -246,7 +268,9 @@ public sealed partial class CollectionSourceService
             {
                 for (var index = 0; index < rows.Count; index++)
                 {
-                    AddMogStationSource(target, rows[index].Item.RowId);
+                    var itemID = rows[index].Item.RowId;
+                    if (processedItemIDs.Add(itemID))
+                        AddMogStationSource(target, itemID);
                 }
             }
         }
@@ -255,7 +279,9 @@ public sealed partial class CollectionSourceService
         {
             for (var index = 0; index < itemSet.Item.Count; index++)
             {
-                AddMogStationSource(target, itemSet.Item[index].RowId);
+                var itemID = itemSet.Item[index].RowId;
+                if (processedItemIDs.Add(itemID))
+                    AddMogStationSource(target, itemID);
             }
         }
     }

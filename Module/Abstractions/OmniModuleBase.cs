@@ -305,10 +305,24 @@ public abstract class OmniModuleBase : IAsyncDisposable
             Capture(errors, registration.Dispose);
         ownedChildren.Clear();
         childRegistrations.Clear();
-        await CaptureAsync(errors, () => dispatcher(OnDestroy)).ConfigureAwait(false);
         if (instanceLifetime is { } finalScope)
+        {
+            await CaptureAsync(errors, () => dispatcher(OnDestroy)).ConfigureAwait(false);
             await CaptureAsync(errors, () => finalScope.DisposeAsync(dispatcher)).ConfigureAwait(false);
-        await CaptureAsync(errors, () => dispatcher(CompleteDisposal)).ConfigureAwait(false);
+            await CaptureAsync(errors, () => dispatcher(CompleteDisposal)).ConfigureAwait(false);
+        }
+        else
+        {
+            var finalized = false;
+            await CaptureAsync(errors, () => dispatcher(() =>
+            {
+                Capture(errors, OnDestroy);
+                Capture(errors, CompleteDisposal);
+                finalized = true;
+            })).ConfigureAwait(false);
+            if (!finalized)
+                await CaptureAsync(errors, () => dispatcher(CompleteDisposal)).ConfigureAwait(false);
+        }
         if (errors.Count > 0)
             throw new AggregateException("The module failed to dispose.", errors);
     }

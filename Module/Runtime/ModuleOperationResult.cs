@@ -1,3 +1,5 @@
+using OmniToolbox.UI;
+
 namespace OmniToolbox.Common.Module.Runtime;
 
 public readonly record struct ModuleOperationResult
@@ -12,7 +14,7 @@ public readonly record struct ModuleOperationResult
 
     public static ModuleOperationResult Failure(string reason) => new(ModuleOperationStatus.Failed, reason);
 
-    public static ModuleOperationResult Cancelled => new(ModuleOperationStatus.Cancelled, "The module operation was cancelled.");
+    public static ModuleOperationResult Cancelled => new(ModuleOperationStatus.Cancelled, OmniLoc.Get("Module.Operation.Cancelled"));
 
-    public static ModuleOperationResult Busy => new(ModuleOperationStatus.Busy, "The module operation queue is full; try again after pending requests complete.");
+    public static ModuleOperationResult Busy => new(ModuleOperationStatus.Busy, OmniLoc.Get("Module.Operation.Busy"));
 }

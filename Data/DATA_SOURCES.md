@@ -23,7 +23,9 @@
 
 - 自动更新工作流：本体仓库 `.github/workflows/update-community-data.yml`。
 - 数据包生成：`tools/game-data/build-community-data.mjs`。
+- MessagePack 运行包生成：`lib/TreeTools/TreeTools.csproj` 的 `TreeToolsGameDataTool=true` 构建模式，入口源码为 `lib/TreeTools/Tools/GameData/Program.cs`。通过工具模式的 `TreeTools.dll` 执行 `generate --data-directory <Common/Data> --output-directory <仓库外包目录>`；`verify` 校验包和输入对应关系，`export` 将包解码为维护用 JSON。原始 JSON/CSV 仍是维护输入，运行包按物品目录、Wiki 来源和副本来源分别生成，嵌入索引记录输入与产物摘要。
 - 离线核验：`tools/audit-game-data.ps1`，读取本地客户端和仓库静态资源，支持 `-Source` 分源与 `-Resume` 续跑；材料关系核验使用 `tools/game-data/audit-catalog-data.py`。报告和客户端快照输出至仓库外，逐项保留证据范围与未核实项。
+- 运行包独立核验：上述入口使用 `-Source RuntimePackages -RuntimePackageDirectory <包目录> -GameDataToolPath <生成器DLL>`，先解码运行包，再由 `audit-runtime-packages.mjs` 独立读取原始 JSON/CSV，比较全部字段、十进制数值、缺省状态、数组顺序和关联索引。转换保留不代表获取条件及坐标已经获得独立业务核实。
 - 各数据源的更新脚本见下文。
 
 ## 最终幻想 XIV 中文维基

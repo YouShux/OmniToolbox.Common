@@ -128,12 +128,12 @@ public static class OmniCommandCatalog
                         ? "on/off/toggle"
                         : $"{OmniLoc.Get("Command.on.Name")}/{OmniLoc.Get("Command.off.Name")}/{OmniLoc.Get("Command.toggle.Name")}";
                     var exampleModule = OmniLoc.Get("ChatFrameOptimizationTitle");
-                    lines.Add($"/omni {actions} {definition.Parameters} → {string.Format(OmniLoc.Get("Command.Module.StateDescription"), Format("on", exampleModule))}");
+                    lines.Add($"/omni {actions} {OmniLoc.Get("Command.Module.NameParameter")} → {string.Format(OmniLoc.Get("Command.Module.StateDescription"), Format("on", exampleModule))}");
                     continue;
                 }
             }
 
-            lines.Add($"{Format(definition.Name, definition.Parameters)} → {OmniLoc.Get(definition.DescriptionKey)}");
+            lines.Add($"{OmniLoc.Get(definition.UsageKey)} → {OmniLoc.Get(definition.DescriptionKey)}");
         }
 
         return FormatDisplayText(string.Join('\n', lines));
