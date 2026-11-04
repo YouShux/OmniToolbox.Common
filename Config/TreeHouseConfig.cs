@@ -17,6 +17,7 @@ public sealed class TreeHouseConfig
         "VoidFreeCompanyChest",
         "FastWorldTravel",
         "BetterTeleportManagement",
+        "AutoMount",
         "AutoTalkSkip",
         "AutoCutsceneSkip",
         "FastSearchResults"

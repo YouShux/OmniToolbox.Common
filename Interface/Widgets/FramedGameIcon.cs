@@ -1,5 +1,6 @@
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
+using Dalamud.Utility;
 using OmniToolbox.Host;
 using OmniToolbox.Items;
 using OmniToolbox.UI.Theme;
@@ -22,7 +23,17 @@ internal static class FramedGameIcon
         byte       stain0 = 0,
         byte       stain1 = 0
     ) =>
-        DrawAtCursor(item.Icon, size, !ItemCategoryMap.IsCurrency(item), item.RowId, stain0, stain1);
+        DrawItem(item, size, false, stain0, stain1);
+
+    public static void DrawItem
+    (
+        LuminaItem item,
+        Vector2    size,
+        bool       itemHQ,
+        byte       stain0 = 0,
+        byte       stain1 = 0
+    ) =>
+        DrawAtCursor(item.Icon, size, !ItemCategoryMap.IsCurrency(item), item.RowId, stain0, stain1, itemHQ);
 
     public static void DrawAction
     (
@@ -81,6 +92,12 @@ internal static class FramedGameIcon
         IReadOnlyList<(byte Stain0, byte Stain1)>? recordedStains = null
     )
     {
+        if (itemID != 0)
+        {
+            var (baseItemID, kind) = ItemUtil.GetBaseId(itemID);
+            itemHQ |= kind == ItemKind.Hq;
+            itemID = baseItemID;
+        }
         if (recordedStains is { Count: > 0 })
             (stain0, stain1) = recordedStains[0];
         var isBuiltInIcon = IconBrowser.GetBuiltInIconPath(iconID) is not null;
@@ -270,19 +287,20 @@ internal static class FramedGameIcon
         bool    drawFrame,
         uint    itemID = 0,
         byte    stain0 = 0,
-        byte    stain1 = 0
+        byte    stain1 = 0,
+        bool    itemHQ = false
     )
     {
         var position = ImGui.GetCursorScreenPos();
         ImGui.Dummy(size);
-        Draw(iconID, position, size, drawFrame: drawFrame, itemID: itemID, stain0: stain0, stain1: stain1);
+        Draw(iconID, position, size, itemHQ: itemHQ, drawFrame: drawFrame, itemID: itemID, stain0: stain0, stain1: stain1);
     }
 
     private static bool TryGetActiveFrame(out IDalamudTextureWrap frame)
     {
         ActiveTexture ??= DalamudServices.TextureProvider.GetFromFile(System.IO.Path.Combine(
             DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!,
-            @"Resources\activeaction.png"));
+            @"Assets\activeaction.png"));
         if (ActiveTexture.TryGetWrap(out var frameWrap, out _))
         {
             frame = frameWrap;

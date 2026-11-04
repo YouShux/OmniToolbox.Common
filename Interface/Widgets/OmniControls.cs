@@ -1054,7 +1054,7 @@ public static partial class OmniControls
     ) =>
         Combo(id, preview, width, flags).Success;
 
-    public static ImRaii.ComboDisposable Combo
+    public static unsafe ImRaii.ComboDisposable Combo
     (
         string          id,
         string          preview,
@@ -1066,10 +1066,7 @@ public static partial class OmniControls
                                            ImGuiComboFlags.HeightRegular |
                                            ImGuiComboFlags.HeightLarge |
                                            ImGuiComboFlags.HeightLargest;
-        if ((flags & HEIGHT_MASK) == ImGuiComboFlags.None)
-        {
-            flags |= ImGuiComboFlags.HeightLargest;
-        }
+        flags &= ~HEIGHT_MASK;
 
         width = MathF.Max(width, MeasureCombo(preview).X);
         var tokens = OmniTheme.Tokens;
@@ -1080,7 +1077,7 @@ public static partial class OmniControls
         using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(ImGuiStyleVar.PopupRounding, frame.Radius)
-            .Push(ImGuiStyleVar.PopupBorderSize, 0f)
+            .Push(ImGuiStyleVar.PopupBorderSize, OmniTheme.BorderThickness())
             .Push(ImGuiStyleVar.WindowPadding,
                 new Vector2(MathF.Ceiling(popupPadding.X), MathF.Ceiling(popupPadding.Y)))
             .Push(
@@ -1093,13 +1090,29 @@ public static partial class OmniControls
             .Push(ImGuiCol.Button, Vector4.Zero)
             .Push(ImGuiCol.ButtonHovered, Vector4.Zero)
             .Push(ImGuiCol.ButtonActive, Vector4.Zero)
-            .Push(ImGuiCol.PopupBg, Vector4.Zero)
+            .Push(ImGuiCol.PopupBg, Vector4.Lerp(tokens.Background, tokens.Surface, tokens.Surface.W) with { W = 1f })
             .Push(ImGuiCol.Border, tokens.Border)
             .Push(ImGuiCol.BorderShadow, Vector4.Zero);
+        var maximumHeight = ImGui.GetTextLineHeightWithSpacing() * COMBO_VISIBLE_ITEMS - ImGui.GetStyle().ItemSpacing.Y +
+                            MathF.Ceiling(popupPadding.Y) * 2f;
+        var nextWindow = new ImGuiContextPtr(ImGui.GetCurrentContext()).NextWindowData;
+        if ((nextWindow.Flags & ImGuiNextWindowDataFlags.HasSizeConstraint) != 0)
+        {
+            var constraints = nextWindow.SizeConstraintRect;
+            constraints.Max.Y = MathF.Min(constraints.Max.Y, maximumHeight);
+            constraints.Min.Y = MathF.Min(constraints.Min.Y, constraints.Max.Y);
+            nextWindow.SizeConstraintRect = constraints;
+        }
+        else
+            ImGui.SetNextWindowSizeConstraints(Vector2.Zero, new Vector2(float.MaxValue, maximumHeight));
+        if ((nextWindow.Flags & ImGuiNextWindowDataFlags.HasSize) != 0 && nextWindow.SizeVal.Y > maximumHeight)
+        {
+            var size = nextWindow.SizeVal;
+            size.Y = maximumHeight;
+            nextWindow.SizeVal = size;
+        }
         var combo = ImRaii.Combo(id, preview, flags);
         EndNativeControl(frame, combo.Success);
-        if (combo.Success)
-            DrawPopupBackground();
         return combo;
     }
 
@@ -1351,7 +1364,7 @@ public static partial class OmniControls
         var lineTop = ImGui.GetItemRectMin().Y;
         var lineHeight = ImGui.GetItemRectSize().Y;
         ImGui.SameLine(0f, spacing);
-        DrawHelpIcon(lineTop, lineHeight, OmniTheme.Scale(1.5f));
+        DrawHelpIcon(lineTop, lineHeight, referenceText: label);
         HelpTooltip(tooltip);
     }
 
@@ -1383,7 +1396,7 @@ public static partial class OmniControls
         var lineTop = ImGui.GetItemRectMin().Y;
         var lineHeight = ImGui.GetItemRectSize().Y;
         ImGui.SameLine(0f, spacing);
-        DrawHelpIcon(lineTop, lineHeight, OmniTheme.Scale(1.5f));
+        DrawHelpIcon(lineTop, lineHeight, referenceText: label);
         DrawAvailabilityHelpTooltip(introduction);
     }
 
@@ -1392,28 +1405,48 @@ public static partial class OmniControls
             GetScaledIconSize(FontAwesomeIcon.InfoCircle.ToIconString()).X,
             OmniTheme.SmallButtonSize().Y);
 
-    public static void HelpIcon(string tooltip)
-    {
-        DrawHelpIcon(
-            ImGui.GetItemRectMin().Y,
-            ImGui.GetItemRectSize().Y,
-            OmniTheme.Scale(1.5f));
-        HelpTooltip(tooltip);
-    }
-
-    public static void HelpIcon(Action drawTooltip)
-        => HelpIcon(drawTooltip, OmniTheme.Scale(1.5f));
+    public static void HelpIcon(string tooltip) => HelpIcon(tooltip, string.Empty);
 
     public static void HelpIcon
     (
-        Action drawTooltip,
-        float  verticalOffset
+        string tooltip,
+        string referenceText
     )
     {
         DrawHelpIcon(
             ImGui.GetItemRectMin().Y,
             ImGui.GetItemRectSize().Y,
-            verticalOffset);
+            referenceText: referenceText);
+        HelpTooltip(tooltip);
+    }
+
+    public static void HelpIcon(Action drawTooltip)
+        => HelpIcon(drawTooltip, 0f);
+
+    public static void HelpIcon
+    (
+        Action drawTooltip,
+        string referenceText
+    ) => HelpIcon(drawTooltip, 0f, referenceText);
+
+    public static void HelpIcon
+    (
+        Action drawTooltip,
+        float  verticalOffset
+    ) => HelpIcon(drawTooltip, verticalOffset, string.Empty);
+
+    public static void HelpIcon
+    (
+        Action drawTooltip,
+        float  verticalOffset,
+        string referenceText
+    )
+    {
+        DrawHelpIcon(
+            ImGui.GetItemRectMin().Y,
+            ImGui.GetItemRectSize().Y,
+            verticalOffset,
+            referenceText);
         if (!ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
             return;
@@ -1430,12 +1463,20 @@ public static partial class OmniControls
         string  tooltip,
         string  markerText,
         Vector4 markerColor
+    ) => HelpIcon(tooltip, markerText, markerColor, string.Empty);
+
+    public static void HelpIcon
+    (
+        string  tooltip,
+        string  markerText,
+        Vector4 markerColor,
+        string  referenceText
     )
     {
         DrawHelpIcon(
             ImGui.GetItemRectMin().Y,
             ImGui.GetItemRectSize().Y,
-            OmniTheme.Scale(1.5f));
+            referenceText: referenceText);
         if (!ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) || string.IsNullOrWhiteSpace(tooltip))
         {
             return;
@@ -1450,9 +1491,11 @@ public static partial class OmniControls
         }
     }
 
-    public static void AvailabilityHelpIcon()
+    public static void AvailabilityHelpIcon() => AvailabilityHelpIcon(string.Empty);
+
+    public static void AvailabilityHelpIcon(string referenceText)
     {
-        DrawHelpIcon(ImGui.GetItemRectMin().Y, ImGui.GetItemRectSize().Y);
+        DrawHelpIcon(ImGui.GetItemRectMin().Y, ImGui.GetItemRectSize().Y, referenceText: referenceText);
         DrawAvailabilityHelpTooltip();
     }
 
@@ -2027,9 +2070,10 @@ public static partial class OmniControls
 
     private static void DrawHelpIcon
     (
-        float lineTop,
-        float lineHeight,
-        float verticalOffset = 0f
+        float   lineTop,
+        float   lineHeight,
+        float   verticalOffset = 0f,
+        string? referenceText = null
     )
         => DrawInlineIcon(
             FontAwesomeIcon.InfoCircle,
@@ -2039,15 +2083,17 @@ public static partial class OmniControls
             {
                 W = 0.70f
             },
-            verticalOffset);
+            verticalOffset,
+            referenceText);
 
-    private static void DrawInlineIcon
+    private static unsafe void DrawInlineIcon
     (
         FontAwesomeIcon icon,
         float           lineTop,
         float           lineHeight,
         Vector4         color,
-        float           verticalOffset = 0f
+        float           verticalOffset = 0f,
+        string?         referenceText = null
     )
     {
         var iconText = icon.ToIconString();
@@ -2058,14 +2104,50 @@ public static partial class OmniControls
             lineTop    = ImGui.GetCursorScreenPos().Y;
             lineHeight = MathF.Max(ImGui.GetFrameHeight(), iconSize.Y);
         }
+        else if (!string.IsNullOrEmpty(referenceText))
+            verticalOffset += GetTextVisualCenterOffset(referenceText);
         var position = new Vector2(ImGui.GetCursorScreenPos().X, lineTop);
         ImGui.SetCursorScreenPos(position);
         ImGui.Dummy(new Vector2(iconSize.X, lineHeight));
-        DrawScaledIcon(
-            ImGui.GetWindowDrawList(),
-            iconText,
-            position + new Vector2(iconSize.X * 0.5f, lineHeight * 0.5f + verticalOffset),
-            color);
+        var fontSize = ImGui.GetFontSize() * ICON_GLYPH_SCALE;
+        using var iconFont = ImRaii.PushFont(UiBuilder.IconFont);
+        var font = ImGui.GetFont();
+        var glyph = new ImFontGlyphPtr(font.FindGlyph(iconText[0]));
+        var glyphCenter = new Vector2(glyph.X0 + glyph.X1, glyph.Y0 + glyph.Y1) * (fontSize / font.FontSize * 0.5f);
+        var glyphPosition = position + new Vector2(iconSize.X * 0.5f, lineHeight * 0.5f + verticalOffset) - glyphCenter;
+        ImGui.GetWindowDrawList().AddText(
+            font,
+            fontSize,
+            new Vector2(MathF.Round(glyphPosition.X), MathF.Round(glyphPosition.Y)),
+            OmniTheme.Color(color),
+            iconText);
+    }
+
+    private static unsafe float GetTextVisualCenterOffset(string text)
+    {
+        text = DisplayLabel(text);
+        var font = ImGui.GetFont();
+        var scale = ImGui.GetFontSize() / font.FontSize;
+        var lineHeight = ImGui.GetTextLineHeight();
+        var lineTop = 0f;
+        var minimum = float.PositiveInfinity;
+        var maximum = float.NegativeInfinity;
+        foreach (var character in text)
+        {
+            if (character == '\n')
+            {
+                lineTop += lineHeight;
+                continue;
+            }
+            if (char.IsWhiteSpace(character))
+                continue;
+            var glyph = font.FindGlyph(character);
+            if (glyph is null || glyph->Y1 <= glyph->Y0)
+                continue;
+            minimum = MathF.Min(minimum, lineTop + glyph->Y0 * scale);
+            maximum = MathF.Max(maximum, lineTop + glyph->Y1 * scale);
+        }
+        return float.IsPositiveInfinity(minimum) ? 0f : (minimum + maximum - ImGui.CalcTextSize(text).Y) * 0.5f;
     }
 
     private static Vector2 GetScaledIconSize
@@ -2482,6 +2564,8 @@ public static partial class OmniControls
     );
 
     #region 常量
+
+    private const int COMBO_VISIBLE_ITEMS = 20;
 
     private const int BORDER_HIGHLIGHT_BANDS = 12;
 

@@ -20,10 +20,10 @@ namespace OmniToolbox.UI;
 public sealed class IconBrowser : IEscapeClosableWindow
 {
     internal static string CustomIconPath => System.IO.Path.Combine(
-        DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Resources", "CustomIcon.png");
+        DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Assets", "CustomIcon.png");
 
     internal static string LauncherIconPath => System.IO.Path.Combine(
-        DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Resources", "XIVLauncherCN.png");
+        DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Assets", "XIVLauncherCN.png");
 
     internal static string? GetBuiltInIconPath(uint iconID) => iconID switch
     {

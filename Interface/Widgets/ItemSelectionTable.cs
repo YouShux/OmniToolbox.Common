@@ -1,3 +1,4 @@
+using Dalamud.Utility;
 using Lumina.Excel.Sheets;
 using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.UI.Theme;
@@ -210,8 +211,23 @@ public static class ItemSelectionTable
         bool    showItemIDTooltip = true,
         bool    isCollected = false,
         bool    wrapName = false
+    ) => DrawItemCell(itemID, rowContentHeight, iconSize, false, displayName, showItemIDTooltip, isCollected, wrapName);
+
+    public static void DrawItemCell
+    (
+        uint    itemID,
+        float   rowContentHeight,
+        float   iconSize,
+        bool    itemHQ,
+        string? displayName = null,
+        bool    showItemIDTooltip = true,
+        bool    isCollected = false,
+        bool    wrapName = false
     )
     {
+        var (baseItemID, kind) = ItemUtil.GetBaseId(itemID);
+        itemHQ |= kind == ItemKind.Hq;
+        itemID = baseItemID;
         var itemName = string.IsNullOrWhiteSpace(displayName) ? LuminaWrapper.GetItemName(itemID) : displayName;
         if (string.IsNullOrWhiteSpace(itemName))
         {
@@ -229,7 +245,7 @@ public static class ItemSelectionTable
         ImGui.SetCursorScreenPos(iconPosition);
         if (LuminaGetter.TryGetRow<Item>(itemID, out var item))
         {
-            FramedGameIcon.DrawItem(item, new Vector2(iconSize));
+            FramedGameIcon.DrawItem(item, new Vector2(iconSize), itemHQ);
             if (isCollected)
             {
                 FramedGameIcon.DrawCollectedCheck(

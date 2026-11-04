@@ -98,12 +98,15 @@ public static class OmniCommandCatalog
 
     public static IReadOnlyDictionary<string, string> CreateTexts()
     {
-        var texts = new Dictionary<string, string>(StringComparer.Ordinal);
+        var texts = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Command.worldtravel.OpenDescription"] = "打开跨界传送窗口"
+        };
         foreach (var definition in Definitions)
         {
             texts.Add(definition.NameKey, definition.ChineseName);
             texts.Add(definition.DescriptionKey, definition.Description);
-            texts.Add(definition.UsageKey, $"用法：{Format(definition.Name, definition.Parameters)}");
+            texts.Add(definition.UsageKey, Format(definition.Name, definition.Parameters));
         }
         return texts;
     }
@@ -114,23 +117,24 @@ public static class OmniCommandCatalog
     {
         var description = OmniLoc.Get("Command.Main.Description");
         var lines = new List<string> { forCommandInfo ? description : $"/omni → {description}" };
-        foreach (var definition in Definitions)
+        var definitions = forCommandInfo
+            ? CommandInfoOrder.Select(name => Definitions.First(definition => definition.Name == name))
+            : Definitions;
+        foreach (var definition in definitions)
         {
-            if (forCommandInfo)
+            if (forCommandInfo && definition.Name == "on")
             {
-                if (definition.Name is "off" or "toggle" or "chatlogreplay" or "foodcheck" or "armoirecheck" or
-                    "relicreplicamap" or "battlehornpreset" or "bluemageset" or "itemmanagement")
-                    continue;
-
-                if (definition.Name == "on")
-                {
-                    var actions = DisplayMode == CommandDisplayMode.English
-                        ? "on/off/toggle"
-                        : $"{OmniLoc.Get("Command.on.Name")}/{OmniLoc.Get("Command.off.Name")}/{OmniLoc.Get("Command.toggle.Name")}";
-                    var exampleModule = OmniLoc.Get("ChatFrameOptimizationTitle");
-                    lines.Add($"/omni {actions} {OmniLoc.Get("Command.Module.NameParameter")} → {string.Format(OmniLoc.Get("Command.Module.StateDescription"), Format("on", exampleModule))}");
-                    continue;
-                }
+                var actions = DisplayMode == CommandDisplayMode.English
+                    ? "on/off/toggle"
+                    : $"{OmniLoc.Get("Command.on.Name")}/{OmniLoc.Get("Command.off.Name")}/{OmniLoc.Get("Command.toggle.Name")}";
+                var exampleModule = OmniLoc.Get("ChatFrameOptimizationTitle");
+                lines.Add($"/omni {actions} {OmniLoc.Get("Command.Module.NameParameter")} → {string.Format(OmniLoc.Get("Command.Module.StateDescription"), Format("on", exampleModule))}");
+                continue;
+            }
+            if (forCommandInfo && definition.Name == "worldtravel")
+            {
+                lines.Add($"{Format(definition.Name)} → {OmniLoc.Get("Command.worldtravel.OpenDescription")}");
+                continue;
             }
 
             lines.Add($"{OmniLoc.Get(definition.UsageKey)} → {OmniLoc.Get(definition.DescriptionKey)}");
@@ -138,6 +142,22 @@ public static class OmniCommandCatalog
 
         return FormatDisplayText(string.Join('\n', lines));
     }
+
+    private static readonly string[] CommandInfoOrder =
+    [
+        "help",
+        "search",
+        "on",
+        "iconbrowser",
+        "marketboard",
+        "npcshop",
+        "fcchest",
+        "glamourcabinet",
+        "teleportpanel",
+        "tp",
+        "bts",
+        "worldtravel"
+    ];
 
     public static IReadOnlyList<OmniCommandDefinition> Definitions { get; } = Array.AsReadOnly<OmniCommandDefinition>(
     [
