@@ -3,6 +3,7 @@ using Dalamud.Interface;
 using OmenTools.Extensions;
 using OmniToolbox.UI.Controls;
 using OmniToolbox.UI.Theme;
+using OmniToolbox.UI.Widgets;
 using TreeToolKit;
 
 namespace OmniToolbox.UI;
@@ -71,7 +72,7 @@ public sealed class OmniRecordWindow
     {
         using var placement = new OmniWindowPlacement.WindowScope(settings.Collapsed ? collapsedID : windowID);
         using var font = Fonts.GetUIFont().Push();
-        using var theme = new ComicStyleScope();
+        using var theme = new OmniStyleScope();
         using var layoutScale = new OmniTheme.ScaleScope(OmniTheme.ConfiguredScaleValue);
         IsFocused = false;
         var fontScale = MathF.Max(0.01f, settings.GlobalScale);
@@ -159,7 +160,7 @@ public sealed class OmniRecordWindow
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
             var text = icon.ToIconString();
-            var textSize = ImGui.CalcTextSize(text) * (fontSize / ImGui.GetFontSize());
+            var textSize = OmniTextMeasurements.Measure(text) * (fontSize / ImGui.GetFontSize());
             ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), fontSize,
                 position + Vector2.Max(Vector2.Zero, (size - textSize) * 0.5f),
                 OmniTheme.Color(OmniTheme.Tokens.Text with
@@ -227,7 +228,7 @@ public sealed class OmniRecordWindow
             using (ImRaii.PushFont(UiBuilder.IconFont))
             {
                 var icon = FontAwesomeIcon.ChevronCircleDown.ToIconString();
-                var textSize = ImGui.CalcTextSize(icon);
+                var textSize = OmniTextMeasurements.Measure(icon);
                 ImGui.GetWindowDrawList().AddText(min + Vector2.Max(Vector2.Zero, (iconSize - textSize) * 0.5f),
                     ImGui.GetColorU32(ImGuiCol.Text), icon);
             }

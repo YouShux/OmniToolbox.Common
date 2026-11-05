@@ -2,12 +2,16 @@ using Dalamud.Utility;
 using Lumina.Excel.Sheets;
 using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.UI.Theme;
+using OmniToolbox.UI.Widgets;
+using TreeToolKit;
 
 namespace OmniToolbox.UI.Controls;
 
 public static class ItemSelectionTable
 {
     private static readonly Dictionary<uint, ItemLayout> Layouts = [];
+
+    internal static void ClearDisplayCaches() => Layouts.Clear();
 
     public static ItemSelectionTableChange Draw
     (
@@ -19,6 +23,8 @@ public static class ItemSelectionTable
         var layoutID = ImGui.GetID(id);
         if (!Layouts.TryGetValue(layoutID, out var layout))
         {
+            if (Layouts.Count >= 128)
+                Layouts.Clear();
             layout = new();
             Layouts.Add(layoutID, layout);
         }
@@ -72,6 +78,7 @@ public static class ItemSelectionTable
 
         ImGui.TableSetupScrollFreeze(0, 1);
         var change = DrawHeader(rows, showEnabledColumn, detailLayout);
+        var interaction = new OmniListInteraction("##itemSelectionRows");
         ImGui.TableSetColumnIndex(!detailLayout && showEnabledColumn ? 1 : 0);
         nameWidth        = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
         rowContentHeight = MathF.Max(iconSize, MathF.Max(OmniTheme.CheckboxSize(), deleteButtonSize.Y));
@@ -79,10 +86,33 @@ public static class ItemSelectionTable
         rowHeight        = rowContentHeight + cellPadding;
         if (detailLayout)
         {
-            foreach (var row in rows)
+            var measuredDetails = layout.DetailWidth == nameWidth && layout.DetailRows.Length == rows.Count &&
+                layout.DetailSpacing == ImGui.GetStyle().ItemSpacing && layout.DetailPadding == ImGui.GetStyle().CellPadding &&
+                layout.DetailEnabled == showEnabledColumn;
+            if (!measuredDetails)
             {
-                ImGui.TableNextRow();
-                var rowChange = DrawRow(row, rowContentHeight, iconSize, deleteButtonSize, showEnabledColumn, true);
+                layout.DetailWidth = nameWidth;
+                layout.DetailSpacing = ImGui.GetStyle().ItemSpacing;
+                layout.DetailPadding = ImGui.GetStyle().CellPadding;
+                layout.DetailEnabled = showEnabledColumn;
+                layout.DetailRows = new float[rows.Count];
+            }
+
+            for (var index = 0; index < rows.Count; index++)
+            {
+                var row = rows[index];
+                ImGui.TableNextRow(ImGuiTableRowFlags.None, layout.DetailRows[index]);
+                ImGui.TableSetColumnIndex(0);
+                var top = ImGui.GetCursorPosY();
+                if (measuredDetails && !interaction.ShouldRetain(row.ItemID) &&
+                    !ImGui.IsRectVisible(new Vector2(nameWidth, layout.DetailRows[index])))
+                {
+                    continue;
+                }
+                using var rowScope = interaction.BeginRow(row.ItemID);
+                var rowChange = DrawRow(row, layout.Names[index], rowContentHeight, iconSize, deleteButtonSize, showEnabledColumn, true, true);
+                if (!measuredDetails)
+                    layout.DetailRows[index] = MathF.Max(rowContentHeight, ImGui.GetCursorPosY() - top - ImGui.GetStyle().ItemSpacing.Y);
                 if (rowChange.Action != ItemSelectionTableAction.None)
                 {
                     change = rowChange;
@@ -92,12 +122,18 @@ public static class ItemSelectionTable
         }
         var clipper = ImGui.ImGuiListClipper();
         clipper.Begin(rows.Count, rowHeight);
+        if (interaction.RetainAll)
+            clipper.ForceDisplayRangeByIndices(0, rows.Count);
+        else if (interaction.HasRetainedRows)
+            for (var index = 0; index < rows.Count; index++)
+                interaction.IncludeRetainedRow(clipper, index, rows[index].ItemID);
         while (clipper.Step())
         {
             for (var index = clipper.DisplayStart; index < clipper.DisplayEnd; index++)
             {
                 ImGui.TableNextRow(ImGuiTableRowFlags.None, rowContentHeight);
-                var rowChange = DrawRow(rows[index], rowContentHeight, iconSize, deleteButtonSize, showEnabledColumn, false);
+                using var rowScope = interaction.BeginRow(rows[index].ItemID);
+                var rowChange = DrawRow(rows[index], layout.Names[index], rowContentHeight, iconSize, deleteButtonSize, showEnabledColumn, false);
                 if (rowChange.Action != ItemSelectionTableAction.None)
                 {
                     change = rowChange;
@@ -142,7 +178,7 @@ public static class ItemSelectionTable
         if (detailLayout)
         {
             if (showEnabledColumn)
-                OmniControls.SameLineOrWrap(ImGui.CalcTextSize(OmniLoc.Get("Common.Item")).X);
+                OmniControls.SameLineOrWrap(OmniTextMeasurements.Measure(OmniLoc.Get("Common.Item")).X);
             else
                 ImGui.TableNextColumn();
             ImGui.TextUnformatted(OmniLoc.Get("Common.Item"));
@@ -158,18 +194,21 @@ public static class ItemSelectionTable
     private static ItemSelectionTableChange DrawRow
     (
         ItemSelectionTableRow row,
+        string                name,
         float                 rowContentHeight,
         float                 iconSize,
         Vector2               deleteButtonSize,
         bool                  showEnabledColumn,
-        bool                  detailLayout
+        bool                  detailLayout,
+        bool                  firstColumnReady = false
     )
     {
         using var idScope = ImRaii.PushId((int)row.ItemID);
         var change = default(ItemSelectionTableChange);
         if (showEnabledColumn)
         {
-            ImGui.TableNextColumn();
+            if (!firstColumnReady)
+                ImGui.TableNextColumn();
             var enabled = row.Enabled;
             if (!detailLayout)
                 OmniControls.CenterTableItem(new Vector2(OmniTheme.CheckboxSize()), rowContentHeight);
@@ -179,9 +218,9 @@ public static class ItemSelectionTable
             }
         }
 
-        if (!detailLayout || !showEnabledColumn)
+        if ((!detailLayout || !showEnabledColumn) && (!firstColumnReady || showEnabledColumn))
             ImGui.TableNextColumn();
-        DrawItemCell(row.ItemID, rowContentHeight, iconSize, wrapName: true);
+        DrawItemCell(row.ItemID, rowContentHeight, iconSize, displayName: name, wrapName: true);
 
         if (!detailLayout)
             ImGui.TableNextColumn();
@@ -261,7 +300,7 @@ public static class ItemSelectionTable
         }
 
         var wrapWidth = wrapName ? MathF.Max(1f, availableWidth - (stacked ? 0f : iconSize + textSpacing)) : 0f;
-        var textSize = ImGui.CalcTextSize(itemName, false, wrapWidth);
+        var textSize = OmniTextMeasurements.Measure(itemName, false, wrapWidth);
         var textPosition = new Vector2(
             cellPosition.X + (stacked ? 0f : iconSize + textSpacing),
             cellPosition.Y + (stacked ? iconSize + textSpacing : MathF.Max(0f, (cellHeight - textSize.Y) * 0.5f)));
@@ -271,7 +310,7 @@ public static class ItemSelectionTable
         ImGui.Dummy(new Vector2(
             MathF.Max(1f, MathF.Min(textSize.X, wrapName ? wrapWidth : availableWidth - iconSize - textSpacing)),
             textSize.Y));
-        if (showItemIDTooltip)
+        if (showItemIDTooltip && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
             OmniControls.HelpTooltip(string.Format(OmniLoc.Get("Common.ItemId"), itemID));
         }
@@ -286,31 +325,46 @@ public static class ItemSelectionTable
     {
         var spacing = OmniTheme.Scale(6f);
         var stacked = width < iconSize + spacing + ImGui.GetFontSize() * 2f;
-        var textHeight = ImGui.CalcTextSize(name, false, MathF.Max(1f, width - (stacked ? 0f : iconSize + spacing))).Y;
+        var textHeight = OmniTextMeasurements.Measure(name, false, MathF.Max(1f, width - (stacked ? 0f : iconSize + spacing))).Y;
         return stacked ? iconSize + spacing + textHeight : MathF.Max(iconSize, textHeight);
     }
     private sealed class ItemLayout
     {
         private readonly List<uint>                                                     itemIDs   = [];
-        private readonly List<string>                                                   names     = [];
+        private readonly List<bool> deletableItems = [];
+        internal readonly List<string> Names = [];
         private (float Width, float IconSize, float FontSize, nint Font, float Height)? estimated;
         private (float Width, float IconSize, float FontSize, nint Font, float Height)? actual;
+        private long fontRevision = -1;
+        private long localizationRevision = -1;
+        internal float DetailWidth;
+        internal float[] DetailRows = [];
+        internal Vector2 DetailSpacing;
+        internal Vector2 DetailPadding;
+        internal bool DetailEnabled;
 
         public void UpdateItems(IReadOnlyList<ItemSelectionTableRow> rows)
         {
-            var same = rows.Count == itemIDs.Count;
+            var same = rows.Count == itemIDs.Count && fontRevision == Fonts.Revision && localizationRevision == OmniLoc.Revision;
             for (var index = 0; same && index < rows.Count; index++)
-                same = rows[index].ItemID == itemIDs[index];
+                same = rows[index].ItemID == itemIDs[index] && rows[index].CanDelete == deletableItems[index];
             if (same)
                 return;
 
+            fontRevision = Fonts.Revision;
+            localizationRevision = OmniLoc.Revision;
             itemIDs.Clear();
-            names.Clear();
+            deletableItems.Clear();
+            Names.Clear();
             estimated = actual = null;
+            DetailRows = [];
             foreach (var row in rows)
             {
                 itemIDs.Add(row.ItemID);
-                names.Add(LuminaWrapper.GetItemName(row.ItemID));
+                deletableItems.Add(row.CanDelete);
+                var (baseItemID, _) = ItemUtil.GetBaseId(row.ItemID);
+                var name = LuminaWrapper.GetItemName(baseItemID);
+                Names.Add(string.IsNullOrWhiteSpace(name) ? baseItemID.ToString() : name);
             }
         }
 
@@ -328,8 +382,10 @@ public static class ItemSelectionTable
                 layout.FontSize == fontSize && layout.Font == font)
                 return layout.Height;
 
+            if (useActual)
+                DetailRows = [];
             var height = iconSize;
-            foreach (var name in names)
+            foreach (var name in Names)
                 height = MathF.Max(height, MeasureItemCellHeight(name, width, iconSize));
             cached = (width, iconSize, fontSize, font, height);
             return height;

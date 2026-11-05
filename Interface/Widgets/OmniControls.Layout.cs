@@ -4,6 +4,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.ImGuiSeStringRenderer;
 using Dalamud.Utility;
 using OmniToolbox.UI.Theme;
+using OmniToolbox.UI.Widgets;
 
 namespace OmniToolbox.UI.Controls;
 
@@ -55,7 +56,7 @@ public static partial class OmniControls
             contentWidth -= ImGui.GetStyle().ScrollbarSize;
         Span<float> requiredWidths = stackalloc float[labels.Length];
         for (var index = 0; index < labels.Length; index++)
-            requiredWidths[index] = MathF.Max(minimumWidths[index], ImGui.CalcTextSize(DisplayLabel(labels[index])).X);
+            requiredWidths[index] = MathF.Max(minimumWidths[index], OmniTextMeasurements.Measure(DisplayLabel(labels[index])).X);
         var equalColumns = (flags & ImGuiTableFlags.SizingMask) == ImGuiTableFlags.SizingStretchSame;
         if (equalColumns)
         {
@@ -166,7 +167,7 @@ public static partial class OmniControls
             .AppendIcon((uint)BitmapFontIcon.CrossWorld)
             .ToReadOnlySeString();
         var textWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X - ImGui.GetTextLineHeight());
-        var textSize = ImGui.CalcTextSize(worldName, false, textWidth);
+        var textSize = OmniTextMeasurements.Measure(worldName, false, textWidth);
         var height = MathF.Max(contentHeight, textSize.Y);
         var style = new SeStringDrawParams
         {
@@ -310,7 +311,7 @@ public static partial class OmniControls
 
     private static float GetControlAvailableWidth()
     {
-        var window = ImGuiP.GetCurrentWindow();
+        var window = ImGuiP.GetCurrentWindowRead();
         // 自动尺寸弹窗的隐藏测量帧尚无内容宽度，必须先提交控件的固有尺寸。
         if ((window.Flags & ImGuiWindowFlags.AlwaysAutoResize) != 0 &&
             window.HiddenFramesCannotSkipItems > 0 && ImGuiP.GetCurrentTable().IsNull)
@@ -323,7 +324,7 @@ public static partial class OmniControls
 
     private static void WrapControl(float width)
     {
-        if (ImGuiP.GetCurrentWindow().DC.IsSameLine != 0 && width > GetControlAvailableWidth() + 1f)
+        if (ImGuiP.GetCurrentWindowRead().DC.IsSameLine != 0 && width > GetControlAvailableWidth() + 1f)
             ImGui.NewLine();
     }
 
@@ -335,7 +336,7 @@ public static partial class OmniControls
     {
         var side = MathF.Max(ImGui.GetTextLineHeight(), controlSize > 0f ? controlSize : OmniTheme.CheckboxSize());
         var text = DisplayLabel(label);
-        var textSize = ImGui.CalcTextSize(text);
+        var textSize = OmniTextMeasurements.Measure(text);
         return new(MathF.Ceiling(side + (text.Length == 0 ? 0f : ImGui.GetStyle().ItemInnerSpacing.X + textSize.X)),
             MathF.Max(side, textSize.Y));
     }
@@ -346,10 +347,10 @@ public static partial class OmniControls
         bool   hasTooltip = false
     )
     {
-        var size = ImGui.CalcTextSize(DisplayLabel(label));
+        var size = OmniTextMeasurements.Measure(DisplayLabel(label));
         if (hasTooltip)
         {
-            var icon = GetScaledIconSize(FontAwesomeIcon.InfoCircle.ToIconString());
+            var icon = GetScaledIconSize(GetIconText(FontAwesomeIcon.InfoCircle));
             size.X += OmniTheme.Scale(4f) + icon.X;
             size.Y = MathF.Max(size.Y, icon.Y);
         }
@@ -362,7 +363,7 @@ public static partial class OmniControls
         string status
     )
     {
-        var size = MeasureGroup([ImGui.CalcTextSize(DisplayLabel(label)), ImGui.CalcTextSize($"[{status}]")], OmniTheme.Scale(4f));
+        var size = MeasureGroup([OmniTextMeasurements.Measure(DisplayLabel(label)), OmniTextMeasurements.Measure($"[{status}]")], OmniTheme.Scale(4f));
         return new(MathF.Ceiling(size.X), MathF.Ceiling(size.Y));
     }
 
@@ -373,7 +374,7 @@ public static partial class OmniControls
     )
     {
         var height = MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight());
-        return new(MathF.Max(minimumWidth, ImGui.CalcTextSize(preview).X + ImGui.GetStyle().FramePadding.X * 2f + height), height);
+        return new(MathF.Max(minimumWidth, OmniTextMeasurements.Measure(preview).X + ImGui.GetStyle().FramePadding.X * 2f + height), height);
     }
 
     public static Vector2 MeasureInput
@@ -384,7 +385,7 @@ public static partial class OmniControls
     )
     {
         var height = MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight());
-        var width = MathF.Max(minimumWidth, ImGui.CalcTextSize(displayText).X + ImGui.GetStyle().FramePadding.X * 2f);
+        var width = MathF.Max(minimumWidth, OmniTextMeasurements.Measure(displayText).X + ImGui.GetStyle().FramePadding.X * 2f);
         if (step != 0)
         {
             width += (height + ImGui.GetStyle().ItemInnerSpacing.X) * 2f;

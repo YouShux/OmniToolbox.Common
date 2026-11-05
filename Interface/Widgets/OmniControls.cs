@@ -6,6 +6,7 @@ using OmenTools.ImGuiOm;
 using OmenTools.OmenService;
 using OmniToolbox.Collections;
 using OmniToolbox.UI.Theme;
+using OmniToolbox.UI.Widgets;
 using TreeToolKit;
 
 namespace OmniToolbox.UI.Controls;
@@ -18,6 +19,15 @@ public static partial class OmniControls
     private static Vector2                         HelpTooltipSourcePosition;
     private static int                             HelpTooltipFrame          = -1;
     private static int                             HelpTooltipIndex;
+    private static readonly Dictionary<FontAwesomeIcon, string> IconTexts = [];
+    private static readonly Dictionary<(string ID, FontAwesomeIcon Icon), string> IconButtonIDs = [];
+    private static readonly Dictionary<string, string> DisplayLabels = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, (string Label, string ID)> ControlLabels = new(StringComparer.Ordinal);
+    private static readonly Dictionary<int, string> TooltipWindowNames = [];
+    private static string SplitTooltipSource = string.Empty;
+    private static string[] SplitTooltipLines = [];
+    private static readonly Dictionary<(nint Font, float Size, string Text), float> TextVisualOffsets = [];
+    private static long TextVisualFontRevision = -1;
 
     public static bool RoundedSelectable
     (
@@ -63,7 +73,7 @@ public static partial class OmniControls
         bool                 rounded
     )
     {
-        using var disabled = ImRaii.Disabled((flags & ImGuiSelectableFlags.Disabled) != 0);
+        using var disabled = (flags & ImGuiSelectableFlags.Disabled) != 0 ? ImRaii.Disabled() : null;
         var position = ImGui.GetCursorScreenPos();
         var text = DisplayLabel(label);
         var availableWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
@@ -72,11 +82,11 @@ public static partial class OmniControls
         if (!wrapText)
         {
             padding.Y = 0f;
-            width     = MathF.Ceiling(MathF.Max(1f, MathF.Max(size.X, ImGui.CalcTextSize(text).X + padding.X * 2f)));
+            width     = MathF.Ceiling(MathF.Max(1f, MathF.Max(size.X, OmniTextMeasurements.Measure(text).X + padding.X * 2f)));
         }
         padding.X = MathF.Min(padding.X, MathF.Max(0f, (width - 1f) * 0.5f));
         var wrapWidth = wrapText ? MathF.Max(1f, width - padding.X * 2f) : 0f;
-        var textSize = ImGui.CalcTextSize(text, false, wrapWidth);
+        var textSize = OmniTextMeasurements.Measure(text, false, wrapWidth);
         var rowSize = new Vector2(width,
             MathF.Ceiling(MathF.Max(size.Y, MathF.Max(textSize.Y, ImGui.GetTextLineHeight()) + padding.Y * 2f)));
         var textColor = ImGui.GetColorU32(ImGuiCol.Text);
@@ -84,11 +94,11 @@ public static partial class OmniControls
         var hoveredColor = ImGui.GetColorU32(ImGuiCol.HeaderHovered);
         var activeColor = ImGui.GetColorU32(ImGuiCol.HeaderActive);
         bool clicked;
-        using (ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero))
+        using (ControlScope.PushColor(ImGuiCol.Text, Vector4.Zero))
         {
-            using var headers = rounded ? ImRaii.PushColor(ImGuiCol.Header, Vector4.Zero)
+            using var headers = rounded ? ControlScope.PushColor(ImGuiCol.Header, Vector4.Zero)
                 .Push(ImGuiCol.HeaderHovered, Vector4.Zero)
-                .Push(ImGuiCol.HeaderActive, Vector4.Zero) : null;
+                .Push(ImGuiCol.HeaderActive, Vector4.Zero) : default;
             ImGuiP.GetCurrentWindow().DC.CurrLineTextBaseOffset = 0f;
             // 保留原生选择项的 ID、点击、弹层关闭和导航行为，仅替换绘制。
             clicked = ImGui.Selectable(label, selected, flags, rowSize);
@@ -135,13 +145,13 @@ public static partial class OmniControls
         var width = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
         var stacked = width < iconSize + style.ItemInnerSpacing.X + style.FramePadding.X * 2f + ImGui.GetFontSize() * 2f;
         var textWidth = MathF.Max(1f, width - style.FramePadding.X * 2f - (stacked ? 0f : iconSize + style.ItemInnerSpacing.X));
-        var textSize = ImGui.CalcTextSize(label);
+        var textSize = OmniTextMeasurements.Measure(label);
         var wrapWidth = textSize.X > textWidth ? textWidth : 0f;
         if (wrapWidth > 0f)
-            textSize = ImGui.CalcTextSize(label, false, wrapWidth);
+            textSize = OmniTextMeasurements.Measure(label, false, wrapWidth);
         var height = stacked ? iconSize + style.ItemInnerSpacing.Y + textSize.Y : MathF.Max(iconSize, textSize.Y);
         bool clicked;
-        using (ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero))
+        using (ControlScope.PushColor(ImGuiCol.Text, Vector4.Zero))
         {
             var size = new Vector2(width, height);
             clicked = rounded ? RoundedSelectable(id, selected, flags, size) : ImGui.Selectable(id, selected, flags, size);
@@ -178,7 +188,7 @@ public static partial class OmniControls
         new(
             MathF.Ceiling(MathF.Max(
                 OmniTheme.NavButtonSize().X,
-                ImGui.CalcTextSize(DisplayLabel(label)).X + MathF.Max(OmniTheme.Scale(24f), ImGui.GetStyle().FramePadding.X * 2f))),
+                OmniTextMeasurements.Measure(DisplayLabel(label)).X + MathF.Max(OmniTheme.Scale(24f), ImGui.GetStyle().FramePadding.X * 2f))),
             MathF.Ceiling(MathF.Max(
                 OmniTheme.NavButtonSize().Y,
                 ImGui.GetTextLineHeightWithSpacing() + OmniTheme.Scale(8f))));
@@ -245,7 +255,7 @@ public static partial class OmniControls
             : Vector4.One;
         if (OmniTheme.UsesMaterial)
         {
-            using var glassColors = ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero)
+            using var glassColors = ControlScope.PushColor(ImGuiCol.Text, Vector4.Zero)
                 .Push(ImGuiCol.Button, Vector4.Zero)
                 .Push(ImGuiCol.ButtonHovered, Vector4.Zero)
                 .Push(ImGuiCol.ButtonActive, Vector4.Zero)
@@ -256,15 +266,15 @@ public static partial class OmniControls
                 radius, GlassMotion.CurrentItemID, active);
             if (iconVisible)
             {
-                DrawScaledIcon(drawList, icon.ToIconString(), pos + size * 0.5f,
+                DrawScaledIcon(drawList, GetIconText(icon), pos + size * 0.5f,
                     isFavorite && active ? OmniTheme.Favorite : tokens.Text);
             }
             HelpTooltip(tooltip);
             return clickedGlass;
         }
         DrawControlShadow(drawList, pos, size, radius);
-        using var textColor = ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero);
-        using var colors = ImRaii.PushColor(ImGuiCol.Button, active && !useFavoriteStyle ? tokens.Accent : tokens.Surface)
+        using var textColor = ControlScope.PushColor(ImGuiCol.Text, Vector4.Zero);
+        using var colors = ControlScope.PushColor(ImGuiCol.Button, active && !useFavoriteStyle ? tokens.Accent : tokens.Surface)
             .Push(ImGuiCol.ButtonHovered, OmniTheme.UsesDarkPalette ? OmniTheme.HoverBackground : tokens.Accent with
             {
                 W = BUTTON_HOVER_ALPHA
@@ -274,9 +284,18 @@ public static partial class OmniControls
                 W = BUTTON_ACTIVE_ALPHA
             })
             .Push(ImGuiCol.Border, tokens.Border);
-        using var border = ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 0f)
+        using var border = ControlScope.PushStyle(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(ImGuiStyleVar.FrameRounding, radius);
-        var clicked = ImGuiOm.ButtonIcon(id, icon, size, string.Empty, useStaticFont: false);
+        bool clicked;
+        if (!IconButtonIDs.TryGetValue((id, icon), out var buttonID))
+        {
+            if (IconButtonIDs.Count >= 512)
+                IconButtonIDs.Clear();
+            buttonID = $"{id}_{icon}";
+            IconButtonIDs.Add((id, icon), buttonID);
+        }
+        using (ControlScope.PushID(buttonID))
+            clicked = ImGui.Button(string.Empty, size);
 
         DrawControlFrame(
             drawList,
@@ -287,12 +306,12 @@ public static partial class OmniControls
         DrawControlHighlight(drawList, pos, size, radius);
         if (iconVisible)
         {
-            var iconText = icon.ToIconString();
+            var iconText = GetIconText(icon);
             var glyphScale = ICON_GLYPH_SCALE;
             if (favoriteStyle && !isFavorite)
             {
                 var iconSize = GetScaledIconSize(iconText, 1f);
-                var favoriteSize = GetScaledIconSize(FontAwesomeIcon.Heart.ToIconString(), 1f);
+                var favoriteSize = GetScaledIconSize(GetIconText(FontAwesomeIcon.Heart), 1f);
                 glyphScale *= MathF.Min(
                     favoriteSize.X / MathF.Max(1f, iconSize.X),
                     favoriteSize.Y / MathF.Max(1f, iconSize.Y));
@@ -391,7 +410,7 @@ public static partial class OmniControls
         }
 
         FavoriteEffectsDrawnAt = now;
-        var icon = FontAwesomeIcon.Heart.ToIconString();
+        var icon = GetIconText(FontAwesomeIcon.Heart);
         var drawList = ImGui.GetForegroundDrawList();
         for (var index = FavoriteParticles.Count - 1; index >= 0; index--)
         {
@@ -470,12 +489,12 @@ public static partial class OmniControls
         {
             DrawControlShadow(ImGui.GetWindowDrawList(), pos, size, radius);
         }
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, radius)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.Text, tokens.Text)
+        using var colors = ControlScope.PushColor(ImGuiCol.Text, tokens.Text)
             .Push(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with
             {
                 W = 0.06f
@@ -540,10 +559,10 @@ public static partial class OmniControls
             DrawControlShadow(drawList, pos, size, radius);
         }
 
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 0f)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.Text, tokens.Text)
+        using var colors = ControlScope.PushColor(ImGuiCol.Text, tokens.Text)
             .Push(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : tokens.Border with
             {
                 W = 0.06f
@@ -630,12 +649,12 @@ public static partial class OmniControls
         var tokens = OmniTheme.Tokens;
         id = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, true);
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.Text, tokens.Text)
+        using var colors = ControlScope.PushColor(ImGuiCol.Text, tokens.Text)
             .Push(ImGuiCol.TextDisabled, tokens.Text with
             {
                 W = 0.70f
@@ -670,12 +689,12 @@ public static partial class OmniControls
         var tokens = OmniTheme.Tokens;
         id = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, true);
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.Text, tokens.Text)
+        using var colors = ControlScope.PushColor(ImGuiCol.Text, tokens.Text)
             .Push(ImGuiCol.FrameBg, Vector4.Zero)
             .Push(ImGuiCol.FrameBgHovered, Vector4.Zero)
             .Push(ImGuiCol.FrameBgActive, Vector4.Zero)
@@ -699,9 +718,9 @@ public static partial class OmniControls
         id     = DrawLeadingControlLabel(id, ref width);
         size.X = width;
         var frame = BeginNativeControl(id, size, true);
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f);
-        using var colors = ImRaii.PushColor(ImGuiCol.Text, tokens.Text)
+        using var colors = ControlScope.PushColor(ImGuiCol.Text, tokens.Text)
             .Push(ImGuiCol.FrameBg, Vector4.Zero)
             .Push(ImGuiCol.FrameBgHovered, Vector4.Zero)
             .Push(ImGuiCol.FrameBgActive, Vector4.Zero)
@@ -735,12 +754,12 @@ public static partial class OmniControls
         id    = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, true);
         var drawGroupedText = groupThousands && step == 0 && GlassMotion.ActiveItemID != frame.ID;
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.Text, drawGroupedText ? Vector4.Zero : tokens.Text)
+        using var colors = ControlScope.PushColor(ImGuiCol.Text, drawGroupedText ? Vector4.Zero : tokens.Text)
             .Push(ImGuiCol.FrameBg, Vector4.Zero)
             .Push(ImGuiCol.FrameBgHovered, Vector4.Zero)
             .Push(ImGuiCol.FrameBgActive, Vector4.Zero)
@@ -788,12 +807,12 @@ public static partial class OmniControls
         width = MathF.Max(width, MeasureFloatInput(value, format, stepped: step != 0f).X);
         id    = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, true);
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.Text, tokens.Text)
+        using var colors = ControlScope.PushColor(ImGuiCol.Text, tokens.Text)
             .Push(ImGuiCol.FrameBg, Vector4.Zero)
             .Push(ImGuiCol.FrameBgHovered, Vector4.Zero)
             .Push(ImGuiCol.FrameBgActive, Vector4.Zero)
@@ -901,13 +920,13 @@ public static partial class OmniControls
         width = MathF.Max(width, MeasureFloatInput(value, format).X);
         id    = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, false);
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.GrabRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+        using var colors = ControlScope.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
         {
             W = SLIDER_BG_ALPHA
         })
@@ -941,13 +960,13 @@ public static partial class OmniControls
         width = MathF.Max(width, MeasureIntInput(value, format).X);
         id    = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, false);
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.GrabRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+        using var colors = ControlScope.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
         {
             W = SLIDER_BG_ALPHA
         })
@@ -983,12 +1002,12 @@ public static partial class OmniControls
         width = MathF.Max(width, MeasureFloatInput(value, format).X);
         id    = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, false);
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+        using var colors = ControlScope.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
         {
             W = SLIDER_BG_ALPHA
         })
@@ -1022,12 +1041,12 @@ public static partial class OmniControls
             MeasureFloatInput(value.Y, format).X + ImGui.GetStyle().ItemInnerSpacing.X);
         id    = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, false);
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
+        using var colors = ControlScope.PushColor(ImGuiCol.FrameBg, OmniTheme.UsesMaterial ? Vector4.Zero : Vector4.One with
         {
             W = SLIDER_BG_ALPHA
         })
@@ -1074,7 +1093,7 @@ public static partial class OmniControls
         var frame = BeginNativeControl(id, width, true);
         var popupPadding = Vector2.Max(OmniTheme.Scale(tokens.WindowPadding),
             new Vector2(OmniTheme.BorderThickness()) + ImGui.GetStyle().ItemSpacing * 0.5f);
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(ImGuiStyleVar.PopupRounding, frame.Radius)
             .Push(ImGuiStyleVar.PopupBorderSize, OmniTheme.BorderThickness())
@@ -1083,7 +1102,7 @@ public static partial class OmniControls
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ImRaii.PushColor(ImGuiCol.Text, tokens.Text)
+        using var colors = ControlScope.PushColor(ImGuiCol.Text, tokens.Text)
             .Push(ImGuiCol.FrameBg, Vector4.Zero)
             .Push(ImGuiCol.FrameBgHovered, Vector4.Zero)
             .Push(ImGuiCol.FrameBgActive, Vector4.Zero)
@@ -1123,7 +1142,7 @@ public static partial class OmniControls
         float  horizontalPadding = 16f
     ) =>
         new(
-            MathF.Ceiling(MathF.Max(OmniTheme.Scale(minimumWidth), ImGui.CalcTextSize(DisplayLabel(label)).X +
+            MathF.Ceiling(MathF.Max(OmniTheme.Scale(minimumWidth), OmniTextMeasurements.Measure(DisplayLabel(label)).X +
                 MathF.Max(OmniTheme.Scale(horizontalPadding), ImGui.GetStyle().FramePadding.X * 2f))),
             MathF.Ceiling(MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight())));
 
@@ -1190,9 +1209,9 @@ public static partial class OmniControls
                 frame.Radius,
                 ImDrawFlags.RoundCornersAll);
         }
-        using var styles = ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 0f)
+        using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(ImGuiStyleVar.FrameRounding, frame.Radius);
-        using var colors = ImRaii.PushColor(ImGuiCol.Header, Vector4.Zero)
+        using var colors = ControlScope.PushColor(ImGuiCol.Header, Vector4.Zero)
             .Push(ImGuiCol.HeaderHovered, Vector4.Zero)
             .Push(ImGuiCol.HeaderActive, Vector4.Zero);
         var open = ImGui.CollapsingHeader(label, flags | ImGuiTreeNodeFlags.SpanAvailWidth);
@@ -1320,8 +1339,8 @@ public static partial class OmniControls
         bool    wrap = false
     )
     {
-        var wrapWidth = wrap && ImGui.CalcTextSize(text).X > size.X ? MathF.Max(1f, size.X) : 0f;
-        var textSize = ImGui.CalcTextSize(text, false, wrapWidth);
+        var wrapWidth = wrap && OmniTextMeasurements.Measure(text).X > size.X ? MathF.Max(1f, size.X) : 0f;
+        var textSize = OmniTextMeasurements.Measure(text, false, wrapWidth);
         ImGui.GetWindowDrawList().AddText(
             ImGui.GetFont(), ImGui.GetFontSize(),
             pos + new Vector2(MathF.Max(0f, (size.X - textSize.X) * 0.5f), MathF.Max(0f, (size.Y - textSize.Y) * 0.5f)),
@@ -1402,7 +1421,7 @@ public static partial class OmniControls
 
     public static Vector2 HelpIconSize() =>
         new(
-            GetScaledIconSize(FontAwesomeIcon.InfoCircle.ToIconString()).X,
+            GetScaledIconSize(GetIconText(FontAwesomeIcon.InfoCircle)).X,
             OmniTheme.SmallButtonSize().Y);
 
     public static void HelpIcon(string tooltip) => HelpIcon(tooltip, string.Empty);
@@ -1485,7 +1504,12 @@ public static partial class OmniControls
         using var tooltipScope = BeginHelpTooltip();
         if (!tooltipScope.IsVisible)
             return;
-        foreach (var line in tooltip.Split('\n'))
+        if (SplitTooltipSource != tooltip)
+        {
+            SplitTooltipSource = tooltip;
+            SplitTooltipLines = tooltip.Split('\n');
+        }
+        foreach (var line in SplitTooltipLines)
         {
             HelpTooltipLine(line, markerText, markerColor);
         }
@@ -1515,7 +1539,7 @@ public static partial class OmniControls
         ImGui.AlignTextToFramePadding();
         using var wrap = ImRaii.TextWrapPos(0f);
         ImGui.TextUnformatted(label);
-        SameLineOrWrap(ImGui.CalcTextSize(statusText).X, spacing);
+        SameLineOrWrap(OmniTextMeasurements.Measure(statusText).X, spacing);
         ImGui.TextColored(statusColor, statusText);
     }
 
@@ -1527,7 +1551,7 @@ public static partial class OmniControls
     )
     {
         var text = $"[{label}]";
-        SameLineOrWrap(ImGui.CalcTextSize(text).X, OmniTheme.Scale(4f));
+        SameLineOrWrap(OmniTextMeasurements.Measure(text).X, OmniTheme.Scale(4f));
         if (alignToFramePadding)
         {
             ImGui.AlignTextToFramePadding();
@@ -1583,10 +1607,10 @@ public static partial class OmniControls
         if (contentHeight > 0f)
             ImGuiP.GetCurrentWindow().DC.CurrLineTextBaseOffset = 0f;
         var width = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
-        var textSize = ImGui.CalcTextSize(text);
+        var textSize = OmniTextMeasurements.Measure(text);
         if (textSize.X > width)
         {
-            textSize = ImGui.CalcTextSize(text, false, width);
+            textSize = OmniTextMeasurements.Measure(text, false, width);
             var height = MathF.Max(contentHeight, textSize.Y);
             var position = ImGui.GetCursorScreenPos();
             ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), ImGui.GetFontSize(),
@@ -1626,7 +1650,7 @@ public static partial class OmniControls
     {
         var cursorX = ImGui.GetCursorPosX();
         var availableWidth = ImGui.GetContentRegionAvail().X;
-        var textSize = ImGui.CalcTextSize(text, false, availableWidth);
+        var textSize = OmniTextMeasurements.Measure(text, false, availableWidth);
         ImGui.SetCursorPosX(cursorX + MathF.Max(0f, (availableWidth - textSize.X) * 0.5f));
         ImGui.PushTextWrapPos(cursorX + availableWidth);
         ImGui.TextWrapped(text);
@@ -1642,7 +1666,7 @@ public static partial class OmniControls
         bool     selected = false
     )
     {
-        var textSize = ImGui.CalcTextSize(DisplayLabel(label));
+        var textSize = OmniTextMeasurements.Measure(DisplayLabel(label));
         var padding = ImGui.GetStyle().FramePadding;
         size = Vector2.Max(size, textSize + padding * 2f);
         size = new(MathF.Ceiling(size.X), MathF.Ceiling(size.Y));
@@ -1650,13 +1674,13 @@ public static partial class OmniControls
         size.X = MathF.Min(size.X, GetControlAvailableWidth());
         var wrap = textSize.X > size.X - padding.X * 2f + 1f;
         if (wrap)
-            textSize = ImGui.CalcTextSize(DisplayLabel(label), false, MathF.Max(1f, size.X - padding.X * 2f));
+            textSize = OmniTextMeasurements.Measure(DisplayLabel(label), false, MathF.Max(1f, size.X - padding.X * 2f));
         size.Y = MathF.Max(size.Y, textSize.Y + padding.Y * 2f);
         var pos = ImGui.GetCursorScreenPos();
         var clicked = false;
         if (OmniTheme.UsesMaterial)
         {
-            using var colors = ImRaii.PushColor(ImGuiCol.Text, Vector4.Zero)
+            using var colors = ControlScope.PushColor(ImGuiCol.Text, Vector4.Zero)
                 .Push(ImGuiCol.Button, Vector4.Zero)
                 .Push(ImGuiCol.ButtonHovered, Vector4.Zero)
                 .Push(ImGuiCol.ButtonActive, Vector4.Zero)
@@ -1952,7 +1976,9 @@ public static partial class OmniControls
         drawTooltip();
     }
 
-    public static IDisposable PushTooltipStyle()
+    public static IDisposable PushTooltipStyle() => BeginTooltipStyle();
+
+    internal static TooltipStyleScope BeginTooltipStyle()
     {
         var font = Fonts.GetUIFont().Push();
         var scale = new OmniTheme.ScaleScope(ImGui.GetFont().FontSize * ImGui.GetIO().FontGlobalScale / OmniTheme.REFERENCE_FONT_SIZE);
@@ -2023,7 +2049,7 @@ public static partial class OmniControls
         var resetScroll = sourceID != HelpTooltipSourceID || sourcePosition != HelpTooltipSourcePosition || frame > HelpTooltipFrame + 1;
         if (frame == HelpTooltipFrame)
         {
-            var previousTooltip = ImGuiP.FindWindowByName($"##OmniToolboxHelpTooltip{HelpTooltipIndex}");
+            var previousTooltip = ImGuiP.FindWindowByName(GetTooltipWindowName(HelpTooltipIndex));
             if (!previousTooltip.IsNull)
             {
                 previousTooltip.Hidden                   = true;
@@ -2037,7 +2063,7 @@ public static partial class OmniControls
         HelpTooltipSourceID       = sourceID;
         HelpTooltipSourcePosition = sourcePosition;
         HelpTooltipFrame          = frame;
-        var tooltipStyle = PushTooltipStyle();
+        var tooltipStyle = BeginTooltipStyle();
         var maximumSize = OmniTheme.ClampWindowSize(OmniWindowPlacement.GetWorkArea().Size - OmniTheme.Scale(new Vector2(16f)));
         width = MathF.Min(width, maximumSize.X);
         SetNextAutoResizeWindowSizeConstraints(new Vector2(width, 0f),
@@ -2045,7 +2071,7 @@ public static partial class OmniControls
         // 独立窗口隔离提示内容与绘制列表，保留原生 Tooltip 定位与同帧替换行为。
         if (!OmniWindowPlacement.IsMultiMonitorActive)
             ImGui.SetNextWindowViewport(ImGui.GetMainViewport().ID);
-        var isVisible = ImGui.Begin($"##OmniToolboxHelpTooltip{HelpTooltipIndex}",
+        var isVisible = ImGui.Begin(GetTooltipWindowName(HelpTooltipIndex),
             ImGuiWindowFlags.Tooltip | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoTitleBar |
             ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoSavedSettings |
             ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
@@ -2066,6 +2092,16 @@ public static partial class OmniControls
                 ImGui.SetScrollY(ImGui.GetScrollY() - ImGui.GetIO().MouseWheel * ImGui.GetTextLineHeightWithSpacing() * 3f);
         }
         return new HelpTooltipScope(tooltipStyle, true, textWrap);
+    }
+
+    private static string GetTooltipWindowName(int index)
+    {
+        if (TooltipWindowNames.TryGetValue(index, out var name))
+            return name;
+        name = $"##OmniToolboxHelpTooltip{index}";
+        if (TooltipWindowNames.Count < 64)
+            TooltipWindowNames.Add(index, name);
+        return name;
     }
 
     private static void DrawHelpIcon
@@ -2096,10 +2132,10 @@ public static partial class OmniControls
         string?         referenceText = null
     )
     {
-        var iconText = icon.ToIconString();
+        var iconText = GetIconText(icon);
         var iconSize = GetScaledIconSize(iconText);
         WrapControl(iconSize.X);
-        if (ImGuiP.GetCurrentWindow().DC.IsSameLine == 0)
+        if (ImGuiP.GetCurrentWindowRead().DC.IsSameLine == 0)
         {
             lineTop    = ImGui.GetCursorScreenPos().Y;
             lineHeight = MathF.Max(ImGui.GetFrameHeight(), iconSize.Y);
@@ -2127,6 +2163,14 @@ public static partial class OmniControls
     {
         text = DisplayLabel(text);
         var font = ImGui.GetFont();
+        if (TextVisualFontRevision != Fonts.Revision)
+        {
+            TextVisualFontRevision = Fonts.Revision;
+            TextVisualOffsets.Clear();
+        }
+        var key = ((nint)font.Handle, ImGui.GetFontSize(), text);
+        if (TextVisualOffsets.TryGetValue(key, out var cachedOffset))
+            return cachedOffset;
         var scale = ImGui.GetFontSize() / font.FontSize;
         var lineHeight = ImGui.GetTextLineHeight();
         var lineTop = 0f;
@@ -2147,7 +2191,11 @@ public static partial class OmniControls
             minimum = MathF.Min(minimum, lineTop + glyph->Y0 * scale);
             maximum = MathF.Max(maximum, lineTop + glyph->Y1 * scale);
         }
-        return float.IsPositiveInfinity(minimum) ? 0f : (minimum + maximum - ImGui.CalcTextSize(text).Y) * 0.5f;
+        var offset = float.IsPositiveInfinity(minimum) ? 0f : (minimum + maximum - OmniTextMeasurements.Measure(text).Y) * 0.5f;
+        if (TextVisualOffsets.Count >= 256)
+            TextVisualOffsets.Clear();
+        TextVisualOffsets.Add(key, offset);
+        return offset;
     }
 
     private static Vector2 GetScaledIconSize
@@ -2155,8 +2203,7 @@ public static partial class OmniControls
         string icon,
         float  glyphScale = ICON_GLYPH_SCALE
     ) =>
-        ImGui.CalcTextSizeA(UiBuilder.IconFont, ImGui.GetFontSize() * glyphScale,
-            float.MaxValue, -1f, icon, out _);
+        OmniTextMeasurements.MeasureAtSize(icon, UiBuilder.IconFont, ImGui.GetFontSize() * glyphScale, -1f);
 
     public static unsafe void DrawIconGlyph
     (
@@ -2168,7 +2215,7 @@ public static partial class OmniControls
     )
     {
         using var iconFont = ImRaii.PushFont(UiBuilder.IconFont);
-        var iconText = icon.ToIconString();
+        var iconText = GetIconText(icon);
         var font = ImGui.GetFont();
         var glyph = new ImFontGlyphPtr(font.FindGlyph(iconText[0]));
         var scale = targetSize / MathF.Max(glyph.X1 - glyph.X0, glyph.Y1 - glyph.Y0);
@@ -2285,9 +2332,17 @@ public static partial class OmniControls
         ref float width
     )
     {
-        var separator = id.IndexOf("##", StringComparison.Ordinal);
-        var label = separator < 0 ? id : id[..separator];
-        WrapControl(width + (label.Length == 0 ? 0f : ImGui.CalcTextSize(label).X + ImGui.GetStyle().ItemInnerSpacing.X));
+        if (!ControlLabels.TryGetValue(id, out var display))
+        {
+            var separator = id.IndexOf("##", StringComparison.Ordinal);
+            var text = separator < 0 ? id : id[..separator];
+            display = (text, text.Length == 0 ? id : $"###{id}");
+            if (ControlLabels.Count >= 512)
+                ControlLabels.Clear();
+            ControlLabels.Add(id, display);
+        }
+        var label = display.Label;
+        WrapControl(width + (label.Length == 0 ? 0f : OmniTextMeasurements.Measure(label).X + ImGui.GetStyle().ItemInnerSpacing.X));
         if (label.Length == 0)
         {
             width = MathF.Max(1f, MathF.Min(width, GetControlAvailableWidth()));
@@ -2295,7 +2350,7 @@ public static partial class OmniControls
         }
 
         var spacing = ImGui.GetStyle().ItemInnerSpacing.X;
-        var labelWidth = ImGui.CalcTextSize(label).X;
+        var labelWidth = OmniTextMeasurements.Measure(label).X;
         var available = GetControlAvailableWidth();
         ImGui.AlignTextToFramePadding();
         using (ImRaii.TextWrapPos(ImGui.GetCursorPosX() + available))
@@ -2306,7 +2361,7 @@ public static partial class OmniControls
         }
         width = MathF.Max(1f, MathF.Min(width, GetControlAvailableWidth()));
         // 保留完整标识以区分同名控件，最后提交的项目仍是输入框，供编辑完成检测使用。
-        return $"###{id}";
+        return display.ID;
     }
 
     private static NativeControlFrame BeginNativeControl
@@ -2386,7 +2441,7 @@ public static partial class OmniControls
         DrawControlHighlight(frame.DrawList, frame.Pos, frame.Size, frame.Radius);
     }
 
-    private static bool IsRectClipped(ImDrawListPtr drawList, Vector2 min, Vector2 max)
+    internal static bool IsRectClipped(ImDrawListPtr drawList, Vector2 min, Vector2 max)
     {
         var clipMin = drawList.GetClipRectMin();
         var clipMax = drawList.GetClipRectMax();
@@ -2457,11 +2512,28 @@ public static partial class OmniControls
             size.Y * 0.22f + radius * 0.25f,
             size.Y * 0.12f,
             size.Y * 0.38f);
-        var bandHeight = height / BORDER_HIGHLIGHT_BANDS;
         var max = pos + size;
         if (IsRectClipped(drawList, pos, new Vector2(max.X, pos.Y + height)))
             return;
 
+        if (TryDrawControlHighlight(drawList, pos, size, radius, height, alpha))
+            return;
+
+        DrawControlHighlightImmediate(drawList, pos, size, radius, height, alpha);
+    }
+
+    private static void DrawControlHighlightImmediate
+    (
+        ImDrawListPtr drawList,
+        Vector2       pos,
+        Vector2       size,
+        float         radius,
+        float         height,
+        float         alpha
+    )
+    {
+        var max = pos + size;
+        var bandHeight = height / BORDER_HIGHLIGHT_BANDS;
         var clipMin = drawList.GetClipRectMin();
         var clipMax = drawList.GetClipRectMax();
         for (var i = 0; i < BORDER_HIGHLIGHT_BANDS; i++)
@@ -2512,12 +2584,55 @@ public static partial class OmniControls
             thickness);
     }
 
-    private static string DisplayLabel(string label) =>
-        label.Contains("##", StringComparison.Ordinal) ? label[..label.IndexOf("##", StringComparison.Ordinal)] : label;
+    private static string GetIconText(FontAwesomeIcon icon)
+    {
+        if (IconTexts.TryGetValue(icon, out var text))
+            return text;
+        if (IconTexts.Count >= 512)
+            IconTexts.Clear();
+        text = icon.ToIconString();
+        IconTexts.Add(icon, text);
+        return text;
+    }
+
+    private static string DisplayLabel(string label)
+    {
+        var separator = label.IndexOf("##", StringComparison.Ordinal);
+        if (separator < 0)
+            return label;
+        if (DisplayLabels.TryGetValue(label, out var text))
+            return text;
+        if (DisplayLabels.Count >= 512)
+            DisplayLabels.Clear();
+        text = label[..separator];
+        DisplayLabels.Add(label, text);
+        return text;
+    }
+
+    internal static void ClearDisplayCaches()
+    {
+        OmniListInteraction.Clear();
+        ClearControlHighlights();
+        IconTexts.Clear();
+        IconButtonIDs.Clear();
+        DisplayLabels.Clear();
+        ControlLabels.Clear();
+        TooltipWindowNames.Clear();
+        SplitTooltipSource = string.Empty;
+        SplitTooltipLines = [];
+        TextVisualOffsets.Clear();
+        IconBrowser.ClearDisplayCaches();
+        OmniTextMeasurements.Clear();
+        ItemSelectionTable.ClearDisplayCaches();
+        ItemRequirementLine.ClearDisplayCaches();
+        OmniFontSelector.ClearDisplayCaches();
+        OmniPager.ClearDisplayCaches();
+        OmniRecordHistoryMenu.ClearDisplayCaches();
+    }
 
     private readonly record struct HelpTooltipScope
     (
-        IDisposable  Style,
+        TooltipStyleScope Style,
         bool         IsVisible,
         IDisposable? TextWrap = null
     ) : IDisposable
@@ -2530,7 +2645,7 @@ public static partial class OmniControls
         }
     }
 
-    private readonly record struct TooltipStyleScope
+    internal readonly record struct TooltipStyleScope
     (
         IDisposable          Font,
         OmniTheme.ScaleScope Scale

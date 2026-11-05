@@ -2,11 +2,18 @@ namespace OmniToolbox.UI.Theme;
 
 public sealed class ComicStyleScope : IDisposable
 {
+    private OmniStyleScope scope = new();
+
+    public void Dispose() => scope.Dispose();
+}
+
+internal struct OmniStyleScope : IDisposable
+{
     private readonly int                  colorCount;
     private readonly OmniTheme.ScaleScope scale;
     private bool                          disposed;
 
-    public ComicStyleScope()
+    public OmniStyleScope()
     {
         scale = new(ImGui.GetFontSize() / OmniTheme.REFERENCE_FONT_SIZE);
         var tokens = OmniTheme.Tokens;

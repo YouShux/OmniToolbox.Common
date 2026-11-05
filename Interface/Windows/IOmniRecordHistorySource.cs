@@ -4,6 +4,8 @@ public interface IOmniRecordHistorySource<T>
 {
     OmniRecordHistoryMenu.Labels Labels { get; }
 
+    long Revision => 0;
+
     float HeaderWidth => 0f;
 
     bool IsCurrentSelected { get; }

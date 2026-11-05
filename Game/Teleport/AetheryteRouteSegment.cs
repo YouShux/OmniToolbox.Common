@@ -6,4 +6,11 @@ public readonly record struct AetheryteRouteSegment
     uint                      AetheryteID,
     string                    Name,
     bool                      CanTeleportDirectly
-);
+)
+{
+    public uint TerritoryID { get; init; }
+
+    public uint NextTerritoryID { get; init; }
+
+    public Vector2? BoundaryPosition { get; init; }
+}

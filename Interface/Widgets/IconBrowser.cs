@@ -3,27 +3,37 @@ using System.Globalization;
 using Dalamud.Game.Text;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
-using OmenTools.OmenService;
 using OmniToolbox.Config;
 using OmniToolbox.Host;
 using OmniToolbox.Items;
 using OmniToolbox.UI;
 using OmniToolbox.UI.Controls;
 using OmniToolbox.UI.Theme;
+using OmniToolbox.UI.Widgets;
 using TreeToolKit;
 using TreeTools.Text;
 using CharaMakeCustomize = Lumina.Excel.Sheets.CharaMakeCustomize;
+using HairMakeType = Lumina.Excel.Sheets.HairMakeType;
 using MapSymbol = Lumina.Excel.Sheets.MapSymbol;
 
 namespace OmniToolbox.UI;
 
 public sealed class IconBrowser : IEscapeClosableWindow
 {
-    internal static string CustomIconPath => System.IO.Path.Combine(
+    private static string? CustomIconFilePath;
+    private static string? LauncherIconFilePath;
+
+    internal static string CustomIconPath => CustomIconFilePath ??= System.IO.Path.Combine(
         DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Assets", "CustomIcon.png");
 
-    internal static string LauncherIconPath => System.IO.Path.Combine(
+    internal static string LauncherIconPath => LauncherIconFilePath ??= System.IO.Path.Combine(
         DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Assets", "XIVLauncherCN.png");
+
+    internal static void ClearDisplayCaches()
+    {
+        CustomIconFilePath = null;
+        LauncherIconFilePath = null;
+    }
 
     internal static string? GetBuiltInIconPath(uint iconID) => iconID switch
     {
@@ -32,9 +42,14 @@ public sealed class IconBrowser : IEscapeClosableWindow
         _ => null
     };
 
-    internal static IDalamudTextureWrap? GetIconTexture(uint iconID) => GetBuiltInIconPath(iconID) is { } path
-        ? DalamudServices.TextureProvider.GetFromFile(path).GetWrapOrDefault()
-        : ImageHelper.GetGameIcon(iconID);
+    internal static IDalamudTextureWrap? GetIconTexture(uint iconID)
+    {
+        var provider = DalamudServices.TextureProvider;
+        if (GetBuiltInIconPath(iconID) is { } path)
+            return provider.GetFromFile(path).GetWrapOrDefault();
+        return provider.TryGetFromGameIcon(new GameIconLookup(iconID), out var texture)
+            ? texture.GetWrapOrEmpty() : null;
+    }
 
     private static readonly IconTabDefinition[] GameIconTabs =
     [
@@ -189,7 +204,18 @@ public sealed class IconBrowser : IEscapeClosableWindow
     private readonly Dictionary<int, ISharedImmediateTexture> gameIconTextures    = [];
     private readonly List<int>                                filteredGameIcons   = [];
     private Dictionary<int, string>?                          mapSymbolIcons;
+    private IEnumerator<MapSymbol>?                           mapSymbolScan;
+    private bool                                              mapSymbolsComplete;
+    private long                                              mapSymbolRevision;
+    private long                                              filteredMapSymbolRevision = -1;
+    private long                                              filteredLocalization = -1;
+    private string?                                           appliedGameIconFilter;
     private List<SeIconEntry>?                                seIconEntries;
+    private readonly List<SeIconEntry> filteredSeIcons = [];
+    private string? appliedSeIconFilter;
+    private (float Width, nint Font, float Size, long Revision, long Language, Vector2 Padding, Vector2 Spacing,
+        Vector2 FramePadding, bool Detail, float IconSize)? seIconLayout;
+    private OmniTableRowLayout[] seIconHeights = [];
     private Action<uint>?                                     gameIconApplyTarget;
     private Action<string>?                                   seIconApplyTarget;
     private BrowserMode                                       mode;
@@ -271,7 +297,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
         }
 
         using var font = Fonts.GetUIFont().Push();
-        using var style = new ComicStyleScope();
+        using var style = new OmniStyleScope();
         var iconSize = OmniTheme.Scale(config.IconSize);
         using var placement = new OmniWindowPlacement.WindowScope("###OmniIconBrowser");
         var viewportSize = OmniWindowPlacement.GetWorkArea("###OmniIconBrowser").Size;
@@ -279,9 +305,9 @@ public sealed class IconBrowser : IEscapeClosableWindow
         var toolbarMinWidth =
             OmniTheme.Scale(SEARCH_CONTROL_WIDTH + 160f + 180f) +
             OmniControls.CompactButtonSize(OmniLoc.Get("IconBrowser.RebuildCache")).X +
-            ImGui.CalcTextSize(OmniLoc.Get("IconBrowser.Search")).X +
-            ImGui.CalcTextSize(OmniLoc.Get("IconBrowser.IconSize")).X +
-            ImGui.CalcTextSize(OmniLoc.Get("IconBrowser.Mode")).X +
+            OmniTextMeasurements.Measure(OmniLoc.Get("IconBrowser.Search")).X +
+            OmniTextMeasurements.Measure(OmniLoc.Get("IconBrowser.IconSize")).X +
+            OmniTextMeasurements.Measure(OmniLoc.Get("IconBrowser.Mode")).X +
             (imguiStyle.ItemSpacing.X + imguiStyle.ItemInnerSpacing.X) * 3f +
             imguiStyle.WindowPadding.X * 2f;
         if (isCollapsed)
@@ -402,36 +428,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
                     128,
                     OmniTheme.Scale(SEARCH_CONTROL_WIDTH)))
             {
-                filteredGameIcons.Clear();
-                if (int.TryParse(
-                        gameIconFilter,
-                        NumberStyles.None,
-                        CultureInfo.InvariantCulture,
-                        out var icon) &&
-                    IconExists((uint)icon))
-                {
-                    filteredGameIcons.Add(icon);
-                }
-                else if (!string.IsNullOrWhiteSpace(gameIconFilter))
-                {
-                    if (OmniLoc.Get("IconBrowser.CustomIcon").Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase) ||
-                        "CustomIcon".Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase))
-                    {
-                        filteredGameIcons.Add((int)CUSTOM_ICON_ID);
-                    }
-                    if (OmniLoc.Get("IconBrowser.LauncherIcon").Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase) ||
-                        "XIVLauncherCN".Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase))
-                    {
-                        filteredGameIcons.Add((int)LauncherIconID);
-                    }
-                    foreach (var symbol in GetMapSymbolIcons())
-                    {
-                        if (symbol.Value.Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase) && IconExists((uint)symbol.Key))
-                        {
-                            filteredGameIcons.Add(symbol.Key);
-                        }
-                    }
-                }
+                appliedGameIconFilter = null;
             }
         }
         else
@@ -443,7 +440,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
                 OmniTheme.Scale(SEARCH_CONTROL_WIDTH));
         }
 
-        OmniControls.SameLineOrWrap(ImGui.CalcTextSize(OmniLoc.Get("IconBrowser.IconSize")).X +
+        OmniControls.SameLineOrWrap(OmniTextMeasurements.Measure(OmniLoc.Get("IconBrowser.IconSize")).X +
                                    ImGui.GetStyle().ItemSpacing.X + OmniTheme.Scale(160f));
         using (ImRaii.Group())
         {
@@ -468,12 +465,14 @@ public sealed class IconBrowser : IEscapeClosableWindow
             }
         }
 
-        OmniControls.SameLineOrWrap(ImGui.CalcTextSize(OmniLoc.Get("IconBrowser.Mode")).X + ImGui.GetStyle().ItemInnerSpacing.X +
+        OmniControls.SameLineOrWrap(OmniTextMeasurements.Measure(OmniLoc.Get("IconBrowser.Mode")).X + ImGui.GetStyle().ItemInnerSpacing.X +
             OmniControls.MeasureCombo(OmniLoc.Get("IconBrowser.Mode.GameIcon"), OmniTheme.Scale(180f)).X);
         DrawModeSelector();
         OmniControls.SameLineOrWrap(OmniControls.CompactButtonSize(OmniLoc.Get("IconBrowser.RebuildCache")).X);
         if (OmniControls.SmallButton(OmniLoc.Get("IconBrowser.RebuildCache"), false))
         {
+            foreach (var cache in tabCaches.Values)
+                cache.SeedIcons?.Dispose();
             tabCaches.Clear();
             gameIconTextures.Clear();
         }
@@ -533,6 +532,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
         var tab = GameIconTabs[selectedGameIconTab];
         if (gameIconFilter.Length > 0)
         {
+            RefreshGameIconFilter();
             DrawIconGrid(
                 selectedGameIconTab,
                 filteredGameIcons,
@@ -563,56 +563,106 @@ public sealed class IconBrowser : IEscapeClosableWindow
         cache = new IconTabCache(tab.Ranges.Length == 0 ? 0 : tab.Ranges[0].Start);
         if (tab.LabelKey == "IconBrowser.Tab.Featured")
         {
-            cache.Icons.Add((int)CUSTOM_ICON_ID);
-            cache.Icons.Add((int)LauncherIconID);
+            cache.Add((int)CUSTOM_ICON_ID);
+            cache.Add((int)LauncherIconID);
         }
         if (tab.LabelKey == "IconBrowser.Tab.MapSymbols")
         {
-            foreach (var icon in GetMapSymbolIcons().Keys)
-            {
-                if (IconExists((uint)icon))
-                {
-                    cache.Icons.Add(icon);
-                }
-            }
-            cache.Icons.Sort();
-            cache.IsComplete = true;
+            cache.SeedIcons = EnumerateMapSymbolIcons().GetEnumerator();
         }
         else if (tab.LabelKey == "IconBrowser.Tab.Artwork")
         {
-            var hairstyleUnlocks = new HashSet<uint>();
-            foreach (var hairstyle in HairstyleData.GetPurchasableRows())
-            {
-                hairstyleUnlocks.Add(hairstyle.UnlockLink);
-            }
-
-            var hairstyleIcons = new HashSet<int>();
-            foreach (var hairstyle in DalamudServices.DataManager.GetExcelSheet<CharaMakeCustomize>())
-            {
-                if (hairstyle.FeatureID <= byte.MaxValue &&
-                    hairstyleUnlocks.Contains(hairstyle.UnlockLink) &&
-                    hairstyle.Icon != 0 &&
-                    IconExists((uint)hairstyle.Icon) &&
-                    hairstyleIcons.Add((int)hairstyle.Icon))
-                {
-                    cache.Icons.Add((int)hairstyle.Icon);
-                }
-            }
+            cache.SeedIcons = EnumerateHairstyleIcons().GetEnumerator();
         }
         tabCaches.Add(tabIndex, cache);
         return cache;
     }
 
+    private IEnumerable<int> EnumerateMapSymbolIcons()
+    {
+        while (!mapSymbolsComplete)
+        {
+            GetMapSymbolIcons();
+            yield return 0;
+        }
+        if (mapSymbolIcons is not null)
+            foreach (var icon in mapSymbolIcons.Keys)
+                yield return icon;
+    }
+
+    private static IEnumerable<int> EnumerateHairstyleIcons()
+    {
+        var hairstyleRowIDs = new HashSet<uint>();
+        foreach (var hairMakeType in DalamudServices.DataManager.GetExcelSheet<HairMakeType>())
+        {
+            foreach (var rowID in hairMakeType.CharaMakeStruct[0].SubMenuParam)
+            {
+                if (rowID != 0)
+                    hairstyleRowIDs.Add(rowID);
+                yield return 0;
+            }
+        }
+        var hairstyleUnlocks = new HashSet<uint>();
+        foreach (var hairstyle in DalamudServices.DataManager.GetExcelSheet<CharaMakeCustomize>())
+        {
+            if (hairstyle.IsPurchasable && hairstyle.UnlockLink != 0 && hairstyle.FeatureID <= byte.MaxValue &&
+                hairstyleRowIDs.Contains(hairstyle.RowId))
+                hairstyleUnlocks.Add(hairstyle.UnlockLink);
+            yield return 0;
+        }
+        foreach (var hairstyle in DalamudServices.DataManager.GetExcelSheet<CharaMakeCustomize>())
+            yield return hairstyle.FeatureID <= byte.MaxValue && hairstyleUnlocks.Contains(hairstyle.UnlockLink)
+                ? (int)hairstyle.Icon : 0;
+    }
+
+    private void RefreshGameIconFilter()
+    {
+        var numeric = int.TryParse(gameIconFilter, NumberStyles.None, CultureInfo.InvariantCulture, out var icon);
+        if (!numeric && !string.IsNullOrWhiteSpace(gameIconFilter))
+            GetMapSymbolIcons();
+        if (appliedGameIconFilter == gameIconFilter && filteredMapSymbolRevision == mapSymbolRevision &&
+            filteredLocalization == OmniLoc.Revision)
+            return;
+        appliedGameIconFilter = gameIconFilter;
+        filteredMapSymbolRevision = mapSymbolRevision;
+        filteredLocalization = OmniLoc.Revision;
+        filteredGameIcons.Clear();
+        if (numeric && IconExists((uint)icon))
+        {
+            filteredGameIcons.Add(icon);
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(gameIconFilter))
+            return;
+        if (OmniLoc.Get("IconBrowser.CustomIcon").Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase) ||
+            "CustomIcon".Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase))
+            filteredGameIcons.Add((int)CUSTOM_ICON_ID);
+        if (OmniLoc.Get("IconBrowser.LauncherIcon").Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase) ||
+            "XIVLauncherCN".Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase))
+            filteredGameIcons.Add((int)LauncherIconID);
+        if (mapSymbolIcons is not null)
+            foreach (var symbol in mapSymbolIcons)
+                if (symbol.Value.Contains(gameIconFilter, StringComparison.OrdinalIgnoreCase) && IconExists((uint)symbol.Key))
+                    filteredGameIcons.Add(symbol.Key);
+    }
+
     private Dictionary<int, string> GetMapSymbolIcons()
     {
-        if (mapSymbolIcons is not null)
-        {
+        mapSymbolIcons ??= [];
+        if (mapSymbolsComplete)
             return mapSymbolIcons;
-        }
-
-        mapSymbolIcons = [];
-        foreach (var symbol in DalamudServices.DataManager.GetExcelSheet<MapSymbol>())
+        mapSymbolScan ??= DalamudServices.DataManager.GetExcelSheet<MapSymbol>().GetEnumerator();
+        var deadline = Stopwatch.GetTimestamp() + ScanBudgetTicks;
+        for (var remaining = 64; remaining > 0 && Stopwatch.GetTimestamp() < deadline; remaining--)
         {
+            if (!mapSymbolScan.MoveNext())
+            {
+                mapSymbolScan.Dispose();
+                mapSymbolScan = null;
+                mapSymbolsComplete = true;
+                break;
+            }
+            var symbol = mapSymbolScan.Current;
             if (symbol.Icon == 0)
             {
                 continue;
@@ -620,6 +670,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
             var name = symbol.PlaceName.IsValid ? symbol.PlaceName.Value.Name.ExtractText() : string.Empty;
             var icon = (int)symbol.Icon;
             mapSymbolIcons[icon] = mapSymbolIcons.TryGetValue(icon, out var existing) ? $"{existing} {name}" : name;
+            mapSymbolRevision++;
         }
         return mapSymbolIcons;
     }
@@ -634,6 +685,24 @@ public sealed class IconBrowser : IEscapeClosableWindow
         var deadline = Stopwatch.GetTimestamp() + ScanBudgetTicks;
         while (remaining > 0 && !cache.IsComplete && Stopwatch.GetTimestamp() < deadline)
         {
+            if (cache.SeedIcons is { } seeds)
+            {
+                if (seeds.MoveNext())
+                {
+                    if (seeds.Current != 0 && IconExists((uint)seeds.Current))
+                        cache.Add(seeds.Current);
+                    remaining--;
+                    continue;
+                }
+                seeds.Dispose();
+                cache.SeedIcons = null;
+                if (tab.LabelKey == "IconBrowser.Tab.MapSymbols")
+                {
+                    cache.Icons.Sort();
+                    cache.IsComplete = true;
+                    continue;
+                }
+            }
             var range = tab.Ranges[cache.RangeIndex];
             if (cache.NextIcon >= range.End)
             {
@@ -648,10 +717,8 @@ public sealed class IconBrowser : IEscapeClosableWindow
                 continue;
             }
 
-            if (IconExists((uint)cache.NextIcon) && !cache.Icons.Contains(cache.NextIcon))
-            {
-                cache.Icons.Add(cache.NextIcon);
-            }
+            if (IconExists((uint)cache.NextIcon))
+                cache.Add(cache.NextIcon);
 
             cache.NextIcon++;
             remaining--;
@@ -804,7 +871,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
                 : OmniTheme.FitImageSize(new Vector2(texture.Width, texture.Height), previewSize)));
     }
 
-    private void DrawSeIconBrowser(float iconSize)
+    private unsafe void DrawSeIconBrowser(float iconSize)
     {
         EnsureSeIconEntries();
         using var child = ImRaii.Child("##iconBrowserSeIcons", Vector2.Zero, true);
@@ -815,8 +882,8 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
         ReadOnlySpan<string> labels = [OmniLoc.Get("IconBrowser.Column.Preview"), OmniLoc.Get("IconBrowser.Column.Name"),
             OmniLoc.Get("IconBrowser.Column.Value"), OmniLoc.Get("IconBrowser.Column.Hex")];
-        var numberWidth = ImGui.CalcTextSize("65535").X;
-        var hexWidth = ImGui.CalcTextSize("0xFFFF").X;
+        var numberWidth = OmniTextMeasurements.Measure("65535").X;
+        var hexWidth = OmniTextMeasurements.Measure("0xFFFF").X;
         ReadOnlySpan<float> minimum = [iconSize, ImGui.GetFontSize() * 4f, numberWidth, hexWidth];
         ReadOnlySpan<float> desired = [iconSize + OmniTheme.Scale(12f), OmniTheme.Scale(200f),
             MathF.Max(numberWidth, OmniTheme.Scale(72f)), MathF.Max(hexWidth, OmniTheme.Scale(72f))];
@@ -829,32 +896,61 @@ public sealed class IconBrowser : IEscapeClosableWindow
             ImGui.TableHeadersRow();
 
             var filter = seIconFilter.Trim();
-            foreach (var entry in seIconEntries!)
+            if (appliedSeIconFilter != filter)
             {
-                if (filter.Length > 0 &&
-                    !entry.SearchText.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                appliedSeIconFilter = filter;
+                filteredSeIcons.Clear();
+                foreach (var candidate in seIconEntries!)
+                    if (filter.Length == 0 || candidate.SearchText.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                        filteredSeIcons.Add(candidate);
+                seIconLayout = null;
+            }
+            var key = (ImGui.GetContentRegionAvail().X, (nint)ImGui.GetFont().Handle, ImGui.GetFontSize(), Fonts.Revision, OmniLoc.Revision,
+                ImGui.GetStyle().CellPadding, ImGui.GetStyle().ItemSpacing, ImGui.GetStyle().FramePadding, detailLayout, iconSize);
+            var measured = seIconLayout == key && seIconHeights.Length == filteredSeIcons.Count;
+            if (!measured)
+            {
+                seIconLayout = key;
+                seIconHeights = new OmniTableRowLayout[filteredSeIcons.Count];
+            }
+            var interaction = new OmniListInteraction("##seIconRows");
+            for (var index = 0; index < filteredSeIcons.Count; index++)
+            {
+                var entry = filteredSeIcons[index];
+
+                ref var rowLayout = ref seIconHeights[index];
+                var rowID = ImGui.GetID(entry.ButtonID);
+                if (!rowLayout.BeginRow(0f, detailLayout ? 4 : 1, interaction.ShouldRetain(rowID)))
                 {
                     continue;
                 }
+                ImGui.TableSetColumnIndex(0);
 
-                ImGui.TableNextRow();
-                OmniControls.NextTableField(labels[0], detailLayout);
+                using var rowScope = interaction.BeginRow(rowID);
+
+                if (detailLayout)
+                    ImGui.TextDisabled(labels[0]);
                 var previewSize = MathF.Min(iconSize, MathF.Max(1f, ImGui.GetContentRegionAvail().X));
-                if (ImGui.Button($"{entry.IconText}##seIcon{entry.Value}", new Vector2(previewSize)))
+                if (ImGui.Button(entry.ButtonID, new Vector2(previewSize)))
                 {
                     ApplySeIcon(entry);
                 }
 
-                OmniControls.NextTableField(labels[1], detailLayout);
+
+                rowLayout.NextField(labels[1], detailLayout);
                 if (OmniControls.WrappedSelectable(entry.Name, false, ImGuiSelectableFlags.SpanAllColumns))
                 {
                     ApplySeIcon(entry);
                 }
 
-                OmniControls.NextTableField(labels[2], detailLayout);
+
+                rowLayout.NextField(labels[2], detailLayout);
                 ImGui.TextUnformatted(entry.DecimalValue);
-                OmniControls.NextTableField(labels[3], detailLayout);
+
+                rowLayout.NextField(labels[3], detailLayout);
                 ImGui.TextUnformatted(entry.HexValue);
+
+                rowLayout.EndRow();
             }
         }
     }
@@ -894,6 +990,24 @@ public sealed class IconBrowser : IEscapeClosableWindow
         IsOpen    = false;
         isFocused = false;
         gameIconTextures.Clear();
+        filteredSeIcons.Clear();
+        appliedSeIconFilter = null;
+        seIconLayout = null;
+        seIconHeights = [];
+        foreach (var (index, cache) in tabCaches.ToArray())
+        {
+            if (cache.SeedIcons is null)
+                continue;
+            cache.SeedIcons.Dispose();
+            tabCaches.Remove(index);
+        }
+        if (mapSymbolScan is not null)
+        {
+            mapSymbolScan.Dispose();
+            mapSymbolScan = null;
+            mapSymbolIcons = null;
+            mapSymbolRevision++;
+        }
         ClearApplyTargets();
     }
 
@@ -932,7 +1046,17 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
     private sealed class IconTabCache(int nextIcon)
     {
+        private readonly HashSet<int> iconIDs = [];
+
         public List<int> Icons { get; } = [];
+
+        public IEnumerator<int>? SeedIcons { get; set; }
+
+        public void Add(int icon)
+        {
+            if (iconIDs.Add(icon))
+                Icons.Add(icon);
+        }
 
         public int RangeIndex { get; set; }
 
@@ -949,7 +1073,10 @@ public sealed class IconBrowser : IEscapeClosableWindow
         string DecimalValue,
         string HexValue,
         string SearchText
-    );
+    )
+    {
+        internal string ButtonID { get; } = $"{IconText}##seIcon{Value}";
+    }
 
     #region 常量
 

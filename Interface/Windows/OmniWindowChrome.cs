@@ -6,6 +6,9 @@ namespace OmniToolbox.UI;
 
 public static class OmniWindowChrome
 {
+    private static readonly Dictionary<string, string> DragIDs = new(StringComparer.Ordinal);
+
+    internal static void ClearDisplayCaches() => DragIDs.Clear();
     public static bool IsTextInputActive => ImGui.GetIO().WantTextInput;
 
     public static void UpdateEscapeClose
@@ -111,7 +114,14 @@ public static class OmniWindowChrome
     )
     {
         var titleBarSize = new Vector2(frameSize.X, OmniTheme.TitleBarHeight());
-        framePosition = DragTitleBar($"{collapseID}Drag", framePosition,
+        if (!DragIDs.TryGetValue(collapseID, out var dragID))
+        {
+            if (DragIDs.Count >= 256)
+                DragIDs.Clear();
+            dragID = $"{collapseID}Drag";
+            DragIDs.Add(collapseID, dragID);
+        }
+        framePosition = DragTitleBar(dragID, framePosition,
             new Vector2(titleBarSize.X - OmniTheme.TitleExpandIconRight() - ImGui.GetStyle().ItemSpacing.X, titleBarSize.Y));
         var titleDoubleClicked = ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left);
         OmniControls.DrawWindowBackground(framePosition, frameSize, isCollapsed);

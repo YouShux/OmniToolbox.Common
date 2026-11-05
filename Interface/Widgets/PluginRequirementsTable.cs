@@ -1,13 +1,61 @@
+using System.Runtime.CompilerServices;
+using System.Threading;
 using Dalamud.Interface;
 using Dalamud.Plugin;
 using Dalamud.Utility;
 using OmniToolbox.Host;
 using OmniToolbox.UI.Theme;
+using OmniToolbox.UI.Widgets;
 
 namespace OmniToolbox.UI.Controls;
 
 internal static class PluginRequirementsTable
 {
+    private static readonly ConditionalWeakTable<Entry[], DisplayTable> Displays = new();
+    private static IExposedPlugin[] Plugins = [];
+    private static long Revision;
+    private static long SnapshotRevision = -1;
+
+    internal static void Initialize() => DalamudServices.PluginInterface.ActivePluginsChanged += OnPluginsChanged;
+
+    internal static void Shutdown()
+    {
+        DalamudServices.PluginInterface.ActivePluginsChanged -= OnPluginsChanged;
+        Plugins = [];
+        Displays.Clear();
+        SnapshotRevision = -1;
+    }
+
+    private static void OnPluginsChanged(IActivePluginsChangedEventArgs args) => Interlocked.Increment(ref Revision);
+
+    private static DisplayTable GetDisplay(Entry[] entries)
+    {
+        var revision = Interlocked.Read(ref Revision);
+        if (SnapshotRevision != revision)
+        {
+            Plugins = DalamudServices.PluginInterface.InstalledPlugins.ToArray();
+            SnapshotRevision = revision;
+        }
+        var display = Displays.GetValue(entries, static _ => new());
+        if (display.Revision == revision && display.LocalizationRevision == OmniLoc.Revision)
+            return display;
+        display.Revision = revision;
+        display.LocalizationRevision = OmniLoc.Revision;
+        display.Rows = new DisplayRow[entries.Length];
+        for (var index = 0; index < entries.Length; index++)
+        {
+            var entry = entries[index];
+            var plugin = FindPlugin(entry, Plugins);
+            display.Rows[index] = new(entry, plugin, OmniLoc.Get(entry.NameKey),
+                plugin is null ? string.Empty : string.Format(OmniLoc.Get("Requirements.Version"), plugin.Version),
+                OmniLoc.Get(entry.ReasonKey), $"##openPluginLink{entry.NameKey}");
+        }
+        display.Labels = [OmniLoc.Get("Requirements.Column.Icon"), OmniLoc.Get("Requirements.Column.Plugin"),
+            OmniLoc.Get("Requirements.Column.Link"), OmniLoc.Get("Requirements.Column.Status"),
+            OmniLoc.Get("Requirements.Column.Reason")];
+        return display;
+    }
+
     internal static void Draw
     (
         string  titleKey,
@@ -17,29 +65,22 @@ internal static class PluginRequirementsTable
         float   minimumPluginWidth = 0f
     )
     {
-        var installedPlugins = DalamudServices.PluginInterface.InstalledPlugins;
-        var pluginWidth = MathF.Max(minimumPluginWidth, MeasurePluginInfoWidth(entries, installedPlugins));
-        var statusWidth = MathF.Max(ImGui.CalcTextSize(OmniLoc.Get("Requirements.Column.Status")).X,
-            MathF.Max(ImGui.CalcTextSize(OmniLoc.Get("Requirements.Status.NotInstalled")).X,
-                MathF.Max(ImGui.CalcTextSize(OmniLoc.Get("Requirements.Status.Enabled")).X,
-                    ImGui.CalcTextSize(OmniLoc.Get("Requirements.Status.InstalledDisabled")).X)));
+        var display = GetDisplay(entries);
+        var pluginWidth = MathF.Max(minimumPluginWidth, MeasurePluginInfoWidth(entries));
+        var statusWidth = MathF.Max(OmniTextMeasurements.Measure(OmniLoc.Get("Requirements.Column.Status")).X,
+            MathF.Max(OmniTextMeasurements.Measure(OmniLoc.Get("Requirements.Status.NotInstalled")).X,
+                MathF.Max(OmniTextMeasurements.Measure(OmniLoc.Get("Requirements.Status.Enabled")).X,
+                    OmniTextMeasurements.Measure(OmniLoc.Get("Requirements.Status.InstalledDisabled")).X)));
         OmniControls.SectionLabel(OmniLoc.Get(titleKey));
         ImGui.Spacing();
 
-        string[] labels =
-        [
-            OmniLoc.Get("Requirements.Column.Icon"),
-            OmniLoc.Get("Requirements.Column.Plugin"),
-            OmniLoc.Get("Requirements.Column.Link"),
-            OmniLoc.Get("Requirements.Column.Status"),
-            OmniLoc.Get("Requirements.Column.Reason")
-        ];
+        var labels = display.Labels;
         var columnPadding = ImGui.GetStyle().CellPadding.X * 2f;
-        var iconWidth = MathF.Ceiling(MathF.Max(OmniTheme.Scale(40f), ImGui.CalcTextSize(labels[0]).X)) + columnPadding;
-        var linkWidth = MathF.Ceiling(MathF.Max(OmniTheme.CheckboxSize(), ImGui.CalcTextSize(labels[2]).X)) + columnPadding;
+        var iconWidth = MathF.Ceiling(MathF.Max(OmniTheme.Scale(40f), OmniTextMeasurements.Measure(labels[0]).X)) + columnPadding;
+        var linkWidth = MathF.Ceiling(MathF.Max(OmniTheme.CheckboxSize(), OmniTextMeasurements.Measure(labels[2]).X)) + columnPadding;
         pluginWidth = MathF.Ceiling(pluginWidth) + columnPadding;
         statusWidth = MathF.Ceiling(statusWidth) + columnPadding;
-        var minimumReasonWidth = MathF.Max(ImGui.CalcTextSize(labels[4]).X, ImGui.GetFontSize() * 8f) + columnPadding;
+        var minimumReasonWidth = MathF.Max(OmniTextMeasurements.Measure(labels[4]).X, ImGui.GetFontSize() * 8f) + columnPadding;
         var availableWidth = ImGui.GetContentRegionAvail().X;
         var fixedWidth = iconWidth + pluginWidth + linkWidth + statusWidth + columnPadding * 4f;
         var tableWidth = MathF.Max(availableWidth, fixedWidth + minimumReasonWidth);
@@ -50,12 +91,12 @@ internal static class PluginRequirementsTable
                           ImGui.GetStyle().CellPadding.Y * 2f;
         for (var index = 0; index < entries.Length; index++)
         {
-            var textHeight = FindPlugin(entries[index], installedPlugins) is null
+            var textHeight = display.Rows[index].Plugin is null
                 ? ImGui.GetTextLineHeight()
                 : ImGui.GetTextLineHeight() * 2f + ImGui.GetStyle().ItemSpacing.Y;
             rowHeights[index] = MathF.Ceiling(MathF.Max(
                 MathF.Max(textHeight, MathF.Max(OmniTheme.Scale(40f), OmniTheme.CheckboxSize())),
-                ImGui.CalcTextSize(OmniLoc.Get(entries[index].ReasonKey), false, reasonWidth).Y));
+                OmniTextMeasurements.Measure(display.Rows[index].Reason, false, reasonWidth).Y));
             tableHeight += rowHeights[index] + ImGui.GetStyle().CellPadding.Y * 2f;
         }
         var flags = ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.RowBg |
@@ -86,24 +127,24 @@ internal static class PluginRequirementsTable
 
         for (var index = 0; index < entries.Length; index++)
         {
-            DrawRow(entries[index], conflict, installedPlugins, rowHeights[index]);
+            DrawRow(display.Rows[index], conflict, rowHeights[index]);
         }
     }
 
     private static void DrawRow
     (
-        Entry                       entry,
+        DisplayRow                  display,
         bool                        conflict,
-        IEnumerable<IExposedPlugin> installedPlugins,
         float                       rowContentHeight
     )
     {
-        var plugin = FindPlugin(entry, installedPlugins);
+        var entry = display.Entry;
+        var plugin = display.Plugin;
         var iconSize = new Vector2(MathF.Round(OmniTheme.Scale(40f)));
         var buttonSize = new Vector2(OmniTheme.CheckboxSize());
-        var name = OmniLoc.Get(entry.NameKey);
-        var version = plugin is null ? string.Empty : string.Format(OmniLoc.Get("Requirements.Version"), plugin.Version);
-        var reason = OmniLoc.Get(entry.ReasonKey);
+        var name = display.Name;
+        var version = display.Version;
+        var reason = display.Reason;
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         var textHeight = ImGui.GetTextLineHeight() * (plugin is null ? 1f : 2f) +
@@ -129,7 +170,7 @@ internal static class PluginRequirementsTable
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - buttonSize.X) * 0.5f));
         ImGui.SetCursorPosY(top + (rowContentHeight - buttonSize.Y) * 0.5f);
         if (OmniControls.IconButton(
-                $"##openPluginLink{entry.NameKey}",
+                display.LinkID,
                 FontAwesomeIcon.ExternalLinkAlt,
                 false,
                 buttonSize,
@@ -203,17 +244,15 @@ internal static class PluginRequirementsTable
 
     internal static float MeasurePluginInfoWidth
     (
-        Entry[]                     entries,
-        IEnumerable<IExposedPlugin> installedPlugins
+        Entry[] entries
     )
     {
-        var width = ImGui.CalcTextSize(OmniLoc.Get("Requirements.Column.Plugin")).X;
-        foreach (var entry in entries)
+        var width = OmniTextMeasurements.Measure(OmniLoc.Get("Requirements.Column.Plugin")).X;
+        foreach (var row in GetDisplay(entries).Rows)
         {
-            width = MathF.Max(width, ImGui.CalcTextSize(OmniLoc.Get(entry.NameKey)).X);
-            if (FindPlugin(entry, installedPlugins) is { } plugin)
-                width = MathF.Max(width,
-                    ImGui.CalcTextSize(string.Format(OmniLoc.Get("Requirements.Version"), plugin.Version)).X);
+            width = MathF.Max(width, OmniTextMeasurements.Measure(row.Name).X);
+            if (row.Plugin is not null)
+                width = MathF.Max(width, OmniTextMeasurements.Measure(row.Version).X);
         }
         return width;
     }
@@ -251,4 +290,15 @@ internal static class PluginRequirementsTable
         string?  URL,
         string[] Identifiers
     );
+
+    private sealed class DisplayTable
+    {
+        internal long Revision = -1;
+        internal long LocalizationRevision = -1;
+        internal DisplayRow[] Rows = [];
+        internal string[] Labels = [];
+    }
+
+    private readonly record struct DisplayRow(Entry Entry, IExposedPlugin? Plugin, string Name, string Version,
+        string Reason, string LinkID);
 }

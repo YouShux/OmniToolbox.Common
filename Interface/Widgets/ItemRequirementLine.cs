@@ -1,20 +1,48 @@
+using System.Globalization;
 using Lumina.Excel.Sheets;
 using OmenTools;
 using OmenTools.Extensions;
 using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.Items;
 using OmniToolbox.UI.Theme;
+using OmniToolbox.UI.Widgets;
 
 namespace OmniToolbox.UI.Controls;
 
 public static class ItemRequirementLine
 {
+    private static readonly Dictionary<(uint? Item, decimal Patch), Display> Displays = [];
+    private static long LocalizationRevision = -1;
+    private static string Culture = string.Empty;
+
+    internal static void ClearDisplayCaches() => Displays.Clear();
     public static void Draw
     (
         uint?   itemID,
         decimal patch
     )
     {
+        if (LocalizationRevision != OmniLoc.Revision || Culture != CultureInfo.CurrentCulture.Name)
+        {
+            LocalizationRevision = OmniLoc.Revision;
+            Culture = CultureInfo.CurrentCulture.Name;
+            Displays.Clear();
+        }
+        var key = (itemID, patch);
+        if (!Displays.TryGetValue(key, out var display))
+        {
+            if (Displays.Count >= 256)
+                Displays.Clear();
+            display = new();
+            if (itemID is { } displayID && LuminaGetter.TryGetRow<Item>(displayID, out var displayItem) &&
+                displayItem.ClassJobCategory.RowId != 0 && displayItem.ClassJobCategory.IsValid)
+            {
+                display.Job = displayItem.ClassJobCategory.Value.Name.ExtractText();
+                display.Level = string.Format(OmniLoc.Get("ItemInfo.RequiredLevel"), displayItem.LevelEquip);
+            }
+            display.Patch = patch > 0 ? string.Format(OmniLoc.Get("Collection.Preview.Version"), ItemPatchMap.Format(patch)) : string.Empty;
+            Displays.Add(key, display);
+        }
         var hasPart = false;
         var lineStart = ImGui.GetCursorPosX();
         var lineEnd = lineStart + ImGui.GetContentRegionAvail().X;
@@ -30,11 +58,11 @@ public static class ItemRequirementLine
             var category = item.ClassJobCategory.Value;
             var player = DService.Instance().ObjectTable.LocalPlayer;
             DrawPart(
-                category.Name.ExtractText(),
+                display.Job,
                 player is null ? neutral
                     : category.IsClassJobIn(player.ClassJob.RowId) ? OmniTheme.Tokens.Success : OmniTheme.Tokens.Error);
             DrawPart(
-                string.Format(OmniLoc.Get("ItemInfo.RequiredLevel"), item.LevelEquip),
+                display.Level,
                 player is null ? neutral
                     : player.Level >= item.LevelEquip ? OmniTheme.Tokens.Success : OmniTheme.Tokens.Error);
         }
@@ -42,7 +70,7 @@ public static class ItemRequirementLine
         if (patch > 0)
         {
             DrawPart(
-                string.Format(OmniLoc.Get("Collection.Preview.Version"), ItemPatchMap.Format(patch)),
+                display.Patch,
                 neutral);
         }
 
@@ -56,7 +84,7 @@ public static class ItemRequirementLine
             {
                 var nextX = ImGui.GetItemRectMax().X - ImGui.GetWindowPos().X + ImGui.GetScrollX() +
                             ImGui.GetStyle().ItemSpacing.X;
-                if (nextX + ImGui.CalcTextSize(text).X <= lineEnd)
+                if (nextX + OmniTextMeasurements.Measure(text).X <= lineEnd)
                 {
                     ImGui.SameLine();
                 }
@@ -67,5 +95,12 @@ public static class ItemRequirementLine
             ImGui.PopTextWrapPos();
             hasPart = true;
         }
+    }
+
+    private sealed class Display
+    {
+        internal string Job = string.Empty;
+        internal string Level = string.Empty;
+        internal string Patch = string.Empty;
     }
 }

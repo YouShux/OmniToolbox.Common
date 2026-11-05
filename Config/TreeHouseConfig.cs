@@ -71,11 +71,11 @@ public sealed class TreeHouseConfig
         return changed;
     }
 
-    public void EnsureDefaultModuleStates()
+    public void EnsureDefaultModuleStates(bool enabled)
     {
         foreach (var moduleName in DefaultEnabledModuleNames)
         {
-            ModuleStates.TryAdd(moduleName, true);
+            ModuleStates.TryAdd(moduleName, enabled);
         }
     }
 

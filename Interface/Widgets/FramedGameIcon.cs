@@ -4,6 +4,7 @@ using Dalamud.Utility;
 using OmniToolbox.Host;
 using OmniToolbox.Items;
 using OmniToolbox.UI.Theme;
+using OmniToolbox.UI.Widgets;
 using LuminaAction = Lumina.Excel.Sheets.Action;
 using LuminaItem = Lumina.Excel.Sheets.Item;
 
@@ -92,6 +93,11 @@ internal static class FramedGameIcon
         IReadOnlyList<(byte Stain0, byte Stain1)>? recordedStains = null
     )
     {
+        var extent = Vector2.Max(Vector2.One, size * 0.15f);
+        if (recordedStains is not { Count: > 1 } &&
+            OmniControls.IsRectClipped(drawList, position - extent, position + size + extent))
+            return;
+
         if (itemID != 0)
         {
             var (baseItemID, kind) = ItemUtil.GetBaseId(itemID);
@@ -143,7 +149,7 @@ internal static class FramedGameIcon
         }
         else
         {
-            var textSize = ImGui.CalcTextSize("?");
+            var textSize = OmniTextMeasurements.Measure("?");
             drawList.AddText(
                 iconPosition + (iconMaximum - iconPosition - textSize) * 0.5f,
                 OmniTheme.Color(OmniTheme.Tokens.Text with
@@ -177,6 +183,10 @@ internal static class FramedGameIcon
         bool          active = false
     )
     {
+        var extent = active ? size * 0.05f : Vector2.Zero;
+        if (OmniControls.IsRectClipped(drawList, position - extent, position + size + extent))
+            return;
+
         if (TryGetFrame(out var frame))
         {
             drawList.AddImage(
