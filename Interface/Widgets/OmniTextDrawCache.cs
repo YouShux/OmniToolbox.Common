@@ -62,7 +62,7 @@ internal sealed class OmniTextDrawCache(string name) : IDisposable
             if (stable && !slot.Failed && (slot.Texture is not null || TryBuild(slot, frame)))
             {
                 var texture = slot.Texture;
-                if (texture is not null)
+                if (texture is not null && frame >= slot.UseFromFrame)
                 {
                     var min = origin - new Vector2(3f);
                     drawList.AddImage(texture.Handle, min, min + texture.Size);
@@ -127,6 +127,7 @@ internal sealed class OmniTextDrawCache(string name) : IDisposable
         }
         slot.Texture = texture;
         slot.Bytes = bytes;
+        slot.UseFromFrame = frame + 1;
         return true;
     }
 
@@ -173,6 +174,7 @@ internal sealed class OmniTextDrawCache(string name) : IDisposable
         internal int Frame = -1;
         internal IDrawListTextureWrap? Texture;
         internal long Bytes;
+        internal int UseFromFrame;
         internal bool Failed;
     }
 }
