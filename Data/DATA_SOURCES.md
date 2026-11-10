@@ -61,6 +61,8 @@ Omni 对数据进行字段筛选、格式转换、分类、去重和补充。
 
 特殊武器材料流程还参考 FFXIV Console Games Wiki 的[义军武器](https://ffxiv.consolegameswiki.com/wiki/Resistance_Weapons)、[禁地兵装](https://ffxiv.consolegameswiki.com/wiki/Eurekan_Weapons)、[幻境武器](https://ffxiv.consolegameswiki.com/wiki/Phantom_Weapons)及其各阶段任务资料，以及 [AkhMorning 的义军武器指南](https://www.akhmorning.com/resources/bozjan-southern-front/relic-weapons/)。
 
+自动狩猎的幻武目标与完成位使用客户端 `PhantomWeaponExTodoDetails`、`PhantomWeaponExTodoDetailTxt` 和 `ExtendedQuestCounter`。狩猎表未覆盖的[其瓦固雕工](https://ffxiv.consolegameswiki.com/wiki/Chirwagur_Engraver)与[圆扇刺](https://ffxiv.consolegameswiki.com/wiki/Nopalitender)出生点采用上述页面的地图坐标，维护入口为 `OmniToolbox.Tree/Automation/AutoHunt/AutoHunt.SpawnCatalog.cs`。
+
 ## 官方玩法、商品与活动资料
 
 职业上限参考官方[驯兽师指南](https://na.finalfantasyxiv.com/jobguide/beastmaster/)和[青魔法师指南](https://na.finalfantasyxiv.com/jobguide/bluemage/)；魔兽图鉴补丁归类参考 [7.5 专题页](https://na.finalfantasyxiv.com/dawntrail/patch_7_5/)。

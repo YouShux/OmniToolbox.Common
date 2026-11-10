@@ -26,7 +26,17 @@ public static class PartyFinderShareModels
         [property: JsonPropertyName("lease_expires_at")]
         long LeaseExpiresAt,
         [property: JsonPropertyName("revision")]
-        long Revision);
+        long Revision)
+    {
+        [JsonPropertyName("candidate_count")]
+        public int CandidateCount { get; init; }
+
+        [JsonPropertyName("lease_age_seconds")]
+        public long LeaseAgeSeconds { get; init; }
+
+        [JsonPropertyName("snapshot_age_seconds")]
+        public long? SnapshotAgeSeconds { get; init; }
+    }
 
     public sealed record ObservationBatch(
         [property: JsonPropertyName("schema_version")]
@@ -104,5 +114,9 @@ public static class PartyFinderShareModels
         [property: JsonPropertyName("generated_at")]
         long GeneratedAt,
         [property: JsonPropertyName("listings")]
-        Listing[] Listings);
+        Listing[] Listings)
+    {
+        [JsonPropertyName("is_complete")]
+        public bool? IsComplete { get; init; }
+    }
 }
