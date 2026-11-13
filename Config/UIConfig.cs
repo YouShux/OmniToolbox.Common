@@ -13,6 +13,8 @@ public sealed class UIConfig
 
     public Vector2 ItemInformationWindowSize { get; set; } = DefaultItemInformationWindowSize;
 
+    public Dictionary<string, Vector2> ExpandedWindowSizes { get; set; } = new(StringComparer.Ordinal);
+
     public int ActiveTab { get; set; } = 3;
 
     public HashSet<string> ExpandedSettingsSections { get; set; } = [];

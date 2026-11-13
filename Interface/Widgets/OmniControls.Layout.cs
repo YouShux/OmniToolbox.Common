@@ -445,7 +445,6 @@ public static partial class OmniControls
         return size;
     }
 
-    // 参数为已测量的屏幕尺寸；只调整下一组的位置，不提交控件或改变最后项目。
     public static void SameLineOrWrap
     (
         float nextWidth,

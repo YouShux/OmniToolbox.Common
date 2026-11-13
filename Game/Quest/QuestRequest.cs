@@ -18,6 +18,8 @@ public sealed record QuestRequest
     public QuestRequestMode Mode { get; init; }
     public QuestTarget[] Targets { get; init; } = [];
     public QuestTargetRelation Relation { get; init; }
+    internal bool AllowEurekaEntry { get; init; }
+    internal bool FinishAcceptedQuestFirst { get; init; }
 
     public bool IsValid() =>
         !string.IsNullOrWhiteSpace(Caller) && Caller.Length <= 128 &&

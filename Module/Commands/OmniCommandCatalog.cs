@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using OmniToolbox.Common.Module.Abstractions;
 using OmniToolbox.Config;
 using OmniToolbox.UI;
 
@@ -62,7 +63,6 @@ public static class OmniCommandCatalog
         return arguments.Length == 0 ? $"/omni {definition.Name}" : $"/omni {definition.Name} {arguments}";
     }
 
-    /// <summary>使用稳定模块名生成可供显示、复制和解析的模块指令。</summary>
     public static string FormatModule
     (
         string moduleName,
@@ -91,10 +91,28 @@ public static class OmniCommandCatalog
 
             var name = definition.Name;
             if (DisplayMode == CommandDisplayMode.Chinese)
-                name = language is { } value ? OmniLoc.Get(definition.NameKey, value) : OmniLoc.Get(definition.NameKey);
+                name = OmniLoc.Get(definition.NameKey, language ?? ChineseDisplayLanguage());
             return $"{match.Groups["prefix"].Value}{name}";
         });
     }
+
+    public static string FormatModuleDisplayText(string text, OmniModuleBase module)
+    {
+        if (DisplayMode != CommandDisplayMode.Chinese)
+            return FormatDisplayText(text);
+
+        var language = ChineseDisplayLanguage();
+        var moduleTitle = OmniLoc.Get(module, "Title", language);
+        return CommandTextPattern.Replace(text, match =>
+            string.Equals(match.Groups["name"].Value, module.ModuleName, StringComparison.OrdinalIgnoreCase)
+                ? $"{match.Groups["prefix"].Value}{moduleTitle}"
+                : FormatDisplayText(match.Value, language));
+    }
+
+    private static UILanguage ChineseDisplayLanguage() =>
+        OmniLoc.CurrentLanguage == UILanguage.TraditionalChinese
+            ? UILanguage.TraditionalChinese
+            : UILanguage.SimplifiedChinese;
 
     public static IReadOnlyDictionary<string, string> CreateTexts()
     {
@@ -201,6 +219,11 @@ public static class OmniCommandCatalog
         new("gcexchange", "虚空军票兑换", "", "打开军票兑换界面", "AutoGCSeal", OmniCommandArguments.None),
         new("sortitems", "自动整理", "", "整理物品", "AutoSortItems", OmniCommandArguments.None),
         new("specialscenario", "自动特殊场景探索", "[区域ID/名称]", "打开场景探索窗口或开始指定区域", "SpecialScenarioExplorer", OmniCommandArguments.Optional),
+        new("autohunt", "自动狩猎", "", "打开自动狩猎窗口", "AutoHunt", OmniCommandArguments.None),
+        new("autotripletriadcollection", "自动幻卡收集", "", "打开自动幻卡收集窗口", "AutoTripleTriadCollection", OmniCommandArguments.None),
+        new("autoquest", "自动任务", "[任务ID]", "打开自动任务窗口，或执行指定任务及其前置任务", "AutoQuest", OmniCommandArguments.Optional),
+        new("autoduty", "自动副本", "", "打开自动副本窗口", "AutoDuty", OmniCommandArguments.None),
+        new("autodeepdungeon", "自动深层迷宫", "[potd|hoh|eo|pt]", "打开自动深层迷宫窗口，或开始指定迷宫", "AutoDeepDungeon", OmniCommandArguments.Optional),
         new("leaveduty", "即刻退本", "", "离开当前副本", "InstantLeaveDuty", OmniCommandArguments.None),
         new("invulnerable", "无敌模式", "", "切换进入或退出无敌模式", "InvulnerableMode", OmniCommandArguments.None),
         new("relicreplicamap", "肝武", "", "导出肝武复制品对应表", null, OmniCommandArguments.None),
@@ -208,7 +231,7 @@ public static class OmniCommandCatalog
         new("mooglemail", "虚空莫古邮件", "", "打开莫古邮件", "VoidMoogleMail", OmniCommandArguments.None),
         new("housingsearch", "售房查询", "", "打开售房查询", "HousingSales", OmniCommandArguments.None),
         new("island", "自动无人岛", "[enter]", "打开无人岛管理；enter 自动前往无人岛", "AutoIslandSanctuary", OmniCommandArguments.Optional),
-        new("ishgardrestoration", "自动重建伊修加德", "[open]", "打开伊修加德重建设置", "AutoIshgardRestoration", OmniCommandArguments.Optional),
+        new("ishgardrestoration", "自动重建伊修加德", "", "打开伊修加德重建设置", "AutoIshgardRestoration", OmniCommandArguments.None),
         new("relogin", "重新登录", "<角色名@世界名>", "重新登录指定角色", "AutoLogin", OmniCommandArguments.Required),
         new("battlehornpreset", "兽笛设置", "<方案名>", "应用指定兽笛方案", "BetterNotebooks", OmniCommandArguments.Required),
         new("bluemageset", "青魔技能预设", "<方案名>", "应用指定青魔技能预设", "BetterNotebooks", OmniCommandArguments.Required),

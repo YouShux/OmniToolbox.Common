@@ -47,7 +47,6 @@ public abstract class OmniModuleBase : IAsyncDisposable
     /// </summary>
     public abstract ModuleLocalization Localization { get; }
 
-    /// <summary>判断模块是否具有指定语言的完整词库。</summary>
     public bool SupportsLanguage(UILanguage language)
     {
         var complete = LocalizationRegistration is { } registration

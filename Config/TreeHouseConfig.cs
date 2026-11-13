@@ -20,6 +20,7 @@ public sealed class TreeHouseConfig
         "AutoMount",
         "AutoTalkSkip",
         "AutoCutsceneSkip",
+        "AutoConfirmAreaTravel",
         "FastSearchResults"
     ];
 
@@ -58,18 +59,6 @@ public sealed class TreeHouseConfig
         string moduleName,
         bool   enabled
     ) => ModuleStates[moduleName] = enabled;
-
-    internal bool RemoveModule(string moduleName)
-    {
-        var changed = ModuleStates.Remove(moduleName);
-        changed |= Favorites.Remove(moduleName);
-        changed |= moduleConfigs.Remove(moduleName);
-        changed |= rawModuleConfigs.Remove(moduleName);
-        changed |= localModuleNames.Remove(moduleName);
-        foreach (var group in FavoriteGroups.Values)
-            changed |= group.Remove(moduleName);
-        return changed;
-    }
 
     public void EnsureDefaultModuleStates(bool enabled)
     {

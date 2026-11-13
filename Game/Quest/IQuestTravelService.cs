@@ -4,7 +4,10 @@ namespace OmniToolbox.Quests;
 
 public enum QuestWorkState { Idle, Running, Succeeded, Failed }
 
-public sealed record QuestTravelTarget(uint TerritoryID, Vector3 Position, float Radius = 3, bool AllowFlight = true);
+public sealed record QuestTravelTarget(uint TerritoryID, Vector3 Position, float Radius = 3, bool AllowFlight = true)
+{
+    internal bool AllowEurekaEntry { get; init; }
+}
 
 public sealed record QuestWorkStatus(QuestWorkState State, string? Error = null);
 

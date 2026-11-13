@@ -221,13 +221,10 @@ public sealed class IconBrowser : IEscapeClosableWindow
     private BrowserMode                                       mode;
     private string                                            gameIconFilter      = string.Empty;
     private string                                            seIconFilter        = string.Empty;
-    private Vector2                                           expandedWindowSize;
+    private readonly OmniWindowSize                           expandedWindowSize = new("###OmniIconBrowser");
     private int                                               selectedGameIconTab;
     private bool                                              isCollapsed;
-    private bool                                              restoreExpandedSize;
     private bool                                              isFocused;
-    private float                                             lastScale;
-    private Vector2                                           lastViewportSize;
 
     public IconBrowser
     (
@@ -300,7 +297,6 @@ public sealed class IconBrowser : IEscapeClosableWindow
         using var style = new OmniStyleScope();
         var iconSize = OmniTheme.Scale(config.IconSize);
         using var placement = new OmniWindowPlacement.WindowScope("###OmniIconBrowser");
-        var viewportSize = OmniWindowPlacement.GetWorkArea("###OmniIconBrowser").Size;
         var imguiStyle = ImGui.GetStyle();
         var toolbarMinWidth =
             OmniTheme.Scale(SEARCH_CONTROL_WIDTH + 160f + 180f) +
@@ -310,29 +306,10 @@ public sealed class IconBrowser : IEscapeClosableWindow
             OmniTextMeasurements.Measure(OmniLoc.Get("IconBrowser.Mode")).X +
             (imguiStyle.ItemSpacing.X + imguiStyle.ItemInnerSpacing.X) * 3f +
             imguiStyle.WindowPadding.X * 2f;
-        if (isCollapsed)
-        {
-            ImGui.SetNextWindowSize(
-                OmniTheme.ClampWindowSize(OmniTheme.CollapsedWindowSize(
-                    expandedWindowSize == Vector2.Zero
-                        ? MathF.Min(toolbarMinWidth, viewportSize.X)
-                        : OmniTheme.Scale(expandedWindowSize).X)),
-                ImGuiCond.Always);
-        }
-        else
-        {
-            ImGui.SetNextWindowSizeConstraints(
-                OmniTheme.ClampWindowSize(OmniTheme.Scale(new Vector2(320f, 240f))),
-                viewportSize);
-            if ((restoreExpandedSize || lastScale != OmniTheme.ScaleValue || lastViewportSize != viewportSize) && expandedWindowSize != Vector2.Zero)
-            {
-                ImGui.SetNextWindowSize(OmniTheme.ClampWindowSize(OmniTheme.Scale(expandedWindowSize)), ImGuiCond.Always);
-            }
-
-            restoreExpandedSize = false;
-        }
-        lastScale        = OmniTheme.ScaleValue;
-        lastViewportSize = viewportSize;
+        var expandedWidth = expandedWindowSize.GetExpandedSize(new(toolbarMinWidth / OmniTheme.ScaleValue, 0f)).X;
+        expandedWindowSize.Apply(Vector2.Zero, new(320f, 240f), isCollapsed
+            ? OmniTheme.CollapsedWindowSize(OmniTheme.Scale(expandedWidth))
+            : null);
 
         ImGui.SetNextWindowCollapsed(false, ImGuiCond.Always);
         var flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
@@ -353,10 +330,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
         var windowPosition = ImGui.GetWindowPos();
         var windowSize = ImGui.GetWindowSize();
-        if (!isCollapsed)
-        {
-            expandedWindowSize = OmniTheme.Unscale(OmniTheme.PreserveWindowSize(windowSize, OmniTheme.Scale(expandedWindowSize)));
-        }
+        expandedWindowSize.SaveAfterResize();
 
         var (framePosition, frameSize) = OmniWindowChrome.GetFrameBounds(windowPosition, windowSize, isCollapsed);
         var chrome = OmniWindowChrome.Draw(
@@ -370,11 +344,6 @@ public sealed class IconBrowser : IEscapeClosableWindow
         var collapseChanged = chrome.ToggleCollapse;
         if (chrome.ToggleCollapse)
         {
-            if (isCollapsed)
-            {
-                restoreExpandedSize = true;
-            }
-
             isCollapsed = !isCollapsed;
         }
         if (chrome.CloseClicked)

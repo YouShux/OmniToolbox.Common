@@ -1,5 +1,17 @@
 {
   "schemaVersion": 1,
+  "provenance": {
+    "relicWeaponCatalog": ["https://na.finalfantasyxiv.com/lodestone/playguide/db/", "https://ffxivcollect.com/api/relics", "https://ffxiv.consolegameswiki.com/wiki/Extreme_Trial_Glamour_Weapons"],
+    "manualCollectionSources": ["https://ff14.huijiwiki.com/", "https://ffxivcollect.com/"],
+    "blueMageGearModel": ["https://docs.google.com/document/d/1-NBJDkyl8h_UXFcOba-CrPPcFXZrDs2QXX53pSS3QJc/edit", "https://docs.google.com/spreadsheets/d/1IZBK7MMMuS4KABnWxDCUNrPRAf_hzUz89BmqYxjpMMA/edit"],
+    "manualHuntLocations": ["https://www.xivdaily.com/hunts/arr", "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/026d818cd3a/", "https://ffxiv.consolegameswiki.com/wiki/Chirwagur_Engraver", "https://ffxiv.consolegameswiki.com/wiki/Nopalitender"],
+    "brandIcons": {
+      "Discord Symbol Color (Blurple)": "https://discord.com/branding",
+      "GitHub Invertocat": "https://brand.github.com/foundations/logo",
+      "爱发电": "https://static.afdiancdn.com/static/img/icons/apple-touch-icon-152x152.png",
+      "Omni Info": "用户提供"
+    }
+  },
   "resources": [
     {
       "name": "ItemPatch.csv",
@@ -125,7 +137,7 @@
       "name": "RelicMaterialSources.csv",
       "path": "Resources/Collections/RelicMaterialSources.csv",
       "group": "Collection",
-      "source": "https://ff14.huijiwiki.com/; DATA_SOURCES.md",
+      "source": "https://ff14.huijiwiki.com/wiki/义军武器; https://ff14.huijiwiki.com/wiki/幻境武器; https://ff14.huijiwiki.com/wiki/天钢工具; https://ff14.huijiwiki.com/wiki/天上福地云冠群岛",
       "version": "manually maintained; source revision absent",
       "update": "manual source review"
     }

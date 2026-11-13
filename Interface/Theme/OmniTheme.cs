@@ -336,7 +336,6 @@ public static class OmniTheme
         }
     }
 
-    // 仅覆盖当前绘制调用链，退出后恢复，避免工具栏配色影响其他窗口。
     public readonly struct ColorScope : IDisposable
     {
         private readonly ThemeTokens? previousTokens;
@@ -361,7 +360,6 @@ public static class OmniTheme
         }
     }
 
-    // 局部窗口按当前字号布局，退出后恢复外层尺寸，支持嵌套弹窗。
     public readonly struct ScaleScope : IDisposable
     {
         private readonly float? previousScale;

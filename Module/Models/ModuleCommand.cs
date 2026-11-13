@@ -12,5 +12,9 @@ public readonly record struct ModuleCommand
 {
     public string DisplayCommand => OmniCommandCatalog.FormatDisplayText(ClipboardText);
 
-    public string GetDisplayText(OmniModuleBase module) => $"{DisplayCommand} → {OmniLoc.Get(module, DescriptionKey)}";
+    public string GetDisplayText(OmniModuleBase module)
+    {
+        return $"{OmniCommandCatalog.FormatModuleDisplayText(ClipboardText, module)} → " +
+               OmniLoc.Get(module, DescriptionKey);
+    }
 }

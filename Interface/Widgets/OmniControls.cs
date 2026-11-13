@@ -1348,6 +1348,25 @@ public static partial class OmniControls
             text, wrapWidth);
     }
 
+    public static unsafe void DrawTableGroupTitle(string title)
+    {
+        ImGui.TableSetColumnIndex(0);
+        var table = ImGuiP.GetCurrentTable();
+        var clip = table.Bg2ClipRectForDrawCmd;
+        if (table.RowPosY2 <= clip.Min.Y || table.RowPosY1 >= clip.Max.Y) return;
+
+        ImGuiP.TablePushBackgroundChannel();
+        try
+        {
+            DrawTextCentered(title, new Vector2(clip.Min.X, table.RowPosY1),
+                new Vector2(clip.Max.X - clip.Min.X, table.RowPosY2 - table.RowPosY1), OmniTheme.ControlAccent);
+        }
+        finally
+        {
+            ImGuiP.TablePopBackgroundChannel();
+        }
+    }
+
     public static void BeginTableHeaderRow() =>
         ImGui.TableNextRow(ImGuiTableRowFlags.Headers, MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight()));
 

@@ -35,9 +35,6 @@ public static class OmniLoc
     /// </summary>
     public static long Revision => Interlocked.Read(ref ResourceRevision);
 
-    /// <summary>
-    /// 获取所有模块共用的当前界面语言。
-    /// </summary>
     public static UILanguage CurrentLanguage => (UILanguage)Volatile.Read(ref Language);
 
     /// <summary>
@@ -94,9 +91,6 @@ public static class OmniLoc
         TryGet(owner, key, value, out var text) ? text
             : throw new KeyNotFoundException($"Module localization key is not registered: {owner.ModuleName}/{key}");
 
-    /// <summary>
-    /// 尝试按当前语言获取模块自带词条。
-    /// </summary>
     public static bool TryGet
     (
         OmniModuleBase owner,
@@ -105,9 +99,6 @@ public static class OmniLoc
     ) =>
         TryGet(owner, key, CurrentLanguage, out text);
 
-    /// <summary>
-    /// 尝试按指定语言获取模块自带词条。
-    /// </summary>
     public static bool TryGet
     (
         OmniModuleBase owner,

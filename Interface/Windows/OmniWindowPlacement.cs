@@ -5,12 +5,31 @@ namespace OmniToolbox.UI;
 public static unsafe class OmniWindowPlacement
 {
     private static UIConfig? Config;
+    private static Action? SaveConfig;
     [ThreadStatic] private static string? ScopedWindowName;
 
     public static bool IsMultiMonitorActive => Config is { MultiMonitorEnabled: true } &&
         (ImGui.GetIO().ConfigFlags & ImGuiConfigFlags.ViewportsEnable) != 0;
 
-    public static void Configure(UIConfig? config) => Config = config;
+    public static void Configure(UIConfig? config) => Configure(config, null);
+
+    public static void Configure(UIConfig? config, Action? saveConfig)
+    {
+        Config = config;
+        SaveConfig = saveConfig;
+    }
+
+    internal static Vector2 GetExpandedSize(string windowID, Vector2 defaultSize) =>
+        Config?.ExpandedWindowSizes?.TryGetValue(windowID, out var size) == true &&
+        float.IsFinite(size.X) && size.X > 0f && float.IsFinite(size.Y) && size.Y > 0f
+            ? size : defaultSize;
+
+    internal static void SaveExpandedSize(string windowID, Vector2 size)
+    {
+        if (Config is not { } config) return;
+        (config.ExpandedWindowSizes ??= new(StringComparer.Ordinal))[windowID] = size;
+        SaveConfig?.Invoke();
+    }
 
     public static (Vector2 Position, Vector2 Size) GetWorkArea(string? windowName = null)
     {

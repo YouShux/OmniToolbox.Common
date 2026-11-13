@@ -194,7 +194,6 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
 
     public long Revision => Interlocked.Read(ref revision);
 
-    /// <summary>在后台解析来源资源和构建索引，并在框架线程分帧取得游戏文本。</summary>
     public static Task<CollectionSourceService> CreateAsync(CancellationToken cancellationToken = default) =>
         CreateAsync(null, cancellationToken);
 

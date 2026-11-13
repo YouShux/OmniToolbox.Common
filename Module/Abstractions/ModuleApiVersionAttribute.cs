@@ -6,8 +6,5 @@ namespace OmniToolbox.Common.Module.Abstractions;
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class ModuleApiVersionAttribute(int version) : Attribute
 {
-    /// <summary>
-    /// 获取模块实现的接口版本。
-    /// </summary>
     public int Version { get; } = version;
 }

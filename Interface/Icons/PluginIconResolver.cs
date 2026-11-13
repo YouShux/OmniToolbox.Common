@@ -42,7 +42,6 @@ internal static class PluginIconResolver
         DalamudServices.PluginInterface.GetPluginConfigDirectory(), "TreeHouse", "MultiToolbar", "Cache", "PluginIcons");
     private static readonly FeatureLifetime                              CacheLifetime       = new();
     private static Guid?                                                 PNGContainerGUID;
-    private static bool                                                  CacheMigrated;
     private static int                                                   RemoteIconsDirty = 1;
 
     static PluginIconResolver()
@@ -86,7 +85,6 @@ internal static class PluginIconResolver
             return GetDefaultIcon();
         }
 
-        MigrateCache();
         if (GetLocalIconPath(plugin) is { } iconPath)
         {
             try
@@ -260,37 +258,6 @@ internal static class PluginIconResolver
         {
             DalamudServices.PluginLog.Warning(exception, $"Unable to save plugin icon cache: {path}");
             return false;
-        }
-    }
-
-    private static void MigrateCache()
-    {
-        if (CacheMigrated)
-            return;
-        CacheMigrated = true;
-        try
-        {
-            if (!Directory.Exists(CacheDirectory))
-                return;
-            foreach (var plugin in DalamudServices.PluginInterface.InstalledPlugins
-                         .GroupBy(plugin => plugin.InternalName, StringComparer.OrdinalIgnoreCase)
-                         .Select(group => group.OrderByDescending(plugin => plugin.IsLoaded)
-                             .ThenByDescending(plugin => plugin.Version).First()))
-            {
-                var key = $"{plugin.InternalName}\0{plugin.Version}\0{plugin.Manifest.IconUrl}";
-                var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
-                var oldPath = Path.Combine(CacheDirectory, hash + ".png");
-                if (!File.Exists(oldPath))
-                    continue;
-                var prefix = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(plugin.InternalName))) + "-";
-                var newPath = Path.Combine(CacheDirectory, prefix + hash + ".png");
-                if (!File.Exists(newPath))
-                    File.Move(oldPath, newPath);
-            }
-            QueueOldCacheRecycling(string.Empty);
-        }
-        catch (Exception)
-        {
         }
     }
 
