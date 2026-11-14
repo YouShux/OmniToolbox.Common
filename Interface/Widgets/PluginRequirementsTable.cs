@@ -69,12 +69,12 @@ internal static class PluginRequirementsTable
         return display;
     }
 
-    internal static void DrawCollapsible(string tableID, Entry[] entries, Action? drawStatus = null, bool scrollOnOpen = false)
+    internal static void DrawCollapsible(string tableID, Entry[] entries, Action? drawStatus = null)
     {
         if (!OmniControls.CollapsingHeader($"{OmniLoc.Get("Requirements.Dependencies.Title")}###dependencies{tableID}"))
             return;
 
-        var reveal = scrollOnOpen && ImGui.IsItemToggledOpen();
+        var reveal = ImGui.IsItemToggledOpen();
         drawStatus?.Invoke();
         Draw(null, tableID, entries, limitVisibleRows: true);
         if (reveal)
@@ -368,6 +368,8 @@ internal static class PluginRequirementsTable
             "https://github.com/erdelf/AutoDuty", ["AutoDuty"]),
         ..CombatAndNavigationPlugins
     ];
+
+    internal const string DEPENDENCY_WARNING_KEY = "Requirements.Dependencies.Warning";
 
     private const int MAX_VISIBLE_ROWS = 5;
 }
