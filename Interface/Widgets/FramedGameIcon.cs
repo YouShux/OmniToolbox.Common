@@ -198,7 +198,13 @@ internal static class FramedGameIcon
                 OmniTheme.Color(Vector4.One));
         }
 
-        if (!active || !TryGetActiveFrame(out var activeFrame))
+        if (active)
+            DrawActiveFrame(drawList, position, size);
+    }
+
+    internal static void DrawActiveFrame(ImDrawListPtr drawList, Vector2 position, Vector2 size)
+    {
+        if (!TryGetActiveFrame(out var activeFrame))
         {
             return;
         }

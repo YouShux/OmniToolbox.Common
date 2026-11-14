@@ -11,6 +11,26 @@ public static class OmniWindowChrome
     internal static void ClearDisplayCaches() => DragIDs.Clear();
     public static bool IsTextInputActive => ImGui.GetIO().WantTextInput;
 
+    public static bool Begin(string windowID, ImGuiWindowFlags flags, bool collapsed) =>
+        Begin(windowID, flags, collapsed, false);
+
+    public static bool Begin(string windowID, ImGuiWindowFlags flags, bool collapsed, bool compact)
+    {
+        ImGui.SetNextWindowCollapsed(false, ImGuiCond.Always);
+        var fixedSize = collapsed || compact;
+        using var minimum = OmniControls.ControlScope.PushStyle(ImGuiStyleVar.WindowMinSize,
+            fixedSize ? Vector2.One : ImGui.GetStyle().WindowMinSize);
+        return ImGui.Begin(windowID, fixedSize ? flags | ImGuiWindowFlags.NoResize : flags);
+    }
+
+    public static bool Begin(string windowID, ref bool open, ImGuiWindowFlags flags, bool collapsed)
+    {
+        ImGui.SetNextWindowCollapsed(false, ImGuiCond.Always);
+        using var minimum = OmniControls.ControlScope.PushStyle(ImGuiStyleVar.WindowMinSize,
+            collapsed ? Vector2.One : ImGui.GetStyle().WindowMinSize);
+        return ImGui.Begin(windowID, ref open, collapsed ? flags | ImGuiWindowFlags.NoResize : flags);
+    }
+
     public static void UpdateEscapeClose
     (
         EscapeCloseController  controller,

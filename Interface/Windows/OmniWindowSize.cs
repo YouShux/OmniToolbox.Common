@@ -30,7 +30,28 @@ public sealed class OmniWindowSize
         return float.IsFinite(size.X) && size.X > 0f && float.IsFinite(size.Y) && size.Y > 0f ? size : defaultSize;
     }
 
+    public bool IsCompact { get; set; }
+
+    public bool ApplyCompact(bool clicked)
+    {
+        if (!clicked) return false;
+        IsCompact = !IsCompact;
+        return true;
+    }
+
     public void Restore() => lastScale = 0f;
+
+    public void ApplyCollapsible(Vector2 defaultSize, Vector2 minimumSize, bool collapsed, float fallbackWidth = 0f)
+    {
+        Vector2? headerSize = null;
+        if (collapsed)
+        {
+            var width = OmniTheme.Scale(GetExpandedSize(defaultSize)).X;
+            if (width <= 0f) width = fallbackWidth;
+            headerSize = OmniTheme.CollapsedWindowSize(MathF.Max(width, OmniTheme.Scale(minimumSize.X)));
+        }
+        Apply(defaultSize, minimumSize, headerSize);
+    }
 
     public void Apply(Vector2 defaultSize, Vector2 minimumSize, Vector2? compactSize = null)
     {

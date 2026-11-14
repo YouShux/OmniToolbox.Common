@@ -306,21 +306,13 @@ public sealed class IconBrowser : IEscapeClosableWindow
             OmniTextMeasurements.Measure(OmniLoc.Get("IconBrowser.Mode")).X +
             (imguiStyle.ItemSpacing.X + imguiStyle.ItemInnerSpacing.X) * 3f +
             imguiStyle.WindowPadding.X * 2f;
-        var expandedWidth = expandedWindowSize.GetExpandedSize(new(toolbarMinWidth / OmniTheme.ScaleValue, 0f)).X;
-        expandedWindowSize.Apply(Vector2.Zero, new(320f, 240f), isCollapsed
-            ? OmniTheme.CollapsedWindowSize(OmniTheme.Scale(expandedWidth))
-            : null);
+        expandedWindowSize.ApplyCollapsible(Vector2.Zero, new(320f, 240f), isCollapsed, toolbarMinWidth);
 
-        ImGui.SetNextWindowCollapsed(false, ImGuiCond.Always);
         var flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
                     ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove;
-        if (isCollapsed)
-        {
-            flags |= ImGuiWindowFlags.NoResize;
-        }
 
         OmniWindowChrome.SetNextWindowPosition("###OmniIconBrowser");
-        var drawWindow = ImGui.Begin("###OmniIconBrowser", flags);
+        var drawWindow = OmniWindowChrome.Begin("###OmniIconBrowser", flags, isCollapsed);
         isFocused = ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
         if (!drawWindow)
         {
@@ -341,11 +333,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
             "##collapseIconBrowser",
             "##closeIconBrowser");
         framePosition += ImGui.GetWindowPos() - windowPosition;
-        var collapseChanged = chrome.ToggleCollapse;
-        if (chrome.ToggleCollapse)
-        {
-            isCollapsed = !isCollapsed;
-        }
+        var collapseChanged = chrome.ApplyCollapse(ref isCollapsed);
         if (chrome.CloseClicked)
         {
             Close();

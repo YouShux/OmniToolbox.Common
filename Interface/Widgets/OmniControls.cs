@@ -178,10 +178,22 @@ public static partial class OmniControls
         float  minimumWidth = 0f
     )
     {
-        var tokens = OmniTheme.Tokens;
         var size = NavButtonSize(label);
         size.X = MathF.Max(size.X, minimumWidth);
-        return DrawOutlinedButton(label, size, active ? tokens.Accent : tokens.Surface, selected: active);
+        return NavButton(label, active, size);
+    }
+
+    public static bool NavButton
+    (
+        string  label,
+        bool    active,
+        Vector2 size,
+        bool    alignLeft = false
+    )
+    {
+        var tokens = OmniTheme.Tokens;
+        return DrawOutlinedButton(label, size, active ? tokens.Accent : tokens.Surface,
+            selected: active, navigation: true, alignLeft: alignLeft);
     }
 
     public static Vector2 NavButtonSize(string label) =>
@@ -1367,6 +1379,35 @@ public static partial class OmniControls
         }
     }
 
+    // 分组表格用 NoBordersInBody 保留表头列线，数据行绘制完毕后单独补列线。
+    internal static unsafe void DrawTableRowDividers()
+    {
+        var table = ImGuiP.GetCurrentTable();
+        var clip = table.Bg2ClipRectForDrawCmd;
+        var top = MathF.Max(table.RowPosY1, clip.Min.Y);
+        var bottom = MathF.Min(MathF.Max(table.RowPosY2,
+            table.InnerWindow.DC.CursorMaxPos.Y + ImGui.GetStyle().CellPadding.Y), clip.Max.Y);
+        if (bottom <= top) return;
+
+        ImGuiP.TablePushBackgroundChannel();
+        try
+        {
+            var draw = ImGui.GetWindowDrawList();
+            for (var index = 0; index < table.ColumnsCount; index++)
+            {
+                ref var column = ref table.Columns.Data[index];
+                if (column.IsEnabled == 0 || column.NextEnabledColumn < 0 ||
+                    column.MaxX <= clip.Min.X || column.MaxX >= clip.Max.X)
+                    continue;
+                draw.AddLine(new Vector2(column.MaxX, top), new Vector2(column.MaxX, bottom), table.BorderColorLight);
+            }
+        }
+        finally
+        {
+            ImGuiP.TablePopBackgroundChannel();
+        }
+    }
+
     public static void BeginTableHeaderRow() =>
         ImGui.TableNextRow(ImGuiTableRowFlags.Headers, MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight()));
 
@@ -1682,22 +1723,30 @@ public static partial class OmniControls
         Vector2  size,
         Vector4  normal,
         Vector4? textColor = null,
-        bool     selected = false
+        bool     selected = false,
+        bool     navigation = false,
+        bool     alignLeft = false
     )
     {
-        var textSize = OmniTextMeasurements.Measure(DisplayLabel(label));
+        var text = DisplayLabel(label);
         var padding = ImGui.GetStyle().FramePadding;
-        size = Vector2.Max(size, textSize + padding * 2f);
+        var customContent = navigation && text.Length == 0;
+        var textSize = customContent ? Vector2.Zero : OmniTextMeasurements.Measure(text);
+        if (!customContent)
+            size = Vector2.Max(size, textSize + padding * 2f);
         size = new(MathF.Ceiling(size.X), MathF.Ceiling(size.Y));
         WrapControl(size.X);
         size.X = MathF.Min(size.X, GetControlAvailableWidth());
         var wrap = textSize.X > size.X - padding.X * 2f + 1f;
-        if (wrap)
-            textSize = OmniTextMeasurements.Measure(DisplayLabel(label), false, MathF.Max(1f, size.X - padding.X * 2f));
-        size.Y = MathF.Max(size.Y, textSize.Y + padding.Y * 2f);
+        if (!customContent)
+        {
+            if (wrap)
+                textSize = OmniTextMeasurements.Measure(text, false, MathF.Max(1f, size.X - padding.X * 2f));
+            size.Y = MathF.Max(size.Y, textSize.Y + padding.Y * 2f);
+        }
         var pos = ImGui.GetCursorScreenPos();
         var clicked = false;
-        if (OmniTheme.UsesMaterial)
+        if (OmniTheme.UsesMaterial || navigation)
         {
             using var colors = ControlScope.PushColor(ImGuiCol.Text, Vector4.Zero)
                 .Push(ImGuiCol.Button, Vector4.Zero)
@@ -1728,15 +1777,32 @@ public static partial class OmniControls
         {
             DrawMaterialControl(drawList, pos + new Vector2(0f, GlassMotion.ButtonOffset()), size,
                 GlassMotion.ButtonFill(normal), radius, GlassMotion.CurrentItemID, selected);
-            DrawTextCentered(DisplayLabel(label), pos + padding, Vector2.Max(Vector2.One, size - padding * 2f), textColor ?? tokens.Text, wrap);
-            return clicked;
         }
-        DrawControlShadow(drawList, pos, size, radius);
-        drawList.AddRectFilled(pos, pos + size, OmniTheme.Color(fill), radius);
-        DrawControlFrame(drawList, pos, size, radius, OmniTheme.BorderThickness());
-        DrawControlHighlight(drawList, pos, size, radius);
-        DrawTextCentered(DisplayLabel(label), pos + padding, Vector2.Max(Vector2.One, size - padding * 2f), textColor ?? tokens.Text, wrap);
-        return ImGui.IsItemClicked();
+        else
+        {
+            DrawControlShadow(drawList, pos, size, radius);
+            drawList.AddRectFilled(pos, pos + size, OmniTheme.Color(fill), radius);
+            DrawControlFrame(drawList, pos, size, radius, OmniTheme.BorderThickness());
+            DrawControlHighlight(drawList, pos, size, radius);
+        }
+
+        if (!customContent)
+        {
+            var contentSize = Vector2.Max(Vector2.One, size - padding * 2f);
+            if (navigation)
+                drawList.PushClipRect(pos, pos + size, true);
+            if (alignLeft)
+                drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(),
+                    pos + new Vector2(padding.X, MathF.Max(0f, (size.Y - textSize.Y) * 0.5f)),
+                    OmniTheme.Color(textColor ?? tokens.Text), text, wrap ? contentSize.X : 0f);
+            else
+                DrawTextCentered(text, pos + padding, contentSize, textColor ?? tokens.Text, wrap);
+            if (navigation)
+                drawList.PopClipRect();
+        }
+        if (navigation && ImGui.IsItemFocused())
+            ImGuiP.RenderNavHighlight(new ImRect(pos, pos + size), ImGui.GetID(label));
+        return OmniTheme.UsesMaterial || navigation ? clicked : ImGui.IsItemClicked();
     }
 
     public static void DrawPopupBackground()

@@ -203,7 +203,7 @@ public static class OmniTheme
 
     public static Vector2 MainWindowMinSize() => Scale(new Vector2(320f, 240f));
 
-    public static Vector2 CollapsedWindowSize(float width) => ClampWindowSize(new(MathF.Max(Scale(420f), width), TitleBarHeight() + Scale(4f)));
+    public static Vector2 CollapsedWindowSize(float width) => ClampWindowSize(new(width, TitleBarHeight() + Scale(4f)));
 
     public static Vector2 Unscale(Vector2 value) => value / ScaleValue;
 

@@ -1,6 +1,3 @@
-using OmniToolbox.UI.Controls;
-using OmniToolbox.UI.Theme;
-
 namespace OmniToolbox.UI;
 
 public readonly record struct OmniWindowChromeResult
@@ -11,4 +8,11 @@ public readonly record struct OmniWindowChromeResult
 )
 {
     public bool ToggleCollapse => CollapseClicked || TitleDoubleClicked;
+
+    public bool ApplyCollapse(ref bool collapsed)
+    {
+        if (!ToggleCollapse) return false;
+        collapsed = !collapsed;
+        return true;
+    }
 }
