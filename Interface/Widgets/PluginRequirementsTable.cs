@@ -44,18 +44,30 @@ internal static class PluginRequirementsTable
         display.LocalizationRevision = OmniLoc.Revision;
         display.Rows = new DisplayRow[entries.Length];
         var originalBossModEnabled = PluginDependencies.IsOriginalBossModEnabled(Plugins);
+        PluginDependencies.GetLoadedRotation(Plugins, out var rotationConflict);
         for (var index = 0; index < entries.Length; index++)
         {
             var entry = entries[index];
             var plugin = FindPlugin(entry, Plugins);
             var originalVnavmesh = entry == Vnavmesh && plugin is not null &&
                                    PluginDependencies.IsOriginalVnavmeshEnabled(plugin);
-            var blocked = entry == BossModReborn && originalBossModEnabled;
+            var bossModBlocked = entry == BossModReborn && originalBossModEnabled;
+            var rotationBlocked = rotationConflict && plugin is { IsLoaded: true } &&
+                                  PluginDependencies.GetRotationProvider(plugin.InternalName) != null;
+            var blocked = bossModBlocked || rotationBlocked;
             var reason = OmniLoc.Get(entry.ReasonKey);
             if (originalVnavmesh)
                 reason += "\n" + OmniLoc.Get("Requirements.Warning.OriginalVnavmesh");
-            if (blocked)
+            if (bossModBlocked)
                 reason += "\n" + OmniLoc.Get("Requirements.Warning.OriginalBossMod");
+            if (rotationBlocked)
+                reason += "\n" + OmniLoc.Get(PluginDependencies.ROTATION_CONFLICT_KEY);
+            if (entry == RotationSolverReborn)
+            {
+                reason += "\n" + OmniLoc.Get("Requirements.Rsr.Compatibility");
+                if (ReferenceEquals(entries, DutyCombatAndNavigationPlugins))
+                    reason += "\n" + OmniLoc.Get("Requirements.AutoDuty.RsrCompatibility");
+            }
             var statusOverride = blocked ? OmniLoc.Get("Requirements.Status.Blocked") :
                 originalVnavmesh ? OmniLoc.Get("Requirements.Status.OriginalEnabled") : null;
 
@@ -354,10 +366,15 @@ internal static class PluginRequirementsTable
     private static readonly Entry BossModReborn = new("Requirements.Plugin.BossMod", "Requirements.Reason.BossMod", null,
         "https://github.com/44451516-ff14/BossmodRebornCN", [BossModIPC.REBORN_INTERNAL_NAME], MatchInternalNameOnly: true);
 
+    private static readonly Entry RotationSolverReborn = new("Requirements.Plugin.RotationSolverReborn",
+        "Requirements.Reason.Rotation", null, null, [PluginDependencies.RSR_PLUGIN],
+        MatchInternalNameOnly: true);
+
     internal static readonly Entry[] CombatAndNavigationPlugins =
     [
-        new("Requirements.Plugin.AEAssist", "Requirements.Reason.Rotation", null, null, ["AEAssistV3"]),
-        new("Requirements.Plugin.PromeRotation", "Requirements.Reason.Rotation", null, null, ["PromeRotation"]),
+        new("Requirements.Plugin.AEAssist", "Requirements.Reason.Rotation", null, null, [PluginDependencies.AE_ASSIST_PLUGIN]),
+        new("Requirements.Plugin.PromeRotation", "Requirements.Reason.Rotation", null, null, [PluginDependencies.PROME_ROTATION_PLUGIN]),
+        RotationSolverReborn,
         BossModReborn,
         Vnavmesh
     ];
@@ -368,8 +385,5 @@ internal static class PluginRequirementsTable
             "https://github.com/erdelf/AutoDuty", ["AutoDuty"]),
         ..CombatAndNavigationPlugins
     ];
-
-    internal const string DEPENDENCY_WARNING_KEY = "Requirements.Dependencies.Warning";
-
-    private const int MAX_VISIBLE_ROWS = 5;
+    private const int MAX_VISIBLE_ROWS = 6;
 }

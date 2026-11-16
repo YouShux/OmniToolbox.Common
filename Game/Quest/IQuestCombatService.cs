@@ -5,6 +5,10 @@ public interface IQuestCombatService
 {
     bool TryStart(string operationID, out string? error);
 
+    bool TryStart(string operationID, ulong targetID, out string? error) => TryStart(operationID, out error);
+
+    bool TryUpdateTarget(string operationID, ulong targetID) => true;
+
     QuestWorkStatus Tick(string operationID);
 
     void Cancel(string operationID);

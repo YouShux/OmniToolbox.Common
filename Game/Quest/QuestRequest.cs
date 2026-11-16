@@ -20,6 +20,7 @@ public sealed record QuestRequest
     public QuestTargetRelation Relation { get; init; }
     internal bool AllowEurekaEntry { get; init; }
     internal bool FinishAcceptedQuestFirst { get; init; }
+    internal bool RequireConfiguredModule { get; init; }
 
     public bool IsValid() =>
         !string.IsNullOrWhiteSpace(Caller) && Caller.Length <= 128 &&
