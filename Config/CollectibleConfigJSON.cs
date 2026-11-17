@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using OmniToolbox.IO;
 
 namespace OmniToolbox.Config;
 
@@ -48,7 +49,7 @@ internal static class CollectibleConfigJSON
     )
     {
         if (!UsesCollectibleModuleContract(type))
-            return value.ToObject(type);
+            return value.ToObject(type, JsonSerializer.Create(OmniJson.SerializerSettings));
         Validate(type);
         return Read(value, type, 0);
     }

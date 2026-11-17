@@ -22,10 +22,8 @@ public sealed class TerritorySelector
     private readonly string selectAllID;
     private readonly string selectedID;
     private (int Count, long Localization, string Culture)? headerKey;
-    private (uint Territory, long Localization, string Culture)? currentTerritoryKey;
     private string headerLabel = string.Empty;
     private string addCurrentLabel = string.Empty;
-    private string currentTerritoryText = string.Empty;
     private readonly List<TerritoryOption>                                                                  visibleTerritoryOptions = [];
     private string                                                                                          search                  = string.Empty;
     private string?                                                                                         visibleQuery;
@@ -79,6 +77,17 @@ public sealed class TerritorySelector
 
         var clientState = DService.Instance().ClientState;
         var currentTerritoryID = clientState.IsLoggedIn ? (uint)clientState.TerritoryType : 0;
+        var addCurrentWidth = OmniControls.CompactButtonSize(OmniLoc.Get("Common.TerritorySelector.AddCurrent")).X;
+        var searchWidth = MathF.Max(
+            1f,
+            ImGui.GetContentRegionAvail().X - addCurrentWidth - ImGui.GetStyle().ItemSpacing.X);
+        OmniControls.InputTextWithHint(
+            searchID,
+            OmniLoc.Get("Common.TerritorySelector.SearchHint"),
+            ref search,
+            128,
+            searchWidth);
+        ImGui.SameLine();
         using (ImRaii.Disabled(currentTerritoryID == 0 || selectedTerritoryIds.Contains(currentTerritoryID)))
         {
             if (OmniControls.SmallButton(
@@ -88,26 +97,6 @@ public sealed class TerritorySelector
                 changed |= selectedTerritoryIds.Add(currentTerritoryID);
             }
         }
-
-        var displayTerritoryKey = (currentTerritoryID, OmniLoc.Revision, CultureInfo.CurrentCulture.Name);
-        if (currentTerritoryKey != displayTerritoryKey)
-        {
-            currentTerritoryKey = displayTerritoryKey;
-            currentTerritoryText = currentTerritoryID == 0
-                ? OmniLoc.Get("Common.TerritorySelector.LoggedOut")
-                : string.Format(OmniLoc.Get("Common.TerritorySelector.Current"), GetTerritoryName(currentTerritoryID), currentTerritoryID);
-        }
-        OmniControls.SameLineOrWrap(OmniTextMeasurements.Measure(currentTerritoryText).X);
-        ImGui.AlignTextToFramePadding();
-        using (ImRaii.TextWrapPos(0f))
-            ImGui.TextDisabled(currentTerritoryText);
-
-        OmniControls.InputTextWithHint(
-            searchID,
-            OmniLoc.Get("Common.TerritorySelector.SearchHint"),
-            ref search,
-            128,
-            ImGui.GetContentRegionAvail().X);
         changed |= DrawTable(selectedTerritoryIds);
 
         if (selectedTerritoryIds.Count == 0 && !string.IsNullOrEmpty(emptyText))
@@ -392,19 +381,6 @@ public sealed class TerritorySelector
         }
 
         TerritoryOptions.Sort(static (left, right) => left.ID.CompareTo(right.ID));
-    }
-
-    private static string GetTerritoryName(uint territoryID)
-    {
-        foreach (var option in TerritoryOptions)
-        {
-            if (option.ID == territoryID)
-            {
-                return option.Name;
-            }
-        }
-
-        return string.Format(OmniLoc.Get("Common.TerritorySelector.Fallback"), territoryID);
     }
 
     private static string BuildRegionText
