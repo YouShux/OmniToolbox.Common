@@ -223,6 +223,8 @@ public static class OmniCommandCatalog
         new("autotripletriadcollection", "自动幻卡收集", "", "打开自动幻卡收集窗口", "AutoTripleTriadCollection", OmniCommandArguments.None),
         new("autoquest", "自动任务", "[任务ID]", "打开自动任务窗口，或执行指定任务及其前置任务", "AutoQuest", OmniCommandArguments.Optional),
         new("autoduty", "自动副本", "", "打开自动副本窗口", "AutoDuty", OmniCommandArguments.None),
+        new("speed", "自动调整移动速度", "<移速倍率>", "临时调整移速，输入移速 ≤0 或切换区域时清除。", null, OmniCommandArguments.Required),
+        new("deepdungeon", "深宫无敌模式", "<高度偏移>", "临时调整高度偏移，输入高度偏移 ≥0 或切换区域时清除。", null, OmniCommandArguments.Required),
         new("autodeepdungeon", "自动深层迷宫", "[potd|hoh|eo|pt]", "打开自动深层迷宫窗口，或开始指定迷宫", "AutoDeepDungeon", OmniCommandArguments.Optional),
         new("leaveduty", "即刻退本", "", "离开当前副本", "InstantLeaveDuty", OmniCommandArguments.None),
         new("invulnerable", "无敌模式", "", "切换进入或退出无敌模式", "InvulnerableMode", OmniCommandArguments.None),

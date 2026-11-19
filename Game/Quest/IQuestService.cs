@@ -7,6 +7,8 @@ namespace OmniToolbox.Quests;
 /// <summary>任务服务的读写入口；游戏状态查询及控制在 Framework 线程执行。</summary>
 public interface IQuestService : IOperationService
 {
+    bool IsConfiguredEnabled => false;
+
     QuestCatalogPage GetCatalog(QuestCatalogQuery query);
 
     QuestEvaluation Evaluate(QuestRequest request);

@@ -13,6 +13,7 @@ public sealed class ModuleInfo
     public int RequiredAccessLevel { get; init; } = 1;
 
     public bool ShowsAutoPathStatus { get; init; }
+    public bool IsUnderDevelopment { get; init; }
 
     public IReadOnlyList<ModuleCommand>? Commands { get; init; }
 

@@ -25,6 +25,8 @@ public sealed class UIConfig
 
     public bool ShowLauncherIcon { get; set; } = true;
 
+    public bool ShowOTPrefix = true;
+
     public bool MultiMonitorEnabled { get; set; }
 
     public bool DiscordLinkRead { get; set; }

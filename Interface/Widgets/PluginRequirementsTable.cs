@@ -62,12 +62,6 @@ internal static class PluginRequirementsTable
                 reason += "\n" + OmniLoc.Get("Requirements.Warning.OriginalBossMod");
             if (rotationBlocked)
                 reason += "\n" + OmniLoc.Get(PluginDependencies.ROTATION_CONFLICT_KEY);
-            if (entry == RotationSolverReborn)
-            {
-                reason += "\n" + OmniLoc.Get("Requirements.Rsr.Compatibility");
-                if (ReferenceEquals(entries, DutyCombatAndNavigationPlugins))
-                    reason += "\n" + OmniLoc.Get("Requirements.AutoDuty.RsrCompatibility");
-            }
             var statusOverride = blocked ? OmniLoc.Get("Requirements.Status.Blocked") :
                 originalVnavmesh ? OmniLoc.Get("Requirements.Status.OriginalEnabled") : null;
 
@@ -81,14 +75,15 @@ internal static class PluginRequirementsTable
         return display;
     }
 
-    internal static void DrawCollapsible(string tableID, Entry[] entries, Action? drawStatus = null)
+    internal static void DrawCollapsible(string tableID, Entry[] entries, Action? drawStatus = null,
+        int maximumVisibleRows = MAX_VISIBLE_ROWS)
     {
         if (!OmniControls.CollapsingHeader($"{OmniLoc.Get("Requirements.Dependencies.Title")}###dependencies{tableID}"))
             return;
 
         var reveal = ImGui.IsItemToggledOpen();
         drawStatus?.Invoke();
-        Draw(null, tableID, entries, limitVisibleRows: true);
+        Draw(null, tableID, entries, limitVisibleRows: true, maximumVisibleRows: maximumVisibleRows);
         if (reveal)
             ImGui.SetScrollHereY(1f);
     }
@@ -100,7 +95,8 @@ internal static class PluginRequirementsTable
         Entry[] entries,
         bool    conflict = false,
         float   minimumPluginWidth = 0f,
-        bool    limitVisibleRows = false
+        bool    limitVisibleRows = false,
+        int     maximumVisibleRows = MAX_VISIBLE_ROWS
     )
     {
         var display = GetDisplay(entries);
@@ -129,7 +125,7 @@ internal static class PluginRequirementsTable
         var minimumReasonWidth = MathF.Max(OmniTextMeasurements.Measure(labels[4]).X, ImGui.GetFontSize() * 8f) + columnPadding;
         var availableWidth = ImGui.GetContentRegionAvail().X;
         var fixedWidth = iconWidth + pluginWidth + linkWidth + statusWidth + columnPadding * 4f;
-        var visibleRows = limitVisibleRows ? Math.Min(entries.Length, MAX_VISIBLE_ROWS) : entries.Length;
+        var visibleRows = limitVisibleRows ? Math.Min(entries.Length, Math.Max(1, maximumVisibleRows)) : entries.Length;
         var verticalScroll = visibleRows < entries.Length;
         var scrollbarSize = ImGui.GetStyle().ScrollbarSize;
         var contentWidth = availableWidth - (verticalScroll ? scrollbarSize : 0f);
@@ -323,6 +319,9 @@ internal static class PluginRequirementsTable
         IExposedPlugin? match = null;
         foreach (var plugin in installedPlugins)
         {
+            if (entry == AutoDutyCN && !PluginDependencies.IsAutoDutyCN(plugin))
+                continue;
+
             foreach (var identifier in entry.Identifiers)
             {
                 if (string.Equals(plugin.InternalName, identifier, StringComparison.OrdinalIgnoreCase) ||
@@ -379,10 +378,12 @@ internal static class PluginRequirementsTable
         Vnavmesh
     ];
 
+    private static readonly Entry AutoDutyCN = new("Requirements.Plugin.AutoDuty", "Requirements.Reason.AutoDuty", null,
+        "https://github.com/YouShux/AutoDuty", ["AutoDuty"], MatchInternalNameOnly: true);
+
     internal static readonly Entry[] DutyCombatAndNavigationPlugins =
     [
-        new("Requirements.Plugin.AutoDuty", "Requirements.Reason.AutoDuty", null,
-            "https://github.com/erdelf/AutoDuty", ["AutoDuty"]),
+        AutoDutyCN,
         ..CombatAndNavigationPlugins
     ];
     private const int MAX_VISIBLE_ROWS = 6;

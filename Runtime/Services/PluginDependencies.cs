@@ -16,6 +16,13 @@ internal static class PluginDependencies
         DalamudServices.PluginInterface.InstalledPlugins.Any(plugin => plugin.IsLoaded &&
             string.Equals(plugin.InternalName, internalName, StringComparison.OrdinalIgnoreCase));
 
+    internal static bool IsAutoDutyCN(IExposedPlugin plugin) =>
+        string.Equals(plugin.InternalName, "AutoDuty", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(plugin.Name, "AutoDuty CN", StringComparison.OrdinalIgnoreCase);
+
+    internal static bool IsAutoDutyCNEnabled() =>
+        DalamudServices.PluginInterface.InstalledPlugins.Any(static plugin => plugin.IsLoaded && IsAutoDutyCN(plugin));
+
     internal static string? GetVnavmeshFailure()
     {
         if (!vnavmeshIPC.IsPluginEnabled()) return "vnavmesh_unavailable";

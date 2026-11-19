@@ -3,12 +3,18 @@ using Dalamud.Utility;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Lumina.Text.ReadOnly;
 using OmenTools.OmenService;
+using OmniToolbox.Config;
 
 namespace OmniToolbox.UI;
 
 internal static class OmniContextMenu
 {
-    public static readonly ReadOnlySeString Prefix = CreatePrefix();
+    private static readonly ReadOnlySeString DefaultPrefix = CreatePrefix();
+    private static UIConfig? Config;
+
+    public static ReadOnlySeString? Prefix => Config?.ShowOTPrefix == false ? (ReadOnlySeString?)null : DefaultPrefix;
+
+    internal static void Configure(UIConfig? config) => Config = config;
 
     public static unsafe uint GetTargetItemID(ContextMenuOpenedArgs args)
     {

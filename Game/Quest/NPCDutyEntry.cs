@@ -15,18 +15,17 @@ public static unsafe class NPCDutyEntry
         var services = DService.Instance();
         var framework = EventFramework.Instance();
         if (actorID == 0 || string.IsNullOrWhiteSpace(dutyName) || framework == null ||
-            services.Condition.IsBetweenAreas || !UIModule.IsScreenReady() ||
-            !services.Condition.IsOccupiedInEvent ||
-            !(framework->EventState1.EventId.Id == eventID && framework->EventState1.ObjectId == actorID ||
-              framework->EventState2.EventId.Id == eventID && framework->EventState2.ObjectId == actorID))
+            services.Condition.IsBetweenAreas || !UIModule.IsScreenReady())
             return NPCDutyEntryProgress.Waiting;
 
+        var eventMatches = framework->EventState1.EventId.Id == eventID && framework->EventState1.ObjectId == actorID ||
+                           framework->EventState2.EventId.Id == eventID && framework->EventState2.ObjectId == actorID;
         var confirm = services.GameGUI.GetAddonByName<AddonSelectYesno>("SelectYesno");
         if (confirm != null && ((AtkUnitBase*)confirm)->IsAddonAndNodesReady())
         {
             if (confirm->PromptText == null ||
                 !confirm->PromptText->NodeText.ToString().Contains(dutyName, StringComparison.OrdinalIgnoreCase))
-                return NPCDutyEntryProgress.MenuMismatch;
+                return eventMatches ? NPCDutyEntryProgress.MenuMismatch : NPCDutyEntryProgress.Waiting;
             if (confirm->YesButton == null || !confirm->YesButton->IsEnabled)
                 return NPCDutyEntryProgress.Waiting;
             return AddonSelectYesnoEvent.ClickYes(dutyName)
@@ -35,12 +34,24 @@ public static unsafe class NPCDutyEntry
 
         var menu = services.GameGUI.GetAddonByName<AddonSelectString>("SelectString");
         if (menu != null && ((AtkUnitBase*)menu)->IsAddonAndNodesReady())
-            return AddonSelectStringEvent.Select(dutyName)
-                ? NPCDutyEntryProgress.Advanced : NPCDutyEntryProgress.MenuMismatch;
+        {
+            if (AddonSelectStringEvent.TryScanSelectStringText(dutyName, out var index))
+                return AddonSelectStringEvent.Select(index)
+                    ? NPCDutyEntryProgress.Advanced : NPCDutyEntryProgress.Waiting;
+            if (eventMatches)
+                return NPCDutyEntryProgress.MenuMismatch;
+        }
         var iconMenu = services.GameGUI.GetAddonByName<AddonSelectIconString>("SelectIconString");
         if (iconMenu != null && ((AtkUnitBase*)iconMenu)->IsAddonAndNodesReady())
-            return AddonSelectIconStringEvent.Select(dutyName)
-                ? NPCDutyEntryProgress.Advanced : NPCDutyEntryProgress.MenuMismatch;
+        {
+            if (AddonSelectIconStringEvent.TryScanSelectIconStringText(dutyName, out var index))
+                return AddonSelectIconStringEvent.Select(index)
+                    ? NPCDutyEntryProgress.Advanced : NPCDutyEntryProgress.Waiting;
+            if (eventMatches)
+                return NPCDutyEntryProgress.MenuMismatch;
+        }
+        if (!services.Condition.IsOccupiedInEvent)
+            return NPCDutyEntryProgress.Waiting;
         var talk = services.GameGUI.GetAddonByName<AddonTalk>("Talk");
         return talk != null && ((AtkUnitBase*)talk)->IsAddonAndNodesReady() && AddonTalkEvent.ClickNext()
             ? NPCDutyEntryProgress.Advanced : NPCDutyEntryProgress.Waiting;

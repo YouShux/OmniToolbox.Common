@@ -68,10 +68,7 @@ public static class OmniAutomationPanel
         }
         drawList.AddText(titlePosition, OmniTheme.Color(OmniTheme.Tokens.Text), title);
         drawList.PopClipRect();
-        var escape = ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows) &&
-                     !OmniWindowChrome.IsTextInputActive && !ImGui.IsAnyItemActive() &&
-                     ImGui.IsKeyPressed(ImGuiKey.Escape, false);
-        return chrome with { CloseClicked = chrome.CloseClicked || escape };
+        return chrome;
     }
 
     public static Layout Arrange

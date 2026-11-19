@@ -10,6 +10,7 @@ internal static class GameDataManifest
     internal static string[] GetNames(string group) => Resources.Where(resource => resource.Group == group)
         .Select(resource => resource.Name).ToArray();
 
+    [System.Reflection.Obfuscation(Feature = "renaming", Exclude = false)]
     private static IReadOnlyList<(string Name, string Group)> Read()
     {
         using var stream = typeof(GameDataManifest).Assembly.GetManifestResourceStream("OmniToolbox.Data.resource-manifest.json")

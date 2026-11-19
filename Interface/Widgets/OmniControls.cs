@@ -759,35 +759,51 @@ public static partial class OmniControls
         int     step = 0,
         int     stepFast = 0,
         bool    groupThousands = false
+    ) =>
+        InputInt(id, ref value, width, false, step, stepFast, groupThousands);
+
+    public static bool InputInt
+    (
+        string  id,
+        ref int value,
+        float   width,
+        bool    centerText,
+        int     step = 0,
+        int     stepFast = 0,
+        bool    groupThousands = false
     )
     {
         var tokens = OmniTheme.Tokens;
         width = MathF.Max(width, MeasureInput(value.ToString(groupThousands ? "N0" : "0", CultureInfo.InvariantCulture), step: step).X);
         id    = DrawLeadingControlLabel(id, ref width);
         var frame = BeginNativeControl(id, width, true);
-        var drawGroupedText = groupThousands && step == 0 && GlassMotion.ActiveItemID != frame.ID;
+        var drawFormattedText = (groupThousands || centerText) && step == 0 && GlassMotion.ActiveItemID != frame.ID;
         using var styles = ControlScope.PushStyle(ImGuiStyleVar.FrameRounding, frame.Radius)
             .Push(ImGuiStyleVar.FrameBorderSize, 0f)
             .Push(
                 ImGuiStyleVar.FramePadding,
                 new Vector2(ImGui.GetStyle().FramePadding.X, MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)));
-        using var colors = ControlScope.PushColor(ImGuiCol.Text, drawGroupedText ? Vector4.Zero : tokens.Text)
+        using var colors = ControlScope.PushColor(ImGuiCol.Text, drawFormattedText ? Vector4.Zero : tokens.Text)
             .Push(ImGuiCol.FrameBg, Vector4.Zero)
             .Push(ImGuiCol.FrameBgHovered, Vector4.Zero)
             .Push(ImGuiCol.FrameBgActive, Vector4.Zero)
             .Push(ImGuiCol.Border, Vector4.Zero);
         var changed = ImGui.InputInt(id, ref value, step, stepFast);
-        if (drawGroupedText)
+        if (drawFormattedText)
         {
+            var displayText = value.ToString(groupThousands ? "N0" : "0", CultureInfo.InvariantCulture);
             var drawList = frame.DrawList;
             var inset = MathF.Max(1f, OmniTheme.BorderThickness());
             drawList.PushClipRect(frame.Pos + new Vector2(inset), frame.Pos + frame.Size - new Vector2(inset), true);
             drawList.AddText(
                 frame.Pos + new Vector2(
-                    ImGui.GetStyle().FramePadding.X,
+                    centerText
+                        ? MathF.Max(ImGui.GetStyle().FramePadding.X,
+                            (frame.Size.X - ImGui.CalcTextSize(displayText).X) * 0.5f)
+                        : ImGui.GetStyle().FramePadding.X,
                     MathF.Max(0f, (frame.Size.Y - ImGui.GetTextLineHeight()) * 0.5f)),
                 OmniTheme.Color(tokens.Text),
-                value.ToString("N0", CultureInfo.InvariantCulture));
+                displayText);
             drawList.PopClipRect();
         }
 
@@ -1281,6 +1297,14 @@ public static partial class OmniControls
         Vector2 pos,
         Vector2 size,
         bool    collapsed
+    ) => DrawWindowBackground(pos, size, collapsed, opaque: false);
+
+    internal static void DrawWindowBackground
+    (
+        Vector2 pos,
+        Vector2 size,
+        bool    collapsed,
+        bool    opaque
     )
     {
         if (size.X <= 1f || size.Y <= 1f)
@@ -1289,13 +1313,16 @@ public static partial class OmniControls
         }
 
         var tokens = OmniTheme.Tokens;
+        var background = opaque ? tokens.Background with { W = 1f } : tokens.Background;
         var drawList = ImGui.GetWindowDrawList();
         if (OmniTheme.UsesMaterial)
         {
             var glassRadius = OmniTheme.Scale(tokens.BorderRadius);
             var outerGlow = OmniTheme.Scale(new Vector2(OmniTheme.IsGlass ? 8f : 18f));
             drawList.PushClipRect(pos - outerGlow, pos + size + outerGlow, false);
-            DrawGlassSurface(drawList, pos, size, tokens.Background, glassRadius);
+            if (opaque)
+                drawList.AddRectFilled(pos, pos + size, ImGui.ColorConvertFloat4ToU32(background), glassRadius);
+            DrawGlassSurface(drawList, pos, size, background, glassRadius, sampleBackground: !opaque);
             if (!collapsed)
             {
                 var y = pos.Y + OmniTheme.TitleBarHeight();
@@ -1320,7 +1347,7 @@ public static partial class OmniControls
             OmniTheme.Color(collapsed ? tokens.Primary with
             {
                 W = 1f
-            } : tokens.Background),
+            } : background),
             radius);
         if (!collapsed)
         {

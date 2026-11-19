@@ -1,3 +1,4 @@
+using OmniToolbox.Host;
 using OmniToolbox.UI.Controls;
 using OmniToolbox.UI.Theme;
 using TreeToolKit;
@@ -7,9 +8,19 @@ namespace OmniToolbox.UI;
 public static class OmniWindowChrome
 {
     private static readonly Dictionary<string, string> DragIDs = new(StringComparer.Ordinal);
+    private static EscapeCloseController? ImGuiEscapeCloseController;
 
-    internal static void ClearDisplayCaches() => DragIDs.Clear();
+    internal static void ClearDisplayCaches()
+    {
+        DragIDs.Clear();
+        ImGuiEscapeCloseController = null;
+    }
+
     public static bool IsTextInputActive => ImGui.GetIO().WantTextInput;
+
+    private static bool IsEscapeReservedForInput =>
+        IsTextInputActive || ImGui.IsAnyItemActive() ||
+        ImGui.IsPopupOpen(string.Empty, ImGuiPopupFlags.AnyPopupId | ImGuiPopupFlags.AnyPopupLevel);
 
     public static bool Begin(string windowID, ImGuiWindowFlags flags, bool collapsed) =>
         Begin(windowID, flags, collapsed, false);
@@ -39,13 +50,39 @@ public static class OmniWindowChrome
         IEscapeClosableWindow? third = null
     )
     {
-        if (IsTextInputActive)
+        var sharedController = ImGuiEscapeCloseController ??= new(DalamudServices.KeyState);
+        var sharedWasSuppressingEscape = sharedController.IsSuppressingEscape;
+        sharedController.UpdateSuppression();
+        if (sharedWasSuppressingEscape)
         {
             controller.TryConsumeEscape(false);
             return;
         }
+        var wasSuppressingEscape = controller.IsSuppressingEscape;
+        if (IsEscapeReservedForInput)
+        {
+            controller.TryConsumeEscape(false);
+            sharedController.TryConsumeEscape(false);
+        }
+        else
+            controller.Update(first, second, third);
 
-        controller.Update(first, second, third);
+        // 同步已消费的按键，避免同一次 Escape 继续关闭后方窗口。
+        if (wasSuppressingEscape || controller.IsSuppressingEscape)
+            sharedController.TryConsumeEscape(false);
+    }
+
+    public static bool ShouldCloseOnEscape()
+    {
+        var controller = ImGuiEscapeCloseController ??= new(DalamudServices.KeyState);
+        if (IsEscapeReservedForInput)
+        {
+            controller.TryConsumeEscape(false);
+            return false;
+        }
+
+        return ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows | ImGuiFocusedFlags.NoPopupHierarchy) &&
+               controller.TryConsumeEscape(true);
     }
 
     public static (Vector2 Position, Vector2 Size) GetFrameBounds
@@ -87,19 +124,35 @@ public static class OmniWindowChrome
 
     public static unsafe void DragBackground()
     {
-        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left) ||
-            !ImGui.IsWindowHovered(ImGuiHoveredFlags.RootAndChildWindows | ImGuiHoveredFlags.NoPopupHierarchy))
+        if (!ImGui.IsWindowHovered(ImGuiHoveredFlags.RootAndChildWindows | ImGuiHoveredFlags.NoPopupHierarchy))
             return;
 
         var context = new ImGuiContextPtr(ImGui.GetCurrentContext());
-        if (context.ActiveId != 0 || context.HoveredId != 0 || context.HoveredIdDisabled)
-            return;
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) &&
+            context.ActiveId == 0 && context.HoveredId == 0 && !context.HoveredIdDisabled)
+        {
+            var window = ImGuiP.GetCurrentWindow();
+            var flags = window.Flags;
+            window.Flags &= ~ImGuiWindowFlags.NoMove;
+            ImGuiP.StartMouseMovingWindow(window);
+            window.Flags = flags;
+        }
 
-        var window = ImGuiP.GetCurrentWindow();
-        var flags = window.Flags;
-        window.Flags &= ~ImGuiWindowFlags.NoMove;
-        ImGuiP.StartMouseMovingWindow(window);
-        window.Flags = flags;
+        var position = ImGui.GetWindowPos();
+        var clamped = OmniWindowPlacement.ClampPosition(position, ImGui.GetWindowSize(), true);
+        if (position != clamped)
+            ImGui.SetWindowPos(clamped);
+    }
+
+    public static void CenterNextWindow(string windowName, Vector2 defaultSize)
+    {
+        var work = OmniWindowPlacement.GetWorkArea();
+        var window = ImGuiP.FindWindowByName(windowName);
+        var size = window.IsNull ? defaultSize : window.Size;
+
+        ImGui.SetNextWindowPos(
+            OmniWindowPlacement.ClampPosition(work.Position + (work.Size - size) * 0.5f, size, false),
+            ImGuiCond.Always);
     }
 
     public static Vector2 DragTitleBar
@@ -162,6 +215,6 @@ public static class OmniWindowChrome
                 OmniTheme.TitleIconTop()));
         var closeClicked = OmniControls.CloseButton(closeID, OmniTheme.TitleIconSize());
 
-        return new(collapseClicked, closeClicked, titleDoubleClicked);
+        return new(collapseClicked, closeClicked || ShouldCloseOnEscape(), titleDoubleClicked);
     }
 }
