@@ -312,6 +312,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
                     ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove;
 
         OmniWindowChrome.SetNextWindowPosition("###OmniIconBrowser");
+        using var appearance = OmniWindowAppearance.BeginScope();
         var drawWindow = OmniWindowChrome.Begin("###OmniIconBrowser", flags, isCollapsed);
         isFocused = ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
         if (!drawWindow)
@@ -783,7 +784,10 @@ public sealed class IconBrowser : IEscapeClosableWindow
             ImGui.GetWindowDrawList().AddImage(
                 texture.Handle,
                 iconPosition,
-                iconPosition + statusIconSize);
+                iconPosition + statusIconSize,
+                Vector2.Zero,
+                Vector2.One,
+                OmniTheme.Color(Vector4.One));
         }
         else
         {

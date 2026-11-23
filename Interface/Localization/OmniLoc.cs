@@ -71,7 +71,7 @@ public static class OmniLoc
         ? text : throw new KeyNotFoundException($"Official localization key is not registered: {key}");
 
     /// <summary>
-    /// 查询模块自带词条。模块之间的同名键相互隔离，缺失词条会明确报错。
+    /// 查询模块自带词条。模块之间的同名键相互隔离，未译语言回退简体或繁体。
     /// </summary>
     public static string Get
     (
@@ -80,7 +80,7 @@ public static class OmniLoc
     ) => Get(owner, key, CurrentLanguage);
 
     /// <summary>
-    /// 按指定语言查询模块自带词条，缺失词条会明确报错。
+    /// 按指定语言查询模块自带词条，未译语言回退简繁；回退词库也缺少该键时明确报错。
     /// </summary>
     public static string Get
     (
@@ -108,10 +108,14 @@ public static class OmniLoc
     )
     {
         ArgumentNullException.ThrowIfNull(owner);
-        if (owner.LocalizationRegistration is { } registration && (registration.IsReadable || owner.IsDisposing) && registration.Source.TryGet(key, value, out text))
+        if (owner.LocalizationRegistration is { } registration && (registration.IsReadable || owner.IsDisposing))
         {
-            text = OmniCommandCatalog.FormatDisplayText(text, value);
-            return true;
+            var language = registration.Source.IsComplete(value) ? value : GetModuleFallbackLanguage(value);
+            if (registration.Source.TryGet(key, language, out text))
+            {
+                text = OmniCommandCatalog.FormatDisplayText(text, language);
+                return true;
+            }
         }
         text = string.Empty;
         return false;
@@ -245,6 +249,11 @@ public static class OmniLoc
             }
         }
     }
+
+    private static UILanguage GetModuleFallbackLanguage(UILanguage language) =>
+        language == UILanguage.TraditionalChinese
+            ? UILanguage.TraditionalChinese
+            : UILanguage.SimplifiedChinese;
 
     /// <summary>
     /// 一次模块词条登记。候选激活后可回滚，提交后卸载只撤回当前登记。

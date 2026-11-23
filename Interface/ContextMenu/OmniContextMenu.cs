@@ -18,7 +18,7 @@ internal static class OmniContextMenu
 
     public static unsafe uint GetTargetItemID(ContextMenuOpenedArgs args)
     {
-        if (args.TargetItemID != 0 || args.AddonName != "DailyQuestSupply")
+        if (args.TargetItemID != 0 || args.Addon is null || args.Addon->NameString != "DailyQuestSupply")
             return args.TargetItemID;
 
         var agent = AgentDailyQuestSupply.Instance();

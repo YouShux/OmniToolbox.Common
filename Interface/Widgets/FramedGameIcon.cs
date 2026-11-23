@@ -288,7 +288,8 @@ internal static class FramedGameIcon
             min,
             max,
             collected ? Vector2.Zero : new Vector2(0.5f, 0f),
-            collected ? new Vector2(0.5f, 1f) : Vector2.One);
+            collected ? new Vector2(0.5f, 1f) : Vector2.One,
+            OmniTheme.Color(Vector4.One));
 
     private static IDalamudTextureWrap? GetCollectionStatusTexture()
     {

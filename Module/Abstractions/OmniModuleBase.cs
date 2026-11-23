@@ -49,10 +49,9 @@ public abstract class OmniModuleBase : IAsyncDisposable
 
     public bool SupportsLanguage(UILanguage language)
     {
-        var complete = LocalizationRegistration is { } registration
-            ? registration.Source.IsComplete(language) : Localization.IsComplete(language);
-        if (!complete)
+        if (LocalizationRegistration is not { } registration || (!registration.IsReadable && !IsDisposing))
             return false;
+        UILanguages.GetCode(language);
         foreach (var child in ownedChildren)
             if (!child.SupportsLanguage(language))
                 return false;

@@ -78,4 +78,5 @@
     </ItemGroup>
   </Target>
 
+  <Import Project="..\lib\TreeTools\SharedUI\OmniUI.projitems" />
 </Project>

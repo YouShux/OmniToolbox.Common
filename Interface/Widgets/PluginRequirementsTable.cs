@@ -43,6 +43,7 @@ internal static class PluginRequirementsTable
         display.Revision = revision;
         display.LocalizationRevision = OmniLoc.Revision;
         display.Rows = new DisplayRow[entries.Length];
+        display.ViewRows = new PluginRequirementsView.Row[entries.Length];
         var originalBossModEnabled = PluginDependencies.IsOriginalBossModEnabled(Plugins);
         PluginDependencies.GetLoadedRotation(Plugins, out var rotationConflict);
         for (var index = 0; index < entries.Length; index++)
@@ -62,313 +63,124 @@ internal static class PluginRequirementsTable
                 reason += "\n" + OmniLoc.Get("Requirements.Warning.OriginalBossMod");
             if (rotationBlocked)
                 reason += "\n" + OmniLoc.Get(PluginDependencies.ROTATION_CONFLICT_KEY);
-            var statusOverride = blocked ? OmniLoc.Get("Requirements.Status.Blocked") :
-                originalVnavmesh ? OmniLoc.Get("Requirements.Status.OriginalEnabled") : null;
-
-            display.Rows[index] = new(entry, plugin, OmniLoc.Get(entry.NameKey),
+            var status = "Requirements.Status.InstalledDisabled";
+            if (blocked) status = "Requirements.Status.Blocked";
+            else if (originalVnavmesh) status = "Requirements.Status.OriginalEnabled";
+            else if (plugin is null) status = "Requirements.Status.NotInstalled";
+            else if (plugin.IsLoaded) status = "Requirements.Status.Enabled";
+            var name = OmniLoc.Get(entry.NameKey);
+            var row = new PluginRequirementsView.Row(
+                entry.NameKey, name,
                 plugin is null ? string.Empty : string.Format(OmniLoc.Get("Requirements.Version"), plugin.Version),
-                reason, $"##openPluginLink{entry.NameKey}", statusOverride, blocked);
+                OmniLoc.Get(status), default, reason,
+                Details: entry.DetailsKey is null ? null : OmniLoc.Get(entry.DetailsKey),
+                DrawIcon: size => DrawPluginIcon(plugin, size),
+                Open: () =>
+                {
+                    var url = entry.URL ?? plugin?.Manifest.RepoUrl;
+                    if (!string.IsNullOrWhiteSpace(url)) Util.OpenLink(url);
+                    else DalamudServices.PluginInterface.OpenPluginInstallerTo(PluginInstallerOpenKind.AllPlugins, name);
+                },
+                OpenTooltip: OmniLoc.Get(entry.URL is null ? "Requirements.OpenPlugin" : "Requirements.OpenGitHub"));
+            display.Rows[index] = new(row, plugin, blocked, originalVnavmesh);
         }
-        display.Labels = [OmniLoc.Get("Requirements.Column.Icon"), OmniLoc.Get("Requirements.Column.Plugin"),
-            OmniLoc.Get("Requirements.Column.Link"), OmniLoc.Get("Requirements.Column.Status"),
-            OmniLoc.Get("Requirements.Column.Reason")];
         return display;
     }
 
-    internal static void DrawCollapsible(string tableID, Entry[] entries, Action? drawStatus = null,
-        int maximumVisibleRows = MAX_VISIBLE_ROWS)
-    {
-        if (!OmniControls.CollapsingHeader($"{OmniLoc.Get("Requirements.Dependencies.Title")}###dependencies{tableID}"))
-            return;
-
-        var reveal = ImGui.IsItemToggledOpen();
-        drawStatus?.Invoke();
-        Draw(null, tableID, entries, limitVisibleRows: true, maximumVisibleRows: maximumVisibleRows);
-        if (reveal)
-            ImGui.SetScrollHereY(1f);
-    }
-
-    internal static void Draw
-    (
-        string? titleKey,
-        string  tableID,
-        Entry[] entries,
-        bool    conflict = false,
-        float   minimumPluginWidth = 0f,
-        bool    limitVisibleRows = false,
-        int     maximumVisibleRows = MAX_VISIBLE_ROWS
-    )
+    private static PluginRequirementsView.Row[] GetRows(Entry[] entries, bool conflict = false)
     {
         var display = GetDisplay(entries);
-        var pluginWidth = MathF.Max(minimumPluginWidth, MeasurePluginInfoWidth(entries));
-        var statusWidth = MathF.Max(OmniTextMeasurements.Measure(OmniLoc.Get("Requirements.Column.Status")).X,
-            MathF.Max(OmniTextMeasurements.Measure(OmniLoc.Get("Requirements.Status.NotInstalled")).X,
-                MathF.Max(OmniTextMeasurements.Measure(OmniLoc.Get("Requirements.Status.Enabled")).X,
-                    OmniTextMeasurements.Measure(OmniLoc.Get("Requirements.Status.InstalledDisabled")).X)));
-        foreach (var row in display.Rows)
+        var tokens = OmniTheme.Tokens;
+        for (var index = 0; index < display.Rows.Length; index++)
         {
-            if (row.StatusOverride is { } status)
-                statusWidth = MathF.Max(statusWidth, OmniTextMeasurements.Measure(status).X);
+            var row = display.Rows[index];
+            var color = conflict ? tokens.Text : tokens.Warning;
+            if (row.Blocked) color = tokens.Error;
+            else if (row.OriginalVnavmesh) color = tokens.Warning;
+            else if (row.Plugin is null) color = conflict ? tokens.Text : tokens.Error;
+            else if (row.Plugin.IsLoaded) color = conflict ? tokens.Error : tokens.Success;
+            display.ViewRows[index] = row.View with { StatusColor = color };
         }
+        return display.ViewRows;
+    }
+
+    internal static void DrawCollapsible(string tableID, Entry[] entries, Action? drawStatus = null,
+        int maximumVisibleRows = MAX_VISIBLE_ROWS) =>
+        PluginRequirementsView.DrawCollapsible(tableID, GetRows(entries),
+            maximumVisibleRows: maximumVisibleRows, drawStatus: drawStatus);
+
+    internal static void Draw(
+        string? titleKey,
+        string tableID,
+        Entry[] entries,
+        bool conflict = false,
+        float minimumPluginWidth = 0f,
+        bool limitVisibleRows = false,
+        int maximumVisibleRows = MAX_VISIBLE_ROWS)
+    {
         if (titleKey is not null)
         {
             OmniControls.SectionLabel(OmniLoc.Get(titleKey));
             ImGui.Spacing();
         }
-
-        var labels = display.Labels;
-        var columnPadding = ImGui.GetStyle().CellPadding.X * 2f;
-        var iconWidth = MathF.Ceiling(MathF.Max(OmniTheme.Scale(40f), OmniTextMeasurements.Measure(labels[0]).X)) + columnPadding;
-        var linkWidth = MathF.Ceiling(MathF.Max(OmniTheme.CheckboxSize(), OmniTextMeasurements.Measure(labels[2]).X)) + columnPadding;
-        pluginWidth = MathF.Ceiling(pluginWidth) + columnPadding;
-        statusWidth = MathF.Ceiling(statusWidth) + columnPadding;
-        var minimumReasonWidth = MathF.Max(OmniTextMeasurements.Measure(labels[4]).X, ImGui.GetFontSize() * 8f) + columnPadding;
-        var availableWidth = ImGui.GetContentRegionAvail().X;
-        var fixedWidth = iconWidth + pluginWidth + linkWidth + statusWidth + columnPadding * 4f;
-        var visibleRows = limitVisibleRows ? Math.Min(entries.Length, Math.Max(1, maximumVisibleRows)) : entries.Length;
-        var verticalScroll = visibleRows < entries.Length;
-        var scrollbarSize = ImGui.GetStyle().ScrollbarSize;
-        var contentWidth = availableWidth - (verticalScroll ? scrollbarSize : 0f);
-        var tableWidth = MathF.Max(contentWidth, fixedWidth + minimumReasonWidth);
-        var horizontalScroll = tableWidth > contentWidth;
-        var reasonWidth = MathF.Max(1f, MathF.Floor(tableWidth - fixedWidth));
-        Span<float> rowHeights = stackalloc float[entries.Length];
-        var tableHeight = MathF.Max(OmniTheme.SmallButtonSize().Y, ImGui.GetFrameHeight()) +
-                          ImGui.GetStyle().CellPadding.Y * 2f;
-        for (var index = 0; index < entries.Length; index++)
-        {
-            var textHeight = display.Rows[index].Plugin is null
-                ? ImGui.GetTextLineHeight()
-                : ImGui.GetTextLineHeight() * 2f + ImGui.GetStyle().ItemSpacing.Y;
-            rowHeights[index] = MathF.Ceiling(MathF.Max(
-                MathF.Max(textHeight, MathF.Max(OmniTheme.Scale(40f), OmniTheme.CheckboxSize())),
-                OmniTextMeasurements.Measure(display.Rows[index].Reason, false, reasonWidth).Y));
-            if (index < visibleRows)
-                tableHeight += rowHeights[index] + ImGui.GetStyle().CellPadding.Y * 2f;
-        }
-        var flags = ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.RowBg |
-                    ImGuiTableFlags.NoPadOuterX | ImGuiTableFlags.NoSavedSettings;
-        if (horizontalScroll)
-            flags |= ImGuiTableFlags.ScrollX;
-        if (verticalScroll)
-            flags |= ImGuiTableFlags.ScrollY;
-        using var table = ImRaii.Table(tableID, 5,
-            flags,
-            new Vector2(availableWidth, horizontalScroll || verticalScroll
-                ? MathF.Ceiling(tableHeight + (horizontalScroll ? scrollbarSize : 0f)) : 0f),
-            horizontalScroll ? tableWidth : 0f);
-        if (!table)
-        {
-            return;
-        }
-
-        ImGui.TableSetupColumn(labels[0], ImGuiTableColumnFlags.WidthFixed, iconWidth);
-        ImGui.TableSetupColumn(labels[1], ImGuiTableColumnFlags.WidthFixed, pluginWidth);
-        ImGui.TableSetupColumn(labels[2], ImGuiTableColumnFlags.WidthFixed, linkWidth);
-        ImGui.TableSetupColumn(labels[3], ImGuiTableColumnFlags.WidthFixed, statusWidth);
-        ImGui.TableSetupColumn(labels[4], ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupScrollFreeze(2, verticalScroll ? 1 : 0);
-        OmniControls.BeginTableHeaderRow();
-        OmniControls.TableHeader(labels[0]);
-        OmniControls.TableHeader(labels[1]);
-        OmniControls.TableHeader(labels[2]);
-        OmniControls.TableHeader(labels[3]);
-        OmniControls.TableHeader(labels[4]);
-
-        for (var index = 0; index < entries.Length; index++)
-        {
-            DrawRow(display.Rows[index], conflict, rowHeights[index]);
-        }
+        PluginRequirementsView.Draw(tableID, GetRows(entries, conflict),
+            limitVisibleRows: limitVisibleRows, maximumVisibleRows: maximumVisibleRows,
+            minimumPluginWidth: minimumPluginWidth);
     }
 
-    private static void DrawRow
-    (
-        DisplayRow                  display,
-        bool                        conflict,
-        float                       rowContentHeight
-    )
-    {
-        var entry = display.Entry;
-        var plugin = display.Plugin;
-        var iconSize = new Vector2(MathF.Round(OmniTheme.Scale(40f)));
-        var buttonSize = new Vector2(OmniTheme.CheckboxSize());
-        var name = display.Name;
-        var version = display.Version;
-        var reason = display.Reason;
-        ImGui.TableNextRow();
-        ImGui.TableSetColumnIndex(0);
-        var textHeight = ImGui.GetTextLineHeight() * (plugin is null ? 1f : 2f) +
-            (plugin is null ? 0f : ImGui.GetStyle().ItemSpacing.Y);
-        var top = ImGui.GetCursorPosY();
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - iconSize.X) * 0.5f));
-        ImGui.SetCursorPosY(top + (rowContentHeight - iconSize.Y) * 0.5f);
-        DrawPluginIcon(plugin, iconSize);
-        ImGui.TableSetColumnIndex(1);
-        ImGui.SetCursorPosY(top + (rowContentHeight - textHeight) * 0.5f);
-        using (ImRaii.TextWrapPos(-1f))
-        {
-            ImGui.TextUnformatted(name);
-            if (plugin is not null)
-            {
-                ImGui.TextColored(OmniTheme.Tokens.Text with
-                {
-                    W = 0.65f
-                }, version);
-            }
-        }
-        ImGui.TableSetColumnIndex(2);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - buttonSize.X) * 0.5f));
-        ImGui.SetCursorPosY(top + (rowContentHeight - buttonSize.Y) * 0.5f);
-        if (OmniControls.IconButton(
-                display.LinkID,
-                FontAwesomeIcon.ExternalLinkAlt,
-                false,
-                buttonSize,
-                OmniLoc.Get(entry.URL is null ? "Requirements.OpenPlugin" : "Requirements.OpenGitHub"),
-                favoriteStyle: true))
-        {
-            var url = entry.URL ?? plugin?.Manifest.RepoUrl;
-            if (!string.IsNullOrWhiteSpace(url))
-                Util.OpenLink(url);
-            else
-                DalamudServices.PluginInterface.OpenPluginInstallerTo(PluginInstallerOpenKind.AllPlugins, name);
-        }
+    internal static float MeasurePluginInfoWidth(Entry[] entries) =>
+        PluginRequirementsView.MeasurePluginInfoWidth(GetRows(entries));
 
-        ImGui.TableSetColumnIndex(3);
-        if (display.StatusOverride is { } status)
-            OmniControls.TableTextCentered(status, rowContentHeight, display.Blocked ? OmniTheme.Tokens.Error : OmniTheme.Tokens.Warning);
-        else
-            DrawStatus(plugin, conflict, rowContentHeight);
-        ImGui.TableSetColumnIndex(4);
-        OmniControls.TableTextCentered(reason, rowContentHeight);
-        if (entry.DetailsKey is not null)
-        {
-            OmniControls.HelpTooltip(OmniLoc.Get(entry.DetailsKey));
-        }
-    }
-
-    private static void DrawPluginIcon
-    (
-        IExposedPlugin? plugin,
-        Vector2         size
-    )
+    private static void DrawPluginIcon(IExposedPlugin? plugin, Vector2 size)
     {
         var cursor = ImGui.GetCursorScreenPos();
         var position = new Vector2(MathF.Round(cursor.X), MathF.Round(cursor.Y));
         if (PluginIconResolver.GetIcon(plugin, size.X) is { } texture)
-        {
             ImGui.GetWindowDrawList().AddImage(texture.Handle, position, position + size);
-        }
-
         ImGui.Dummy(size);
     }
 
-    private static void DrawStatus
-    (
-        IExposedPlugin? plugin,
-        bool            conflict,
-        float           rowHeight
-    )
-    {
-        var tokens = OmniTheme.Tokens;
-        if (plugin is null)
-        {
-            OmniControls.TableTextCentered(
-                OmniLoc.Get("Requirements.Status.NotInstalled"),
-                rowHeight,
-                conflict ? tokens.Text : tokens.Error);
-            return;
-        }
-
-        if (plugin.IsLoaded)
-        {
-            OmniControls.TableTextCentered(
-                OmniLoc.Get("Requirements.Status.Enabled"),
-                rowHeight,
-                conflict ? tokens.Error : tokens.Success);
-            return;
-        }
-
-        OmniControls.TableTextCentered(
-            OmniLoc.Get("Requirements.Status.InstalledDisabled"),
-            rowHeight,
-            conflict ? tokens.Text : tokens.Warning);
-    }
-
-    internal static float MeasurePluginInfoWidth
-    (
-        Entry[] entries
-    )
-    {
-        var width = OmniTextMeasurements.Measure(OmniLoc.Get("Requirements.Column.Plugin")).X;
-        foreach (var row in GetDisplay(entries).Rows)
-        {
-            width = MathF.Max(width, OmniTextMeasurements.Measure(row.Name).X);
-            if (row.Plugin is not null)
-                width = MathF.Max(width, OmniTextMeasurements.Measure(row.Version).X);
-        }
-        return width;
-    }
-
-    private static IExposedPlugin? FindPlugin
-    (
-        Entry                       entry,
-        IEnumerable<IExposedPlugin> installedPlugins
-    )
+    private static IExposedPlugin? FindPlugin(Entry entry, IEnumerable<IExposedPlugin> installedPlugins)
     {
         IExposedPlugin? match = null;
         foreach (var plugin in installedPlugins)
         {
-            if (entry == AutoDutyCN && !PluginDependencies.IsAutoDutyCN(plugin))
-                continue;
-
+            if (entry == AutoDutyCN && !PluginDependencies.IsAutoDutyCN(plugin)) continue;
             foreach (var identifier in entry.Identifiers)
             {
                 if (string.Equals(plugin.InternalName, identifier, StringComparison.OrdinalIgnoreCase) ||
                     (!entry.MatchInternalNameOnly && string.Equals(plugin.Name, identifier, StringComparison.OrdinalIgnoreCase)))
                 {
-                    if (plugin.IsLoaded)
-                        return plugin;
+                    if (plugin.IsLoaded) return plugin;
                     match ??= plugin;
                     break;
                 }
             }
         }
-
         return match;
     }
 
-    internal readonly record struct Entry
-    (
-        string   NameKey,
-        string   ReasonKey,
-        string?  DetailsKey,
-        string?  URL,
-        string[] Identifiers,
-        bool     MatchInternalNameOnly = false
-    );
+    internal readonly record struct Entry(
+        string NameKey, string ReasonKey, string? DetailsKey, string? URL, string[] Identifiers,
+        bool MatchInternalNameOnly = false);
 
     private sealed class DisplayTable
     {
         internal long Revision = -1;
         internal long LocalizationRevision = -1;
         internal DisplayRow[] Rows = [];
-        internal string[] Labels = [];
+        internal PluginRequirementsView.Row[] ViewRows = [];
     }
 
-    private readonly record struct DisplayRow(Entry Entry, IExposedPlugin? Plugin, string Name, string Version,
-        string Reason, string LinkID, string? StatusOverride, bool Blocked);
+    private readonly record struct DisplayRow(
+        PluginRequirementsView.Row View, IExposedPlugin? Plugin, bool Blocked, bool OriginalVnavmesh);
 
     internal static readonly Entry Vnavmesh = new("Requirements.Plugin.Vnavmesh", "Requirements.Reason.Vnavmesh", null,
         "https://github.com/AtmoOmen/ffxiv_navmesh-cn", [vnavmeshIPC.INTERNAL_NAME], MatchInternalNameOnly: true);
-
     private static readonly Entry BossModReborn = new("Requirements.Plugin.BossMod", "Requirements.Reason.BossMod", null,
         "https://github.com/44451516-ff14/BossmodRebornCN", [BossModIPC.REBORN_INTERNAL_NAME], MatchInternalNameOnly: true);
-
     private static readonly Entry RotationSolverReborn = new("Requirements.Plugin.RotationSolverReborn",
-        "Requirements.Reason.Rotation", null, null, [PluginDependencies.RSR_PLUGIN],
-        MatchInternalNameOnly: true);
-
+        "Requirements.Reason.Rotation", null, null, [PluginDependencies.RSR_PLUGIN], MatchInternalNameOnly: true);
     internal static readonly Entry[] CombatAndNavigationPlugins =
     [
         new("Requirements.Plugin.AEAssist", "Requirements.Reason.Rotation", null, null, [PluginDependencies.AE_ASSIST_PLUGIN]),
@@ -377,14 +189,8 @@ internal static class PluginRequirementsTable
         BossModReborn,
         Vnavmesh
     ];
-
     private static readonly Entry AutoDutyCN = new("Requirements.Plugin.AutoDuty", "Requirements.Reason.AutoDuty", null,
         "https://github.com/YouShux/AutoDuty", ["AutoDuty"], MatchInternalNameOnly: true);
-
-    internal static readonly Entry[] DutyCombatAndNavigationPlugins =
-    [
-        AutoDutyCN,
-        ..CombatAndNavigationPlugins
-    ];
-    private const int MAX_VISIBLE_ROWS = 6;
+    internal static readonly Entry[] DutyCombatAndNavigationPlugins = [AutoDutyCN, ..CombatAndNavigationPlugins];
+    private const int MAX_VISIBLE_ROWS = 5;
 }

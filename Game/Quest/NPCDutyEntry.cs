@@ -15,7 +15,7 @@ public static unsafe class NPCDutyEntry
         var services = DService.Instance();
         var framework = EventFramework.Instance();
         if (actorID == 0 || string.IsNullOrWhiteSpace(dutyName) || framework == null ||
-            services.Condition.IsBetweenAreas || !UIModule.IsScreenReady())
+            services.Condition.IsBetweenAreas)
             return NPCDutyEntryProgress.Waiting;
 
         var eventMatches = framework->EventState1.EventId.Id == eventID && framework->EventState1.ObjectId == actorID ||
@@ -50,7 +50,7 @@ public static unsafe class NPCDutyEntry
             if (eventMatches)
                 return NPCDutyEntryProgress.MenuMismatch;
         }
-        if (!services.Condition.IsOccupiedInEvent)
+        if (!UIModule.IsScreenReady() || !services.Condition.IsOccupiedInEvent)
             return NPCDutyEntryProgress.Waiting;
         var talk = services.GameGUI.GetAddonByName<AddonTalk>("Talk");
         return talk != null && ((AtkUnitBase*)talk)->IsAddonAndNodesReady() && AddonTalkEvent.ClickNext()

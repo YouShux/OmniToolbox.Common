@@ -49,6 +49,12 @@ public sealed class DalamudServices
     public static void Initialize(IDalamudPluginInterface pluginInterface)
     {
         isUnloading = false;
+        OmniToolbox.UI.OmniUIHost.Configure(() => IsUnloading, () =>
+        {
+            OmniToolbox.UI.IconBrowser.ClearDisplayCaches();
+            OmniToolbox.UI.Controls.ItemSelectionTable.ClearDisplayCaches();
+            OmniToolbox.UI.Controls.ItemRequirementLine.ClearDisplayCaches();
+        });
         pluginInterface.Create<DalamudServices>();
         PluginInterface = pluginInterface;
     }
