@@ -52,8 +52,6 @@ public static class PublicTestModuleCatalog
         new("testing.free-company-action", "FreeCompanyAction",
             "FreeCompanyActionTitle", "FreeCompanyActionDescription", ModuleCategory.Automation, 1),
         new("testing.cosmic-lottery", "CosmicLottery",
-            "CosmicLotteryTitle", "CosmicLotteryDescription", ModuleCategory.Automation, 1),
-        new("testing.desynthesis-no-animation", "DesynthesisNoAnimation",
-            "Feature.DesynthesisNoAnimation.Title", "Feature.DesynthesisNoAnimation.Description", ModuleCategory.Item, 1)
+            "CosmicLotteryTitle", "CosmicLotteryDescription", ModuleCategory.Automation, 1)
     ]);
 }
