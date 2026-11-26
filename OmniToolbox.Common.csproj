@@ -16,6 +16,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\OmniToolbox.Tree\Shared\TreasureMaps\TreasureMapNativeUI.cs" Link="Game\TreasureMaps\TreasureMapNativeUI.cs" />
+    <Compile Include="..\OmniToolbox.Tree\Shared\Players\NearbyPlayerGuard*.cs" Link="Module\Runtime\%(Filename)%(Extension)" />
+    <Compile Include="..\OmniToolbox.Tree\Verification\FeatureGate.cs" Link="Module\Contracts\FeatureGate.cs" />
+    <Compile Include="..\OmniToolbox.Tree\Verification\TestQualificationLevel.cs" Link="Module\Contracts\TestQualificationLevel.cs" />
+    <Compile Include="..\OmniToolbox.Tree\Module\Contracts\ITreasureMapService.cs" Link="Module\Contracts\ITreasureMapService.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="MessagePack" Version="3.1.12" />
     <PackageReference Include="DailyRoutines.CodeAnalysis" Version="2.6.0">
@@ -50,12 +57,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\OmniToolbox.Localizations\*.xlf"
-                      Link="Localization\%(Filename)%(Extension)"
-                      LogicalName="OmniToolbox.Localization.Official.%(Filename)%(Extension)" />
   </ItemGroup>
 
-  <Target Name="GenerateOmniRuntimeData" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveProjectReferences"
+  <Target Name="PrepareOmniRuntimeData" DependsOnTargets="ResolveProjectReferences"
           Condition="'$(DesignTimeBuild)' != 'true'">
     <PropertyGroup>
       <OmniRuntimeDataDirectory>$(IntermediateOutputPath)GameDataRuntime</OmniRuntimeDataDirectory>
@@ -64,11 +68,36 @@
       <OmniGameDataToolPath>$(OmniGameDataBuildDirectory)\bin\TreeTools.dll</OmniGameDataToolPath>
       <OmniRuntimeDotNetHost Condition="'$(DotNetHostPath)' != ''">$(DotNetHostPath)</OmniRuntimeDotNetHost>
       <OmniRuntimeDotNetHost Condition="'$(OmniRuntimeDotNetHost)' == ''">dotnet</OmniRuntimeDotNetHost>
+      <OmniRuntimeDataInputsPath>$(OmniRuntimeDataDirectory)\inputs.txt</OmniRuntimeDataInputsPath>
+      <OmniRuntimeDataStamp>$(OmniRuntimeDataDirectory)\generated.stamp</OmniRuntimeDataStamp>
     </PropertyGroup>
+    <ItemGroup>
+      <OmniRuntimeDataInput Include="$(MSBuildProjectFullPath);$(MSBuildAllProjects);$(OmniTreeToolsProject);$(MSBuildProjectDirectory)\..\*.props;$(MSBuildProjectDirectory)\..\*.targets;$(MSBuildProjectDirectory)\..\lib\TreeTools\*.props;$(MSBuildProjectDirectory)\..\lib\TreeTools\*.targets;$(MSBuildProjectDirectory)\..\lib\TreeTools\packages.lock.json" />
+      <OmniRuntimeDataInput Include="$(MSBuildProjectDirectory)\..\lib\TreeTools\Tools\GameData\Program.cs;$(MSBuildProjectDirectory)\Data\Runtime\*.cs;$(MSBuildProjectDirectory)\Data\Loading\GameDataCSV.cs" />
+      <OmniRuntimeDataInput Include="$(MSBuildProjectDirectory)\Data\resource-manifest.json;$(MSBuildProjectDirectory)\Data\Resources\**\*.csv;$(MSBuildProjectDirectory)\Data\Resources\**\*.json" />
+      <OmniRuntimeDataInput Include="$(OmniGameDataBuildDirectory)\artifacts\obj\TreeTools\TreeTools.csproj.nuget.g.props;$(OmniGameDataBuildDirectory)\artifacts\obj\TreeTools\TreeTools.csproj.nuget.g.targets" />
+      <OmniRuntimeDataExpectedOutput Include="$(OmniRuntimeDataDirectory)\item-catalog.msgpack;$(OmniRuntimeDataDirectory)\item-sources.msgpack;$(OmniRuntimeDataDirectory)\dungeon-sources.msgpack;$(OmniRuntimeDataDirectory)\embedded-index.json" />
+      <FileWrites Include="$(OmniRuntimeDataInputsPath);$(OmniRuntimeDataStamp)" />
+    </ItemGroup>
+    <MakeDir Directories="$(OmniRuntimeDataDirectory)" />
+    <WriteLinesToFile File="$(OmniRuntimeDataInputsPath)"
+                      Lines="$(Configuration);$(NETCoreSdkVersion);$(OmniRuntimeDotNetHost);@(OmniRuntimeDataInput->'%(FullPath)')"
+                      Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <Delete Files="$(OmniRuntimeDataStamp)" Condition="!Exists('%(OmniRuntimeDataExpectedOutput.Identity)')" />
+  </Target>
+
+  <Target Name="GenerateOmniRuntimeDataFiles" DependsOnTargets="PrepareOmniRuntimeData"
+          Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="$(OmniRuntimeDataInputsPath);@(OmniRuntimeDataInput)" Outputs="$(OmniRuntimeDataStamp)">
     <Exec Command="&quot;$(OmniRuntimeDotNetHost)&quot; build &quot;$(OmniTreeToolsProject)&quot; -c $(Configuration) --artifacts-path &quot;$(OmniGameDataBuildDirectory)\artifacts&quot; &quot;-p:OutputPath=$(OmniGameDataBuildDirectory)\bin&quot; -p:TreeToolsGameDataTool=true -p:UseSharedCompilation=false --disable-build-servers -m:1 --nologo"
           UseUtf8Encoding="Always" StdOutEncoding="utf-8" StdErrEncoding="utf-8" />
     <Exec Command="&quot;$(OmniRuntimeDotNetHost)&quot; &quot;$(OmniGameDataToolPath)&quot; generate --data-directory &quot;$(MSBuildProjectDirectory)\Data&quot; --output-directory &quot;$(OmniRuntimeDataDirectory)&quot;"
           UseUtf8Encoding="Always" StdOutEncoding="utf-8" StdErrEncoding="utf-8" />
+    <Touch Files="$(OmniRuntimeDataStamp)" AlwaysCreate="true" ForceTouch="true" />
+  </Target>
+
+  <Target Name="GenerateOmniRuntimeData" BeforeTargets="AssignTargetPaths" DependsOnTargets="GenerateOmniRuntimeDataFiles"
+          Condition="'$(DesignTimeBuild)' != 'true'">
     <ItemGroup>
       <OmniRuntimeDataFile Include="$(OmniRuntimeDataDirectory)\*.msgpack;$(OmniRuntimeDataDirectory)\embedded-index.json" />
       <EmbeddedResource Include="@(OmniRuntimeDataFile)"
@@ -79,4 +108,15 @@
   </Target>
 
   <Import Project="..\lib\TreeTools\SharedUI\OmniUI.projitems" />
+  <PropertyGroup>
+    <OmniLocalizationMode>Public</OmniLocalizationMode>
+    <OmniLocalizationFolder>PublicLocalization</OmniLocalizationFolder>
+    <OmniLocalizationExtension>xlf</OmniLocalizationExtension>
+  </PropertyGroup>
+  <Import Project="..\tools\Omni.Localization.targets" />
+  <Target Name="GeneratePublicLocalization" BeforeTargets="AssignTargetPaths" DependsOnTargets="GenerateOmniLocalization">
+    <ItemGroup>
+      <EmbeddedResource Include="@(OmniLocalizationFile)" LogicalName="OmniToolbox.Localization.Official.%(OmniLocalizationFile.Filename)%(OmniLocalizationFile.Extension)" />
+    </ItemGroup>
+  </Target>
 </Project>

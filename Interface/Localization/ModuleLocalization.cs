@@ -21,6 +21,8 @@ public sealed class ModuleLocalization
 
     public IReadOnlyDictionary<UILanguage, IReadOnlyDictionary<string, string>> Catalogs => source.Catalogs;
 
+    internal OmniLoc.TextSource Source => source;
+
     /// <summary>
     /// 从简体源文及可选译文创建词库。繁体由宿主生成，不接受简繁覆盖。
     /// </summary>

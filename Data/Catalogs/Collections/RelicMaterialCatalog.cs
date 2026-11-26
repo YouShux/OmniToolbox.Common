@@ -167,6 +167,17 @@ internal static class RelicMaterialCatalog
         Progress(4, "Collection.Relic.Material.Text.NoMaterial", string.Empty)
     ];
 
+    internal static readonly RelicMaterialRequirement[] DeepDungeon =
+    [
+        Item(0, 23165, 3),
+        Item(1, 23165, 6),
+        Item(2, 23166, 10),
+        Item(3, 38943, 3),
+        Item(4, 38943, 6),
+        Item(5, 47098, 3),
+        Item(6, 47098, 6)
+    ];
+
     internal static readonly RelicMaterialRequirement[] Skysteel =
     [
         ..Crafting(1, 20, [29661, 29662, 29663, 29664, 29665, 29666, 29667, 29668]),

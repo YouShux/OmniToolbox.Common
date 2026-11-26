@@ -15,7 +15,10 @@ public sealed class ModuleOperationCoordinator : IAsyncDisposable
     private readonly Action<Exception>?                             reportError;
     private readonly Task                                           consumer;
     private Task?                                                   stoppingTask;
+    private TaskCompletionSource?                                   drained;
+    private TaskCompletionSource?                                   resumed;
     private bool                                                    accepting    = true;
+    private bool                                                    paused;
     private int                                                     pendingCount;
 
     public ModuleOperationCoordinator
@@ -39,8 +42,49 @@ public sealed class ModuleOperationCoordinator : IAsyncDisposable
 
     public bool IsBusy => PendingCount > 0;
 
-    internal ValueTask<bool> WaitToWriteAsync(CancellationToken cancellationToken) =>
-        operations.Writer.WaitToWriteAsync(cancellationToken);
+    internal ValueTask<bool> WaitToWriteAsync(CancellationToken cancellationToken)
+    {
+        lock (syncRoot)
+        {
+            if (!accepting)
+                return ValueTask.FromResult(false);
+            return paused && resumed is { } signal
+                ? new(WaitForResumeAsync(signal.Task, cancellationToken))
+                : operations.Writer.WaitToWriteAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>暂停接收新操作并等待已提交操作退出；取消等待后仍须由调用方 Resume。</summary>
+    public Task PauseAsync(CancellationToken cancellationToken = default)
+    {
+        if (ReferenceEquals(Current.Value, this))
+            return Task.FromException(new InvalidOperationException("A module operation cannot pause its own coordinator."));
+        if (cancellationToken.IsCancellationRequested)
+            return Task.FromCanceled(cancellationToken);
+        lock (syncRoot)
+        {
+            if (!accepting)
+                return Task.FromException(new InvalidOperationException("The module operation coordinator is stopping."));
+            paused = true;
+            resumed ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
+            if (pendingCount == 0)
+                return Task.CompletedTask;
+            drained ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
+            return drained.Task.WaitAsync(cancellationToken);
+        }
+    }
+
+    public void Resume()
+    {
+        lock (syncRoot)
+        {
+            if (!accepting)
+                return;
+            paused = false;
+            resumed?.TrySetResult();
+            resumed = null;
+        }
+    }
 
     public Task<ModuleOperationResult> Enqueue
     (
@@ -62,11 +106,16 @@ public sealed class ModuleOperationCoordinator : IAsyncDisposable
                 request.Dispose();
                 return Task.FromResult(ModuleOperationResult.Cancelled);
             }
+            if (paused)
+            {
+                request.Dispose();
+                return Task.FromResult(ModuleOperationResult.Busy);
+            }
 
             Interlocked.Increment(ref pendingCount);
             if (!operations.Writer.TryWrite(request))
             {
-                Interlocked.Decrement(ref pendingCount);
+                CompletePending();
                 request.Dispose();
                 return Task.FromResult(ModuleOperationResult.Busy);
             }
@@ -86,6 +135,8 @@ public sealed class ModuleOperationCoordinator : IAsyncDisposable
                 return stoppingTask;
 
             accepting = false;
+            resumed?.TrySetResult();
+            resumed = null;
             operations.Writer.TryComplete();
             completion   = new(TaskCreationOptions.RunContinuationsAsynchronously);
             stoppingTask = completion.Task;
@@ -154,7 +205,8 @@ public sealed class ModuleOperationCoordinator : IAsyncDisposable
             finally
             {
                 request.Dispose();
-                Interlocked.Decrement(ref pendingCount);
+                lock (syncRoot)
+                    CompletePending();
             }
         }
     }
@@ -179,6 +231,20 @@ public sealed class ModuleOperationCoordinator : IAsyncDisposable
         {
             completion.TrySetException(exception);
         }
+    }
+
+    private async Task<bool> WaitForResumeAsync(Task signal, CancellationToken cancellationToken)
+    {
+        await signal.WaitAsync(cancellationToken).ConfigureAwait(false);
+        return await operations.Writer.WaitToWriteAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private void CompletePending()
+    {
+        if (Interlocked.Decrement(ref pendingCount) != 0)
+            return;
+        drained?.TrySetResult();
+        drained = null;
     }
 
     private void Report(Exception exception)

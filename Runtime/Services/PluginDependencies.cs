@@ -5,7 +5,7 @@ using OmniToolbox.UI;
 
 namespace OmniToolbox.Host;
 
-internal static class PluginDependencies
+public static class PluginDependencies
 {
     internal const string AE_ASSIST_PLUGIN = "AEAssistV3";
     internal const string PROME_ROTATION_PLUGIN = "PromeRotation";
@@ -83,7 +83,7 @@ internal static class PluginDependencies
         plugins.Any(static plugin => plugin.IsLoaded &&
             string.Equals(plugin.InternalName, BossModIPC.INTERNAL_NAME, StringComparison.OrdinalIgnoreCase));
 
-    internal static bool IsBossModRebornEnabled()
+    public static bool IsBossModRebornEnabled()
     {
         var plugins = DalamudServices.PluginInterface.InstalledPlugins;
         return !IsOriginalBossModEnabled(plugins) &&

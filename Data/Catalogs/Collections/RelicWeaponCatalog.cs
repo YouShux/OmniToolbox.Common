@@ -466,7 +466,8 @@ internal static class RelicWeaponCatalog
             JobIds = [19, 21, 32, 37, 24, 28, 33, 40, 20, 22, 39, 34, 30, 41, 23, 31, 38, 25, 27, 35, 42],
             StageItemIds = DeepDungeonItemIDs,
             ShieldItemIds = DeepDungeonShieldItemIDs,
-            JobOrder = RelicWeaponJobOrder.Current
+            JobOrder = RelicWeaponJobOrder.Current,
+            Materials = RelicMaterialCatalog.DeepDungeon
         },
         new()
         {

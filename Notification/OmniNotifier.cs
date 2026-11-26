@@ -1,4 +1,5 @@
 using System.IO;
+using Dalamud.Game.Gui.Toast;
 using Dalamud.Game.Text;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Interface.Textures;
@@ -81,14 +82,16 @@ public static class OmniNotifier
         NotifyHelper.Chat(entry);
     }
 
-    public static void Banner(string content)
+    public static void Banner(string content) => Banner(content, 0);
+
+    public static void Banner(string content, uint iconID)
     {
         if (string.IsNullOrWhiteSpace(content))
         {
             return;
         }
 
-        NotifyHelper.ToastQuest(content);
+        NotifyHelper.ToastQuest(content, new QuestToastOptions { IconId = iconID });
     }
 
     public static void Popup

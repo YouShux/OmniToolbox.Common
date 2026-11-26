@@ -86,7 +86,7 @@ public static class ItemSelectionTable
         rowHeight        = rowContentHeight + cellPadding;
         if (detailLayout)
         {
-            var measuredDetails = layout.DetailWidth == nameWidth && layout.DetailRows.Length == rows.Count &&
+            var measuredDetails = layout.DetailWidth.Equals(nameWidth) && layout.DetailRows.Length == rows.Count &&
                 layout.DetailSpacing == ImGui.GetStyle().ItemSpacing && layout.DetailPadding == ImGui.GetStyle().CellPadding &&
                 layout.DetailEnabled == showEnabledColumn;
             if (!measuredDetails)
@@ -300,12 +300,13 @@ public static class ItemSelectionTable
         }
 
         var wrapWidth = wrapName ? MathF.Max(1f, availableWidth - (stacked ? 0f : iconSize + textSpacing)) : 0f;
-        var textSize = OmniTextMeasurements.Measure(itemName, false, wrapWidth);
+        var textSize = wrapWidth > 0f
+            ? OmniTextMeasurements.MeasureWrapped(itemName, wrapWidth)
+            : OmniTextMeasurements.Measure(itemName);
         var textPosition = new Vector2(
             cellPosition.X + (stacked ? 0f : iconSize + textSpacing),
             cellPosition.Y + (stacked ? iconSize + textSpacing : MathF.Max(0f, (cellHeight - textSize.Y) * 0.5f)));
-        ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), ImGui.GetFontSize(), textPosition,
-            ImGui.GetColorU32(ImGuiCol.Text), itemName, wrapWidth);
+        OmniControls.DrawTextWrapped(itemName, textPosition, wrapWidth, ImGui.GetColorU32(ImGuiCol.Text));
         ImGui.SetCursorScreenPos(textPosition);
         ImGui.Dummy(new Vector2(
             MathF.Max(1f, MathF.Min(textSize.X, wrapName ? wrapWidth : availableWidth - iconSize - textSpacing)),
@@ -325,7 +326,7 @@ public static class ItemSelectionTable
     {
         var spacing = OmniTheme.Scale(6f);
         var stacked = width < iconSize + spacing + ImGui.GetFontSize() * 2f;
-        var textHeight = OmniTextMeasurements.Measure(name, false, MathF.Max(1f, width - (stacked ? 0f : iconSize + spacing))).Y;
+        var textHeight = OmniTextMeasurements.MeasureWrapped(name, MathF.Max(1f, width - (stacked ? 0f : iconSize + spacing))).Y;
         return stacked ? iconSize + spacing + textHeight : MathF.Max(iconSize, textHeight);
     }
     private sealed class ItemLayout
@@ -378,8 +379,8 @@ public static class ItemSelectionTable
             ref var cached = ref (useActual ? ref actual : ref estimated);
             var font = (nint)ImGui.GetFont().Handle;
             var fontSize = ImGui.GetFontSize();
-            if (cached is { } layout && layout.Width == width && layout.IconSize == iconSize &&
-                layout.FontSize == fontSize && layout.Font == font)
+            if (cached is { } layout && layout.Width.Equals(width) && layout.IconSize.Equals(iconSize) &&
+                layout.FontSize.Equals(fontSize) && layout.Font == font)
                 return layout.Height;
 
             if (useActual)

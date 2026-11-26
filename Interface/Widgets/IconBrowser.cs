@@ -373,6 +373,7 @@ public sealed class IconBrowser : IEscapeClosableWindow
             }
         }
 
+        OmniWindowChrome.DragBackground();
         ImGui.End();
     }
 

@@ -329,8 +329,8 @@ public sealed class TerritorySelector
         var height = baseHeight;
         foreach (var option in visibleTerritoryOptions)
         {
-            height = MathF.Max(height, OmniTextMeasurements.Measure(option.Name, false, mapWidth).Y);
-            height = MathF.Max(height, OmniTextMeasurements.Measure(option.Region, false, regionWidth).Y);
+            height = MathF.Max(height, OmniTextMeasurements.MeasureWrapped(option.Name, mapWidth).Y);
+            height = MathF.Max(height, OmniTextMeasurements.MeasureWrapped(option.Region, regionWidth).Y);
         }
         cached = (mapWidth, regionWidth, baseHeight, fontSize, font, height);
         return height;

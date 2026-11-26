@@ -90,9 +90,8 @@ public static class ItemRequirementLine
                 }
             }
 
-            ImGui.PushTextWrapPos(lineEnd);
-            ImGui.TextColored(color, text);
-            ImGui.PopTextWrapPos();
+            using (ImRaii.TextWrapPos(lineEnd))
+                OmniControls.TextWrapped(color, text);
             hasPart = true;
         }
     }

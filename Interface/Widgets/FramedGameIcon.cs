@@ -10,7 +10,7 @@ using LuminaItem = Lumina.Excel.Sheets.Item;
 
 namespace OmniToolbox.UI.Controls;
 
-internal static class FramedGameIcon
+public static class FramedGameIcon
 {
     private static readonly Vector4         DimmedTint              = new(0.55f, 0.55f, 0.55f, 1f);
     private static ISharedImmediateTexture? ActiveTexture;

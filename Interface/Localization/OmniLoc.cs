@@ -149,7 +149,7 @@ public static class OmniLoc
     });
 
     /// <summary>
-    /// 为候选模块复制并验证词条，不立即改变当前生效词条。
+    /// 为候选模块复用已验证的冻结词库，检查命令引用，不立即改变当前生效词条。
     /// </summary>
     internal static ModuleRegistration PrepareModule(OmniModuleBase owner)
     {
@@ -160,7 +160,7 @@ public static class OmniLoc
             foreach (var command in commands)
                 if (!texts.Catalogs[UILanguage.SimplifiedChinese].ContainsKey(command.DescriptionKey))
                     throw new InvalidDataException($"Module command localization is missing: {owner.ModuleName}/{command.DescriptionKey}");
-        var registration = new ModuleRegistration(owner.ModuleName, new TextSource(texts.Catalogs));
+        var registration = new ModuleRegistration(owner.ModuleName, texts.Source);
         owner.LocalizationRegistration = registration;
         return registration;
     }
