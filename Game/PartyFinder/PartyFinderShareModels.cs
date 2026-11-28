@@ -36,6 +36,12 @@ public static class PartyFinderShareModels
 
         [JsonPropertyName("snapshot_age_seconds")]
         public long? SnapshotAgeSeconds { get; init; }
+
+        [JsonPropertyName("candidate_pool_full")]
+        public bool CandidatePoolFull { get; init; }
+
+        [JsonPropertyName("next_poll_seconds")]
+        public int NextPollSeconds { get; init; }
     }
 
     public sealed record ObservationBatch(

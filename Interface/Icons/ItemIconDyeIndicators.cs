@@ -6,7 +6,6 @@ using KamiToolKit.Nodes;
 using Lumina.Excel.Sheets;
 using OmenTools.Extensions;
 using OmenTools.Interop.Game.Lumina;
-using OmniToolbox.Host;
 using OmniToolbox.UI.Theme;
 
 namespace OmniToolbox.UI;

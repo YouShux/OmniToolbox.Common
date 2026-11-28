@@ -6,7 +6,6 @@ using OmenTools;
 using OmenTools.Info.Game.ItemSource;
 using OmenTools.Info.Game.ItemSource.Enums;
 using OmenTools.Interop.Game.Lumina;
-using OmniToolbox.Host;
 
 namespace OmniToolbox.Collections;
 

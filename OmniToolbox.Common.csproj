@@ -16,13 +16,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\OmniToolbox.Tree\Shared\TreasureMaps\TreasureMapNativeUI.cs" Link="Game\TreasureMaps\TreasureMapNativeUI.cs" />
-    <Compile Include="..\OmniToolbox.Tree\Shared\Players\NearbyPlayerGuard*.cs" Link="Module\Runtime\%(Filename)%(Extension)" />
-    <Compile Include="..\OmniToolbox.Tree\Verification\FeatureGate.cs" Link="Module\Contracts\FeatureGate.cs" />
-    <Compile Include="..\OmniToolbox.Tree\Verification\TestQualificationLevel.cs" Link="Module\Contracts\TestQualificationLevel.cs" />
-    <Compile Include="..\OmniToolbox.Tree\Module\Contracts\ITreasureMapService.cs" Link="Module\Contracts\ITreasureMapService.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="MessagePack" Version="3.1.12" />
     <PackageReference Include="DailyRoutines.CodeAnalysis" Version="2.6.0">

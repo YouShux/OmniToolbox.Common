@@ -8,7 +8,6 @@ using Lumina.Text.ReadOnly;
 using OmenTools;
 using OmenTools.OmenService;
 using OmniToolbox.Config;
-using OmniToolbox.Host;
 using DalamudSeString = Dalamud.Game.Text.SeStringHandling.SeString;
 using DalamudSeStringBuilder = Dalamud.Game.Text.SeStringHandling.SeStringBuilder;
 
@@ -114,7 +113,7 @@ public static class OmniNotifier
             WindowsNotifier?.Show(resolvedTitle, content);
         }
 
-        DService.Instance().DalamudNotification.AddNotification(
+        DalamudServices.NotificationManager.AddNotification(
             new()
             {
                 Title = resolvedTitle,

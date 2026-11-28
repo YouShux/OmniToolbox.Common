@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using MessagePack;
-using OmniToolbox.Host;
 
 namespace OmniToolbox.Data;
 
@@ -76,7 +75,6 @@ internal sealed partial class GameDataSnapshot
             }
             catch (Exception exception) when (exception is IOException or InvalidDataException or MessagePackSerializationException or InvalidOperationException)
             {
-                DalamudServices.PluginLog.Warning(exception, "Unable to read item catalog runtime package; using source data.");
                 itemCatalog = GameDataPackageBuilder.BuildItemCatalog(new Dictionary<string, string>
                 {
                     ["ItemSupplement.csv"] = GetSelected("ItemSupplement.csv").Content,
@@ -102,7 +100,6 @@ internal sealed partial class GameDataSnapshot
             }
             catch (Exception exception) when (exception is IOException or InvalidDataException or MessagePackSerializationException or InvalidOperationException)
             {
-                DalamudServices.PluginLog.Warning(exception, "Unable to read item source runtime package; using source data.");
                 wikiItems = GameDataPackageBuilder.BuildWikiItems(GetSelected("WikiItemSources.json").Content, cancellationToken);
             }
             return wikiItems;
@@ -124,7 +121,6 @@ internal sealed partial class GameDataSnapshot
             }
             catch (Exception exception) when (exception is IOException or InvalidDataException or MessagePackSerializationException or InvalidOperationException)
             {
-                DalamudServices.PluginLog.Warning(exception, "Unable to read dungeon runtime package; using source data.");
                 var files = RuntimeIndex.Packages["dungeon-sources"].Inputs.ToDictionary(
                     name => name, name => GetSelected(name).Content, StringComparer.Ordinal);
                 dungeonSources = GameDataPackageBuilder.BuildDungeonSources(files, cancellationToken);

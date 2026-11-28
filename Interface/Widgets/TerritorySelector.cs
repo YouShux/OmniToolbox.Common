@@ -15,6 +15,13 @@ public sealed class TerritorySelector
     private static readonly HashSet<uint>         TerritoryOptionIDs     = [];
     private static bool                           TerritoryOptionsLoaded;
 
+    internal static void ClearDisplayCaches()
+    {
+        TerritoryOptions.Clear();
+        TerritoryOptionIDs.Clear();
+        TerritoryOptionsLoaded = false;
+    }
+
     private readonly string                                                                                 id;
     private readonly string searchID;
     private readonly string tableID;
@@ -75,7 +82,7 @@ public sealed class TerritorySelector
             return changed;
         }
 
-        var clientState = DService.Instance().ClientState;
+        var clientState = DalamudServices.ClientState;
         var currentTerritoryID = clientState.IsLoggedIn ? (uint)clientState.TerritoryType : 0;
         var addCurrentWidth = OmniControls.CompactButtonSize(OmniLoc.Get("Common.TerritorySelector.AddCurrent")).X;
         var searchWidth = MathF.Max(

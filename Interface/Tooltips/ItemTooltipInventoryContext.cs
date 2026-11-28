@@ -10,12 +10,6 @@ public sealed unsafe class ItemTooltipInventoryContext(HookRegistry hookRegistry
 {
     private static readonly CompSig HoveredItemSignature = new(
         "E8 ?? ?? ?? ?? 84 C0 0F 84 ?? ?? ?? ?? 48 89 9C 24 ?? ?? ?? ?? 4C 89 A4 24");
-
-    private Hook<AgentItemDetailOnItemHovered>? hoveredItemHook;
-    private InventoryItem                       hoveredItem;
-    private int                                 leaseCount;
-    private bool                                disposed;
-
     private delegate byte AgentItemDetailOnItemHovered
     (
         void* agent,
@@ -26,13 +20,18 @@ public sealed unsafe class ItemTooltipInventoryContext(HookRegistry hookRegistry
         uint  index,
         int*  itemData
     );
+    private Hook<AgentItemDetailOnItemHovered>? HoveredItemHook;
+
+    private InventoryItem hoveredItem;
+    private int           leaseCount;
+    private bool          disposed;
 
     public IDisposable Acquire()
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         if (leaseCount == 0)
         {
-            hoveredItemHook = hookRegistry.Register(
+            HoveredItemHook = hookRegistry.Register(
                 HoveredItemSignature,
                 (AgentItemDetailOnItemHovered)OnItemHovered);
         }
@@ -74,7 +73,7 @@ public sealed unsafe class ItemTooltipInventoryContext(HookRegistry hookRegistry
         int*  itemData
     )
     {
-        var result = hoveredItemHook!.Original(agent, source, context, owner, type, index, itemData);
+        var result = HoveredItemHook!.Original(agent, source, context, owner, type, index, itemData);
         hoveredItem = itemData == null ? default : *(InventoryItem*)itemData;
         return result;
     }
@@ -91,8 +90,8 @@ public sealed unsafe class ItemTooltipInventoryContext(HookRegistry hookRegistry
 
     private void ReleaseHook()
     {
-        hookRegistry.Release(hoveredItemHook);
-        hoveredItemHook = null;
+        hookRegistry.Release(HoveredItemHook);
+        HoveredItemHook = null;
         hoveredItem     = default;
     }
 

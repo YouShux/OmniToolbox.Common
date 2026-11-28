@@ -5,7 +5,6 @@ using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using OmenTools.OmenService;
 using OmniToolbox.Config;
-using OmniToolbox.Host;
 using OmniToolbox.Items;
 using OmniToolbox.UI;
 using OmniToolbox.UI.Controls;

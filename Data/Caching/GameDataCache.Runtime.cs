@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using MessagePack;
-using OmniToolbox.Host;
 using TreeTools.IO;
 
 namespace OmniToolbox.Data;
@@ -109,7 +108,6 @@ internal sealed partial class GameDataCache
             catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or
                 MessagePackSerializationException or InvalidOperationException or ArgumentException)
             {
-                DalamudServices.PluginLog.Warning(exception, "Unable to reuse {Group} runtime cache; checking source data.", group);
             }
         }
 
@@ -318,7 +316,6 @@ internal sealed partial class GameDataCache
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            DalamudServices.PluginLog.Warning(exception, "Unable to save derived runtime cache {Path}; source data is retained.", path);
         }
     }
 

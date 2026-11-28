@@ -56,7 +56,7 @@ public static class ItemRequirementLine
             item.ClassJobCategory.IsValid)
         {
             var category = item.ClassJobCategory.Value;
-            var player = DService.Instance().ObjectTable.LocalPlayer;
+            var player = DalamudServices.ObjectTable.LocalPlayer;
             DrawPart(
                 display.Job,
                 player is null ? neutral

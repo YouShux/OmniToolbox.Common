@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
 using OmenTools.OmenService;
-using OmniToolbox.Host;
 using TreeTools.IO;
 
 namespace OmniToolbox.Data;
@@ -57,7 +56,6 @@ internal sealed partial class GameDataCache
         catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or CsvHelperException or
                                            KeyNotFoundException or InvalidOperationException or FormatException or OverflowException)
         {
-            DalamudServices.PluginLog.Warning(exception, "Unable to read community data cache; using bundled data.");
         }
 
         communitySnapshot = snapshot;
@@ -121,7 +119,6 @@ internal sealed partial class GameDataCache
                                            KeyNotFoundException or InvalidOperationException or FormatException or OverflowException or DecoderFallbackException ||
                                            exception is OperationCanceledException && !cancellationToken.IsCancellationRequested)
         {
-            DalamudServices.PluginLog.Warning(exception, "Unable to update community data; keeping cached or bundled data.");
             return resources;
         }
 
@@ -136,7 +133,6 @@ internal sealed partial class GameDataCache
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            DalamudServices.PluginLog.Warning(exception, "Unable to save community data cache.");
         }
 
         return resources;

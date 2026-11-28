@@ -12,7 +12,6 @@ using OmenTools;
 using OmenTools.Extensions;
 using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.Collections;
-using OmniToolbox.Host;
 using OmniToolbox.Notifications;
 using OmniToolbox.UI;
 
@@ -40,7 +39,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
     public ItemPreviewService()
     {
         itemPreviewTargets = BuildPreviewIndex();
-        lastTerritoryID    = DService.Instance().ClientState.TerritoryType;
+        lastTerritoryID    = DalamudServices.ClientState.TerritoryType;
         lastPlayerAddress  = GetLocalPlayerAddress();
     }
 
@@ -104,7 +103,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             return;
         }
 
-        var territoryID = DService.Instance().ClientState.TerritoryType;
+        var territoryID = DalamudServices.ClientState.TerritoryType;
         var playerAddress = GetLocalPlayerAddress();
         if (territoryID == lastTerritoryID && playerAddress == lastPlayerAddress)
         {
@@ -120,7 +119,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
     {
         var shouldBeUnmounted = originalMountID.HasValue
             ? originalMountID.Value == 0
-            : !DService.Instance().Condition[ConditionFlag.Mounted];
+            : !DalamudServices.Condition[ConditionFlag.Mounted];
         ClearPreview();
 
         var character = CanUseDirectPreview() ? GetLocalCharacter() : null;
@@ -142,7 +141,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             return;
         }
 
-        var canRestore = lastTerritoryID == DService.Instance().ClientState.TerritoryType &&
+        var canRestore = lastTerritoryID == DalamudServices.ClientState.TerritoryType &&
                          lastPlayerAddress == GetLocalPlayerAddress();
         var character = canRestore ? GetLocalCharacter() : null;
         if (character != null)
@@ -650,7 +649,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         customize = default;
         var character = CanUseDirectPreview() ? GetLocalCharacter() : null;
         if (character == null ||
-            HasDirectPreview() && (lastPlayerAddress != (nint)character || lastTerritoryID != DService.Instance().ClientState.TerritoryType))
+            HasDirectPreview() && (lastPlayerAddress != (nint)character || lastTerritoryID != DalamudServices.ClientState.TerritoryType))
             return false;
 
         var draw = ((GameObject*)character)->GetCharacterBase();
@@ -869,8 +868,8 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
     }
 
     private static bool CanUseDirectPreview() =>
-        DService.Instance().ClientState.IsLoggedIn &&
-        !DService.Instance().Condition.IsBetweenAreas;
+        DalamudServices.ClientState.IsLoggedIn &&
+        !DalamudServices.Condition.IsBetweenAreas;
 
     private void TrackPreviewOwner()
     {
@@ -879,7 +878,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
             return;
         }
 
-        lastTerritoryID   = DService.Instance().ClientState.TerritoryType;
+        lastTerritoryID   = DalamudServices.ClientState.TerritoryType;
         lastPlayerAddress = GetLocalPlayerAddress();
     }
 
@@ -897,18 +896,18 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
 
     private static Character* GetLocalCharacter()
     {
-        var localPlayer = DService.Instance().ObjectTable.LocalPlayer;
+        var localPlayer = DalamudServices.ObjectTable.LocalPlayer;
         return localPlayer is null || localPlayer.Address == nint.Zero
             ? null
             : (Character*)localPlayer.Address;
     }
 
     private static nint GetLocalPlayerAddress() =>
-        DService.Instance().ObjectTable.LocalPlayer?.Address ?? nint.Zero;
+        DalamudServices.ObjectTable.LocalPlayer?.Address ?? nint.Zero;
 
     private static Character* GetLocalChocobo(uint expectedEntityID = 0)
     {
-        var objectTable = DService.Instance().ObjectTable;
+        var objectTable = DalamudServices.ObjectTable;
         var ownerID = objectTable.LocalPlayer?.EntityID ?? 0;
         if (expectedEntityID != 0)
         {
@@ -943,7 +942,7 @@ public sealed unsafe partial class ItemPreviewService : IDisposable
         uint ownerID
     )
     {
-        var gameObject = DService.Instance().ObjectTable.SearchByEntityID(entityID);
+        var gameObject = DalamudServices.ObjectTable.SearchByEntityID(entityID);
         return gameObject is not null && IsLocalChocobo(gameObject.ToStruct(), ownerID)
             ? (Character*)gameObject.Address
             : null;

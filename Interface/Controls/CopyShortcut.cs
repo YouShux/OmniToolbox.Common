@@ -2,7 +2,6 @@ using Dalamud.Game.ClientState.Keys;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
-using OmniToolbox.Host;
 
 namespace OmniToolbox.UI;
 

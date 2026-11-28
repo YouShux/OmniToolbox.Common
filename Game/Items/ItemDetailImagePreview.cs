@@ -5,7 +5,6 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using OmenTools.Extensions;
 using OmenTools.Interop.Game.Helpers;
 using OmniToolbox.Config;
-using OmniToolbox.Host;
 using OmniToolbox.UI.Controls;
 using OmniToolbox.UI.Theme;
 using TreeTools.Lifecycle;

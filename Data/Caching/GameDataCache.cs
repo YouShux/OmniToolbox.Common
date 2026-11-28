@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
 using OmenTools.OmenService;
-using OmniToolbox.Host;
 using TreeTools.IO;
 
 namespace OmniToolbox.Data;
@@ -113,7 +112,6 @@ internal sealed partial class GameDataCache : IDisposable
         }
         catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or CsvHelperException)
         {
-            DalamudServices.PluginLog.Warning(exception, "Unable to read supplemental data cache; using bundled data.");
         }
 
         supplementalSnapshot = snapshot;
@@ -164,7 +162,6 @@ internal sealed partial class GameDataCache : IDisposable
                                            CsvHelperException or KeyNotFoundException or InvalidOperationException ||
                                            exception is OperationCanceledException && !cancellationToken.IsCancellationRequested)
         {
-            DalamudServices.PluginLog.Warning(exception, "Unable to update supplemental data; keeping cached or bundled data.");
             return resources;
         }
 
@@ -179,7 +176,6 @@ internal sealed partial class GameDataCache : IDisposable
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            DalamudServices.PluginLog.Warning(exception, "Unable to save supplemental data cache.");
         }
 
         return resources;

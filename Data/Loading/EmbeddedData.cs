@@ -116,7 +116,7 @@ internal static class EmbeddedData
             {
                 readRow(csv);
             }
-            catch (Exception)
+            catch (Exception exception) when (exception is not OperationCanceledException)
             {
             }
         }

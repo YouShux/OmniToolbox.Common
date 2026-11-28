@@ -4,7 +4,6 @@ using Dalamud.Game.Text;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using OmniToolbox.Config;
-using OmniToolbox.Host;
 using OmniToolbox.Items;
 using OmniToolbox.UI;
 using OmniToolbox.UI.Controls;
@@ -20,8 +19,11 @@ namespace OmniToolbox.UI;
 
 public sealed class IconBrowser : IEscapeClosableWindow
 {
-    private static string? CustomIconFilePath;
-    private static string? LauncherIconFilePath;
+    private static string?                                                  CustomIconFilePath;
+    private static string?                                                  LauncherIconFilePath;
+    private static ISharedImmediateTexture?                                 CustomIconTexture;
+    private static ISharedImmediateTexture?                                 LauncherIconTexture;
+    private static readonly Dictionary<(uint IconID, bool HQ), ISharedImmediateTexture?> GameIconTextures = [];
 
     internal static string CustomIconPath => CustomIconFilePath ??= System.IO.Path.Combine(
         DalamudServices.PluginInterface.AssemblyLocation.DirectoryName!, "Assets", "CustomIcon.png");
@@ -31,8 +33,11 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
     internal static void ClearDisplayCaches()
     {
-        CustomIconFilePath = null;
+        CustomIconFilePath   = null;
         LauncherIconFilePath = null;
+        CustomIconTexture    = null;
+        LauncherIconTexture  = null;
+        GameIconTextures.Clear();
     }
 
     internal static string? GetBuiltInIconPath(uint iconID) => iconID switch
@@ -44,11 +49,33 @@ public sealed class IconBrowser : IEscapeClosableWindow
 
     internal static IDalamudTextureWrap? GetIconTexture(uint iconID)
     {
+        if (iconID == CUSTOM_ICON_ID)
+            return (CustomIconTexture ??= DalamudServices.TextureProvider.GetFromFile(CustomIconPath)).GetWrapOrDefault();
+        if (iconID == LauncherIconID)
+            return (LauncherIconTexture ??= DalamudServices.TextureProvider.GetFromFile(LauncherIconPath)).GetWrapOrDefault();
+        return GetCachedGameIconTexture(iconID, false, false)?.GetWrapOrEmpty();
+    }
+
+    internal static IDalamudTextureWrap? GetGameIconWrap(uint iconID, bool itemHQ = false) =>
+        GetCachedGameIconTexture(iconID, itemHQ, true)?.GetWrapOrDefault();
+
+    private static ISharedImmediateTexture? GetCachedGameIconTexture(uint iconID, bool itemHQ, bool fallbackLowRes)
+    {
+        if (iconID == 0)
+            return null;
+        var key = (iconID, itemHQ);
+        if (GameIconTextures.TryGetValue(key, out var cached))
+            return cached;
         var provider = DalamudServices.TextureProvider;
-        if (GetBuiltInIconPath(iconID) is { } path)
-            return provider.GetFromFile(path).GetWrapOrDefault();
-        return provider.TryGetFromGameIcon(new GameIconLookup(iconID), out var texture)
-            ? texture.GetWrapOrEmpty() : null;
+        if (!provider.TryGetFromGameIcon(new GameIconLookup(iconID, itemHQ), out var texture) &&
+            (!fallbackLowRes || !provider.TryGetFromGameIcon(new GameIconLookup(iconID, itemHQ, hiRes: false), out texture)))
+        {
+            texture = null;
+        }
+        if (GameIconTextures.Count >= 512)
+            GameIconTextures.Clear();
+        GameIconTextures[key] = texture;
+        return texture;
     }
 
     private static readonly IconTabDefinition[] GameIconTabs =

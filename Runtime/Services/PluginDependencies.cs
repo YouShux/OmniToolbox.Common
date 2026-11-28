@@ -1,7 +1,7 @@
 using Dalamud.Plugin;
 using OmenTools.Dalamud;
-using OmniToolbox.Config;
 using OmniToolbox.UI;
+using TreeTools.Automation.Combat;
 
 namespace OmniToolbox.Host;
 

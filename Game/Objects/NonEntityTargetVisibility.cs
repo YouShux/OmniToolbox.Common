@@ -11,8 +11,7 @@ public sealed unsafe class NonEntityTargetVisibility(HookRegistry hookRegistry) 
 {
     private static readonly CompSig GetIsTargetableSignature = new(
         "40 53 48 83 EC 20 F3 0F 10 81 ?? ?? ?? ?? 0F 57 C9 0F 2E C1 48 8B D9 7A 02 74 35");
-
-    private Hook<Character.Delegates.GetIsTargetable>? hook;
+    private Hook<Character.Delegates.GetIsTargetable>? GetIsTargetableHook;
     private bool                                       overlayEnabled;
     private bool                                       showNonEntityTargets;
     private bool                                       blockOtherTreasureTargets;
@@ -75,7 +74,7 @@ public sealed unsafe class NonEntityTargetVisibility(HookRegistry hookRegistry) 
     {
         if (overlayEnabled || blockOtherTreasureTargets || blockOtherTreasureAutomationTargets)
         {
-            hook ??= hookRegistry.Register<Character.Delegates.GetIsTargetable>(
+            GetIsTargetableHook ??= hookRegistry.Register<Character.Delegates.GetIsTargetable>(
                 GetIsTargetableSignature,
                 IsTargetableDetour);
             return;
@@ -86,18 +85,18 @@ public sealed unsafe class NonEntityTargetVisibility(HookRegistry hookRegistry) 
 
     private void ReleaseHook()
     {
-        if (hook is null)
+        if (GetIsTargetableHook is null)
         {
             return;
         }
 
-        hookRegistry.Release(hook);
-        hook = null;
+        hookRegistry.Release(GetIsTargetableHook);
+        GetIsTargetableHook = null;
     }
 
     private bool IsTargetableDetour(Character* target)
     {
-        var original = hook!.Original(target);
+        var original = GetIsTargetableHook!.Original(target);
         if ((blockOtherTreasureTargets || blockOtherTreasureAutomationTargets) && IsOtherTreasureTarget(target))
         {
             return false;

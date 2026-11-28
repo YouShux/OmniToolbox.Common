@@ -371,7 +371,7 @@ public sealed partial class CollectionSourceService : IAsyncDisposable
             foreach (var row in containerRows)
                 itemIDs.Add(row.SourceItemID);
         }
-        catch (Exception)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
         }
 

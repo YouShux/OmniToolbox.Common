@@ -19,7 +19,7 @@ internal static class CombatCharacterSnapshot
     {
         Clear();
 
-        var objectTable = DService.Instance().ObjectTable;
+        var objectTable = DalamudServices.ObjectTable;
         var characterCount = Math.Min(objectTable.Length, IObjectTable.CharactersRange.End.Value);
         for (var index = 0; index < characterCount; index++)
         {

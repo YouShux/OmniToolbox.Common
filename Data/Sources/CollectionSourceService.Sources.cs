@@ -6,7 +6,6 @@ using OmenTools;
 using OmenTools.Interop.Game.Helpers;
 using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.Data;
-using OmniToolbox.Host;
 
 namespace OmniToolbox.Collections;
 
@@ -217,7 +216,7 @@ public sealed partial class CollectionSourceService
             var key = (AddonTextID: obtain.Text.RowId, AcquisitionID: resident.Acquisition.RowId, LocationID: resident.Location.RowId);
             if (preparedText is null || !preparedText.TripleTriadText.TryGetValue(key, out addonText))
             {
-                addonText = new(DService.Instance().SeStringEvaluator.EvaluateFromAddon(
+                addonText = new(DalamudServices.SeStringEvaluator.EvaluateFromAddon(
                     obtain.Text.RowId,
                     new[]
                     {

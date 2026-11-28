@@ -4,7 +4,6 @@ using Dalamud.Interface;
 using Dalamud.Plugin;
 using Dalamud.Utility;
 using OmenTools.Dalamud;
-using OmniToolbox.Host;
 using OmniToolbox.UI.Theme;
 using OmniToolbox.UI.Widgets;
 

@@ -6,7 +6,6 @@ using Lumina.Excel.Sheets;
 using OmenTools;
 using OmenTools.Interop.Game.Lumina;
 using OmniToolbox.Data;
-using OmniToolbox.Host;
 using OmniToolbox.Items;
 using OmniToolbox.UI;
 

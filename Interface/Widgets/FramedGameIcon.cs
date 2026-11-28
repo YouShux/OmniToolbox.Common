@@ -1,7 +1,6 @@
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Utility;
-using OmniToolbox.Host;
 using OmniToolbox.Items;
 using OmniToolbox.UI.Theme;
 using OmniToolbox.UI.Widgets;
@@ -122,11 +121,9 @@ public static class FramedGameIcon
         {
             texture = IconBrowser.GetIconTexture(iconID);
         }
-        else if (iconID != 0 &&
-            (DalamudServices.TextureProvider.TryGetFromGameIcon(new GameIconLookup(iconID, itemHQ), out var sharedTexture) ||
-             DalamudServices.TextureProvider.TryGetFromGameIcon(new GameIconLookup(iconID, itemHQ, hiRes: false), out sharedTexture)))
+        else if (iconID != 0)
         {
-            texture = sharedTexture.GetWrapOrDefault();
+            texture = IconBrowser.GetGameIconWrap(iconID, itemHQ);
         }
         if (texture is not null && texture.Handle != nint.Zero)
         {

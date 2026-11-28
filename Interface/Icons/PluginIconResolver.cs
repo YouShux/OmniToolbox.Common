@@ -12,7 +12,6 @@ using Dalamud.Plugin.Internal.Types.Manifest;
 using Microsoft.VisualBasic.FileIO;
 using OmenTools;
 using OmenTools.OmenService;
-using OmniToolbox.Host;
 using TreeTools.Lifecycle;
 
 namespace OmniToolbox.UI;
@@ -37,6 +36,7 @@ internal static class PluginIconResolver
     private static readonly Dictionary<string, string?>                  LocalIconPaths      =
         new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, CachedIcon>               CachedIcons         = new(StringComparer.Ordinal);
+    private static readonly Dictionary<(string InternalName, Version Version), FastIconEntry> FastIcons = [];
     private static readonly Dictionary<(string Source, string InternalName), string> RemoteIconURLs = [];
     private static readonly string                                       CacheDirectory      = Path.Combine(
         DalamudServices.PluginInterface.GetPluginConfigDirectory(), "TreeHouse", "MultiToolbar", "Cache", "PluginIcons");
@@ -46,6 +46,7 @@ internal static class PluginIconResolver
 
     static PluginIconResolver()
     {
+        CacheLifetime.Add(FastIcons.Clear);
         CacheLifetime.Add(CachedIcons.Clear);
         CacheLifetime.Add(LocalTextures.Clear);
         CacheLifetime.Add(LocalIconPaths.Clear);
@@ -59,9 +60,8 @@ internal static class PluginIconResolver
                 changedEvent.AddEventHandler(PluginManager, handler);
                 CacheLifetime.OnStopping(() => changedEvent.RemoveEventHandler(PluginManager, handler));
             }
-            catch (Exception exception)
+            catch (Exception)
             {
-                DalamudServices.PluginLog.Warning(exception, "Unable to subscribe to plugin repository changes");
             }
         }
     }
@@ -85,6 +85,28 @@ internal static class PluginIconResolver
             return GetDefaultIcon();
         }
 
+        var fastKey = (plugin.InternalName, plugin.Version);
+        if (FastIcons.TryGetValue(fastKey, out var fastEntry))
+        {
+            if (fastEntry.LocalTexture is { } fastLocal)
+            {
+                if (fastLocal.TryGetWrap(out var localWrap, out _) && IsUsableTexture(localWrap))
+                    return localWrap;
+            }
+            else if (Volatile.Read(ref RemoteIconsDirty) == 0)
+            {
+                if (fastEntry.Cached is { SaveTask: null, Texture: { } fastDisk } &&
+                    fastDisk.TryGetWrap(out var diskWrap, out _) && IsUsableTexture(diskWrap))
+                {
+                    return diskWrap;
+                }
+                if (fastEntry.RetryAfter > 0 && Environment.TickCount64 < fastEntry.RetryAfter)
+                {
+                    return IsUsableTexture(fastEntry.DirectWrap) ? fastEntry.DirectWrap : null;
+                }
+            }
+        }
+
         if (GetLocalIconPath(plugin) is { } iconPath)
         {
             try
@@ -99,6 +121,7 @@ internal static class PluginIconResolver
                     texture.TryGetWrap(out var localIcon, out _) &&
                     IsUsableTexture(localIcon))
                 {
+                    FastIcons[fastKey] = new(texture, null);
                     return localIcon;
                 }
             }
@@ -123,7 +146,7 @@ internal static class PluginIconResolver
             cachedIcon.SaveTask = null;
             if (saveTask.IsCompletedSuccessfully && saveTask.Result)
             {
-                DService.Instance().TextureSubstitution.InvalidatePaths([cachedIcon.Path]);
+                DalamudServices.TextureSubstitution.InvalidatePaths([cachedIcon.Path]);
                 cachedIcon.Texture     = null;
                 cachedIcon.FileChecked = false;
             }
@@ -144,6 +167,7 @@ internal static class PluginIconResolver
                     QueueOldCacheRecycling(cachedIcon.Prefix);
                     cachedIcon.OldCacheRecycleQueued = true;
                 }
+                FastIcons[fastKey] = new(null, cachedIcon);
                 return diskIcon;
             }
         }
@@ -175,7 +199,10 @@ internal static class PluginIconResolver
         }
 
         if (!IsUsableTexture(resolvedIcon))
+        {
+            FastIcons[fastKey] = new(null, null, null, Environment.TickCount64 + 10_000);
             return null;
+        }
 
         if (cachedIcon.SaveTask is null && Environment.TickCount64 >= cachedIcon.RetryAfter)
         {
@@ -183,6 +210,7 @@ internal static class PluginIconResolver
             cachedIcon.SaveTask   = SaveIconAsync(resolvedIcon, cachedIcon.Path, CacheLifetime.CancellationToken);
             CacheLifetime.Track(cachedIcon.SaveTask);
         }
+        FastIcons[fastKey] = new(null, null, resolvedIcon, Environment.TickCount64 + 2_000);
         return resolvedIcon;
     }
 
@@ -197,6 +225,7 @@ internal static class PluginIconResolver
 
         if (Interlocked.Exchange(ref RemoteIconsDirty, 0) != 0)
         {
+            FastIcons.Clear();
             RemoteIconURLs.Clear();
             try
             {
@@ -220,9 +249,8 @@ internal static class PluginIconResolver
                     }
                 }
             }
-            catch (Exception exception)
+            catch (Exception)
             {
-                DalamudServices.PluginLog.Warning(exception, "Unable to read plugin repository icons");
             }
         }
 
@@ -239,7 +267,7 @@ internal static class PluginIconResolver
     {
         try
         {
-            var readback = DService.Instance().TextureReadback;
+            var readback = DalamudServices.TextureReadback;
             PNGContainerGUID ??= readback.GetSupportedImageEncoderInfos()
                 .FirstOrDefault(codec => codec.MimeTypes.Contains("image/png", StringComparer.OrdinalIgnoreCase))?.ContainerGuid;
             if (PNGContainerGUID is not { } containerGUID)
@@ -254,9 +282,8 @@ internal static class PluginIconResolver
         {
             return false;
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            DalamudServices.PluginLog.Warning(exception, $"Unable to save plugin icon cache: {path}");
             return false;
         }
     }
@@ -410,6 +437,12 @@ internal static class PluginIconResolver
 
         return null;
     }
+
+    private readonly record struct FastIconEntry(
+        ISharedImmediateTexture? LocalTexture,
+        CachedIcon?              Cached,
+        IDalamudTextureWrap?     DirectWrap = null,
+        long                     RetryAfter = 0);
 
     private sealed class CachedIcon
     (

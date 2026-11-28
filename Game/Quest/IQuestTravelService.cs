@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace OmniToolbox.Quests;
 
 public enum QuestWorkState { Idle, Running, Succeeded, Failed }

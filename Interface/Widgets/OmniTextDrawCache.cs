@@ -1,6 +1,5 @@
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Utility;
-using OmniToolbox.Host;
 using OmniToolbox.UI.Theme;
 using TreeToolKit;
 
@@ -20,13 +19,28 @@ internal sealed class OmniTextDrawCache(string name) : IDisposable
     {
         if (text.Length == 0)
             return;
+        var font = ImGui.GetFont();
+        Draw(drawList, id, text, position, fontSize, color, shadowOpacity,
+            ImGui.GetFrameCount(), OmniTextTextureBudget.GetWindowOwner(), (nint)font.Handle, ImGui.GetStyle().Alpha, font);
+    }
+
+    internal void Draw(ImDrawListPtr drawList, int id, string text, Vector2 position, float fontSize,
+        uint? color, float shadowOpacity, int frame, uint windowOwner, nint fontHandle, float styleAlpha, ImFontPtr font)
+    {
+        if (text.Length == 0)
+            return;
+        if (shadowOpacity <= 0f)
+        {
+            if (color is { } plainColor)
+                drawList.AddText(font, fontSize, position, plainColor, text);
+            return;
+        }
         if (fontRevision != Fonts.Revision || localizationRevision != OmniLoc.Revision)
         {
             Clear();
             fontRevision = Fonts.Revision;
             localizationRevision = OmniLoc.Revision;
         }
-        var frame = ImGui.GetFrameCount();
         if (prunedFrame != frame)
         {
             prunedFrame = frame;
@@ -41,7 +55,7 @@ internal sealed class OmniTextDrawCache(string name) : IDisposable
             expired.Clear();
         }
         var origin = new Vector2(MathF.Floor(position.X), MathF.Floor(position.Y));
-        var content = new Content(OmniTextTextureBudget.GetWindowOwner(), (nint)ImGui.GetFont().Handle,
+        var content = new Content(windowOwner, fontHandle,
             fontSize, text, color, shadowOpacity, position - origin);
         if (!slots.TryGetValue(id, out var slot) && slots.Count < 256)
         {
@@ -57,9 +71,9 @@ internal sealed class OmniTextDrawCache(string name) : IDisposable
                 slot.Frame = -1;
                 slot.Failed = false;
             }
-            var stable = slot.Frame == frame - 1 && ImGui.GetStyle().Alpha == 1f;
+            var stable = slot.Frame == frame - 1 && styleAlpha == 1f;
             slot.Frame = frame;
-            if (stable && !slot.Failed && (slot.Texture is not null || TryBuild(slot, frame)))
+            if (stable && !slot.Failed && (slot.Texture is not null || TryBuild(slot, frame, font)))
             {
                 var texture = slot.Texture;
                 if (texture is not null && frame >= slot.UseFromFrame)
@@ -70,22 +84,27 @@ internal sealed class OmniTextDrawCache(string name) : IDisposable
                 }
             }
         }
-        DrawImmediate(drawList, text, position, fontSize, color, shadowOpacity);
+        DrawImmediate(drawList, text, position, fontSize, color, shadowOpacity, font);
     }
 
     internal static void DrawImmediate(ImDrawListPtr drawList, string text, Vector2 position, float fontSize,
-        uint? color, float shadowOpacity)
+        uint? color, float shadowOpacity) =>
+        DrawImmediate(drawList, text, position, fontSize, color, shadowOpacity, ImGui.GetFont());
+
+    internal static void DrawImmediate(ImDrawListPtr drawList, string text, Vector2 position, float fontSize,
+        uint? color, float shadowOpacity, ImFontPtr font)
     {
-        OmniTextShadow.Draw(drawList, text, position, fontSize, shadowOpacity);
         if (color is { } textColor)
-            drawList.AddText(ImGui.GetFont(), fontSize, position, textColor, text);
+            OmniTextShadow.DrawWithText(drawList, font, fontSize, position, textColor, text, shadowOpacity);
+        else
+            OmniTextShadow.Draw(drawList, text, position, fontSize, shadowOpacity);
     }
 
-    private bool TryBuild(Slot slot, int frame)
+    private bool TryBuild(Slot slot, int frame, ImFontPtr font)
     {
         if (Environment.TickCount64 < retryAfter)
             return false;
-        var size = OmniTextMeasurements.MeasureAtSize(slot.Content.Text, ImGui.GetFont(), slot.Content.Size);
+        var size = OmniTextMeasurements.MeasureAtSize(slot.Content.Text, font, slot.Content.Size);
         size = new(MathF.Ceiling(size.X + 6f), MathF.Ceiling(size.Y + 6f));
         if (!float.IsFinite(size.X) || !float.IsFinite(size.Y) || size.X <= 0f || size.Y <= 0f ||
             size.X > 8192f || size.Y > 8192f)
@@ -101,11 +120,11 @@ internal sealed class OmniTextDrawCache(string name) : IDisposable
             using (var data = BufferBackedImDrawData.Create())
             {
                 DrawImmediate(data.ListPtr, slot.Content.Text, new Vector2(3f) + slot.Content.Offset,
-                    slot.Content.Size, slot.Content.Color, slot.Content.Opacity);
+                    slot.Content.Size, slot.Content.Color, slot.Content.Opacity, font);
                 texture.Draw(data.ListPtr, Vector2.Zero, Vector2.One);
             }
         }
-        catch (Exception exception)
+        catch (Exception)
         {
             slot.Failed = true;
             retryAfter = Environment.TickCount64 + 30_000;
@@ -113,16 +132,13 @@ internal sealed class OmniTextDrawCache(string name) : IDisposable
             {
                 texture?.Dispose();
             }
-            catch (Exception releaseException)
+            catch (Exception)
             {
-                DalamudServices.PluginLog.Warning(releaseException, "Omni text texture cleanup failed.");
             }
             finally
             {
                 OmniTextTextureBudget.Release(slot.Content.Window, bytes);
             }
-            if (exception is not ObjectDisposedException || !DalamudServices.IsUnloading)
-                DalamudServices.PluginLog.Warning(exception, "Omni text texture creation failed; drawing text directly.");
             return false;
         }
         slot.Texture = texture;
@@ -142,10 +158,8 @@ internal sealed class OmniTextDrawCache(string name) : IDisposable
         {
             texture.Dispose();
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            if (exception is not ObjectDisposedException || !DalamudServices.IsUnloading)
-                DalamudServices.PluginLog.Warning(exception, "Omni text texture cleanup failed.");
         }
         finally
         {

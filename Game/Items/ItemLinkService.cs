@@ -2,7 +2,6 @@ using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Lumina.Excel.Sheets;
 using OmenTools.Interop.Game.Lumina;
-using OmniToolbox.Host;
 
 namespace OmniToolbox.Items;
 

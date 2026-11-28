@@ -36,7 +36,7 @@ public abstract class OmniModuleBase : IAsyncDisposable
 
     internal Func<bool, bool, CancellationToken, Task<ModuleOperationResult>>? StateChangeRequest { get; set; }
 
-    internal Func<Action, Task> Dispatch { get; set; } = static action => DService.Instance().Framework.Run(action, cancellationToken: CancellationToken.None);
+    internal Func<Action, Task> Dispatch { get; set; } = static action => DalamudServices.Framework.Run(action, cancellationToken: CancellationToken.None);
 
     internal Action<Exception>? ErrorReporter { get; set; }
 
